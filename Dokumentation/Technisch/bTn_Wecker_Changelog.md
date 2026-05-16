@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v01
+Basis 4v1  →  12v02
 
 ## Kategorien
 
@@ -178,4 +178,11 @@ Basis 4v1  →  12v01
 |---|---|---|
 | 12v01 | Qualität | Stack-Größen neu vorgegeben (Bytes): touchTask 2880, wifiTask 2000, nvrTask 2304, inputTask 2240, displayTask 2176, alarmTask 2128, watchdogTask 1344, stackMonTask 2912. webLogTask (4096) unverändert. Werte direkt als `STACK_*`-Konstanten in SysConf gesetzt; `setup()` übernimmt sie ohne weitere Codeänderung. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v01
+## Version 12v02
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v02 | Funktion | Max. Einschaltzeit Licht/Mühlrad (Zugschalter S2) auf 30 min begrenzt – analog Auto-Rückkehr der Menü-Seiten. Neue Konstante `S2_TIMEOUT_MS` (1800000 ms). `displayTask` schaltet E2 (Motor-PWM) und E3 (Licht) nach Ablauf ab und setzt `S2_SW` zurück; Zeitstempel `t_start_S2` wird im S2-Handler beim Einschalten gesetzt. |
+| 12v02 | Qualität | Web-Log „Allgemeines Log": `[xxx]`-Tag wird mit Leerzeichen auf feste Breite `WEBLOG_TAG_WIDTH` (12 Zeichen) aufgefüllt, damit der Text dahinter immer in derselben Spalte beginnt. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v02

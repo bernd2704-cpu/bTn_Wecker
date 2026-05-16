@@ -1,6 +1,6 @@
 # bTn Wecker – Funktions- und Task-Referenz
 
-*Firmware 12v01 · ESP32 / FreeRTOS*
+*Firmware 12v02 · ESP32 / FreeRTOS*
 
 ## 1. FreeRTOS Tasks
 
@@ -96,4 +96,4 @@ Zwei-Stufen-Debouncing: ISR-Ebene BTN_DEBOUNCE_MS=30ms, Task-Ebene BTN_LOCKOUT_M
 
 ---
 
-*bTn Wecker · Funktionsreferenz · Firmware 12v01*
+*bTn Wecker · Funktionsreferenz · Firmware 12v02*

@@ -1,10 +1,18 @@
 #pragma once
-// SysConf_12v01.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v01
-// Datei-Version    : 12v01
+// SysConf_12v02.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v02
+// Datei-Version    : 12v02
 // Boardverwalter   : esp32 3.3.8 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v02–Max. Einschaltzeit Licht/Mühlrad (Zugschalter S2) auf 30 min
+//         begrenzt – analog Auto-Rückkehr der Menü-Seiten. Neue Konstante
+//         S2_TIMEOUT_MS (1800000 ms). displayTask schaltet E2 (Motor-PWM)
+//         und E3 (Licht) nach Ablauf ab und setzt S2_SW zurück; Zeitstempel
+//         t_start_S2 wird im S2-Handler beim Einschalten gesetzt.
+//        –Web-Log "Allgemeines Log": [xxx]-Tag wird mit Leerzeichen auf
+//         feste Breite WEBLOG_TAG_WIDTH (12 Zeichen) aufgefüllt, damit
+//         der Text dahinter immer in derselben Spalte beginnt.
 //   12v01–Stack-Größen neu vorgegeben (Bytes): touchTask 2880,
 //         wifiTask 2000, nvrTask 2304, inputTask 2240,
 //         displayTask 2176, alarmTask 2128, watchdogTask 1344,
@@ -159,7 +167,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v01"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v02"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -215,6 +223,7 @@ const uint32_t BTN_LOCKOUT_MS       = 1000;                                    /
 const uint32_t CUCKOO_DURATION_MS   = 7500;                                    // Kuckuck-Laufzeit
 const uint32_t AUTO_RETURN_MS       = 20000;                                   // Auto-Rückkehr zu Seite 0
 const uint32_t DISPLAY_TIMEOUT_MS   = 300000UL;                                // OLED aus nach 5 min ohne Touch-Event
+const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               // 12v02: Licht/Mühlrad (Zugschalter S2) aus nach 30 min – analog AUTO_RETURN_MS
 const uint32_t ALARM_POLL_MS        = 5000;                                    // Alarm-Nachlauf Prüfintervall
 const uint32_t WIFI_RECONNECT_MS    = 3000;                                    // WiFi-Reconnect Wiederholrate
 const uint32_t NVR_COMMIT_DELAY_MS  = 2000;                                    // 11v00: Ruhezeit nach letztem Event vor NVR-Commit (Flash-Wear-Schutz)
@@ -257,3 +266,4 @@ const uint8_t E3 = 27;                                                         /
 #define WEBLOG_PORT      8080                                                  // HTTP-Port des Log-Servers (8080 ≠ 80 des WiFi-Konfigurators)
 #define WEBLOG_LINES       40                                                  // Anzahl Zeilen auf der Seite
 #define WEBLOG_LINE_LEN   128                                                  // maximale Zeichenanzahl je Zeile
+#define WEBLOG_TAG_WIDTH   12                                                  // [xxx]-Tag im "Allgemeines Log" auf feste Spaltenbreite auffüllen

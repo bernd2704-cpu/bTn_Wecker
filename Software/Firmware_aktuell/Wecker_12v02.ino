@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_12v01.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_12v02.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
@@ -167,6 +167,7 @@ volatile uint32_t lastTouchMs = 0;                                              
 static volatile bool displayBlanked = false;                                             // 10v00: true wenn OLED nach DISPLAY_TIMEOUT_MS abgeschaltet wurde
 volatile uint32_t t_start6 = 0;
          uint32_t t_start7 = 0;
+volatile uint32_t t_start_S2 = 0;                                                        // 12v02: Einschaltzeitpunkt Licht/Mühlrad via Zugschalter S2
 
 // ── Sound ────────────────────────────────────────────────────
 bool    sound1_on   = false;
@@ -203,7 +204,7 @@ static inline void markSafeChange() {
 }
 
 // ── Taster Toggle-Status ─────────────────────────────────────
-bool          S2_SW = false;                                                             // Toggle-Status Zugschalter
+volatile bool S2_SW = false;                                                             // Toggle-Status Zugschalter
 
 // ── Funktion-Vorwahl ─────────────────────────────────────────
 bool    cuckoo_on      = false;
@@ -1518,6 +1519,7 @@ static void inputTask(void *pvParam) {
         lastBtnMs[1] = t_now;
         S2_SW = !S2_SW;
         if (S2_SW) {
+          t_start_S2 = t_now;                                                              // 12v02: Start der 30-min-Einschaltzeitbegrenzung
           if (wheel_on) { ledcWrite(E2, MOTOR_PWM_DUTY); }                                // 12v00: Motor via PWM
           if (light_on) { digitalWrite(E3, HIGH); }
         } else {
@@ -1664,6 +1666,19 @@ static void displayTask(void *pvParam) {
       }
 
       xSemaphoreGive(displayMutex);
+    }
+
+    // 12v02: Max. Einschaltzeit Licht/Mühlrad (Zugschalter S2) auf
+    // S2_TIMEOUT_MS (30 min) begrenzen – analog Auto-Rückkehr der Menü-
+    // Seiten. Außerhalb displayMutex: betrifft nur GPIO/S2_SW (kein
+    // Display). displayTask + inputTask laufen beide auf Core 1, S2_SW
+    // und t_start_S2 sind volatile. Schaltet E2 (Motor-PWM) + E3 (Licht)
+    // ab und setzt S2_SW zurück; die Checkbox-Konfig (light_on/wheel_on)
+    // bleibt unverändert. Spiegelt den OFF-Zweig des S2-Handlers.
+    if (S2_SW && (millis() - t_start_S2 >= S2_TIMEOUT_MS)) {
+      S2_SW = false;
+      ledcWrite(E2, 0);
+      digitalWrite(E3, LOW);
     }
 
     vTaskDelay(pdMS_TO_TICKS(DISPLAY_UPDATE_MS));
@@ -1875,6 +1890,17 @@ static void webLogTask(void *pvParam) {
       for (uint16_t i = 0; i < webLogCount; i++) {
         uint16_t idx = (start + i) % WEBLOG_LINES;
         String line = String(webLogBuf[idx]);
+        // [xxx]-Tag mit Leerzeichen auf feste Breite (WEBLOG_TAG_WIDTH)
+        // bringen, damit der Text dahinter immer in derselben Spalte beginnt
+        if (line.length() > 0 && line[0] == '[') {
+          int close = line.indexOf(']');
+          if (close >= 0 && (close + 1) < WEBLOG_TAG_WIDTH) {
+            String rest = line.substring(close + 1);
+            line = line.substring(0, close + 1);
+            while ((int)line.length() < WEBLOG_TAG_WIDTH) line += ' ';
+            line += rest;
+          }
+        }
         if (line.indexOf("[WATCHDOG]") >= 0 || line.indexOf("[PANIC]") >= 0 || line.indexOf("failed") >= 0)
           html += "<span class='err'>";
         else if (line.indexOf("OK") >= 0 || line.indexOf("ready") >= 0 || line.indexOf("connected") >= 0)
@@ -2201,7 +2227,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v01.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v02.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

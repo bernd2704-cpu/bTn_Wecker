@@ -1,10 +1,60 @@
 #pragma once
-// SysConf_11v02.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 11v02
-// Datei-Version    : 11v02
+// SysConf_12v02.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v02
+// Datei-Version    : 12v02
 // Boardverwalter   : esp32 3.3.8 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v02–Max. Einschaltzeit Licht/Mühlrad (Zugschalter S2) auf 30 min
+//         begrenzt – analog Auto-Rückkehr der Menü-Seiten. Neue Konstante
+//         S2_TIMEOUT_MS (1800000 ms). displayTask schaltet E2 (Motor-PWM)
+//         und E3 (Licht) nach Ablauf ab und setzt S2_SW zurück; Zeitstempel
+//         t_start_S2 wird im S2-Handler beim Einschalten gesetzt.
+//        –Web-Log "Allgemeines Log": [xxx]-Tag wird mit Leerzeichen auf
+//         feste Breite WEBLOG_TAG_WIDTH (12 Zeichen) aufgefüllt, damit
+//         der Text dahinter immer in derselben Spalte beginnt.
+//   12v01–Stack-Größen neu vorgegeben (Bytes): touchTask 2880,
+//         wifiTask 2000, nvrTask 2304, inputTask 2240,
+//         displayTask 2176, alarmTask 2128, watchdogTask 1344,
+//         stackMonTask 2912. webLogTask (4096) unverändert.
+//         Werte direkt als STACK_*-Konstanten gesetzt – setup()
+//         übernimmt sie ohne weitere Codeänderung.
+//   12v00–Hardware-Erweiterung "Motor + LED-Streifen" (siehe
+//         Hardware/hardware_notesmotor_led_driver.md):
+//         (1) E2 (GPIO26, Wasserrad-Motor) wird jetzt per PWM über
+//             LEDC betrieben – 20 kHz / 8 Bit / 60 % Duty (=153),
+//             um den 3-V-Motor an 5 V mit Mittelwert ~3 V zu treiben
+//             ohne hörbares Schaltgeräusch. Ansteuerung in alarmTask
+//             und S2-Zugschalter auf ledcWrite(E2, MOTOR_PWM_DUTY / 0)
+//             umgestellt. pinMode(E2,OUTPUT) in setup() entfällt –
+//             ledcAttach übernimmt die Pinkonfiguration.
+//         (2) E3 (GPIO27, LED-Streifen) bleibt digitalWrite(HIGH/LOW):
+//             ohmsche Last mit Vorwiderstand 47 Ω (48 mA bei 5 V),
+//             kein PWM erforderlich (siehe hardware_notes).
+//         (3) Neue Konstanten MOTOR_PWM_FREQ / MOTOR_PWM_RES /
+//             MOTOR_PWM_DUTY – zentral änderbar analog zu STACK_*.
+//         (4) Beide MOSFET-Kanäle verwenden IRLML6344TRPBF mit
+//             100 Ω Gate-Reihe und 10 kΩ Pull-Down nach GND
+//             (Boot-Safe-Pegel während Pin-Konfiguration).
+//   11v05–Info-Seite: WLAN-Reset von T0 auf T3 verlegt – einheitliche
+//         Bedienung (Taste + = T3 = WLAN-Reset, Taste - = T4 = Werksreset).
+//         Info-Seite neu angeordnet: Z1 Versionsstring, Z2 Web-Log-Adresse,
+//         Z3 MP3-/Reset-Zähler, Z4 "Taste +  WiFi Reset", Z5 " Taste -  Full
+//         Reset". T0 auf UI_INFO bleibt wirkungslos (Seitencycle weiter
+//         durch `s != UI_INFO`-Guard geschützt), onInfo() reagiert jetzt
+//         auf EVT_T3 statt EVT_T0. Wake-Discard-Kommentar nachgezogen.
+//   11v04–S3 bei dunklem Display: Display einschalten UND Info-Seite öffnen.
+//         Ändert das 11v02-Verhalten (reines Wake+Discard) zurück zu einem
+//         kombinierten Wake+Open. Touch T0–T4 bleiben reines Wake+Discard –
+//         nur S3 reicht das Event an die UI weiter. Da Auto-Return (20 s)
+//         immer UI_CLOCK erreicht, bevor der Display-Timeout (5 min) greift,
+//         landet die Toggle-Logik in uiDispatch() sicher auf UI_INFO.
+//   11v03–resetCount zählt WiFi-Konfigurator-Boot nicht mehr mit:
+//         bumpResetCount() in setup() wird erst NACH loadWifiCredentials()
+//         aufgerufen. Nach einem Werksreset zeigte der Reset-Zähler 2 an,
+//         weil der erste Boot (leere NVS → WiFi-Konfigurator → ESP.restart)
+//         und der zweite Boot (mit gespeicherten WLAN-Daten) beide zählten.
+//         Jetzt zählt nur der reguläre Boot.
 //   11v02–Sicherheit Info-Seite + Display-Wake:
 //         (1) S3 verhält sich bei ausgeschaltetem Display jetzt analog
 //             zu T0–T4: weckt das Display und verwirft das Event,
@@ -117,7 +167,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "11v02"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v02"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -173,6 +223,7 @@ const uint32_t BTN_LOCKOUT_MS       = 1000;                                    /
 const uint32_t CUCKOO_DURATION_MS   = 7500;                                    // Kuckuck-Laufzeit
 const uint32_t AUTO_RETURN_MS       = 20000;                                   // Auto-Rückkehr zu Seite 0
 const uint32_t DISPLAY_TIMEOUT_MS   = 300000UL;                                // OLED aus nach 5 min ohne Touch-Event
+const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               // 12v02: Licht/Mühlrad (Zugschalter S2) aus nach 30 min – analog AUTO_RETURN_MS
 const uint32_t ALARM_POLL_MS        = 5000;                                    // Alarm-Nachlauf Prüfintervall
 const uint32_t WIFI_RECONNECT_MS    = 3000;                                    // WiFi-Reconnect Wiederholrate
 const uint32_t NVR_COMMIT_DELAY_MS  = 2000;                                    // 11v00: Ruhezeit nach letztem Event vor NVR-Commit (Flash-Wear-Schutz)
@@ -187,24 +238,32 @@ const uint8_t S2 = 33;                                                         /
 const uint8_t S3 = 0;                                                          // GPIO0  – Info-Seite ein/aus
 
 // ── Ausgangs-Pins ────────────────────────────────────────────
-const uint8_t E1 = 25;                                                         // GPIO25 – Kuckuck
-const uint8_t E2 = 26;                                                         // GPIO26 – Mühlrad / Motor
-const uint8_t E3 = 27;                                                         // GPIO27 – Licht
+const uint8_t E1 = 25;                                                         // GPIO25 – Kuckuck (digital, MOSFET)
+const uint8_t E2 = 26;                                                         // GPIO26 – Mühlrad / DC-Motor 3 V (PWM via LEDC, MOSFET + Freilaufdiode 1N4148)
+const uint8_t E3 = 27;                                                         // GPIO27 – LED-Streifen Licht (digital, MOSFET + 47 Ω Vorwiderstand High-Side)
+
+// ── Motor-PWM (E2 / GPIO26) ───────────────────────────────────
+// 12v00: DC-Motor 3 V an 5 V-Versorgung → PWM mit 60 % Duty ≙ ~3 V Mittelwert.
+// 20 kHz liegt über der Hörschwelle → kein Surren; 8-Bit-Auflösung reicht.
+#define MOTOR_PWM_FREQ 20000UL                                                 // 20 kHz Trägerfrequenz (über Hörschwelle)
+#define MOTOR_PWM_RES      8                                                   // 8-Bit Auflösung → Duty-Bereich 0..255
+#define MOTOR_PWM_DUTY   153                                                   // ~60 % Duty ≙ 3 V Mittelwert aus 5 V
 
 // ── Stack-Größen (Bytes) ──────────────────────────────────────
 // Angepasst auf Basis der Stack High-Water Marks aus stackMonTask.
 // setup() verwendet diese Konstanten direkt – Änderungen hier wirken sofort.
-#define STACK_TOUCH     3072                                                   // touchTask
-#define STACK_ALARM     2048                                                   // alarmTask
-#define STACK_WIFI      2560                                                   // wifiTask
-#define STACK_NVR       2560                                                   // nvrTask
-#define STACK_STACKMON  3072                                                   // stackMonTask
-#define STACK_WATCHDOG  1536                                                   // watchdogTask
-#define STACK_INPUT     2560                                                   // inputTask
-#define STACK_DISPLAY   2560                                                   // displayTask
+#define STACK_TOUCH     2880                                                   // touchTask
+#define STACK_ALARM     2128                                                   // alarmTask
+#define STACK_WIFI      2000                                                   // wifiTask
+#define STACK_NVR       2304                                                   // nvrTask
+#define STACK_STACKMON  2912                                                   // stackMonTask
+#define STACK_WATCHDOG  1344                                                   // watchdogTask
+#define STACK_INPUT     2240                                                   // inputTask
+#define STACK_DISPLAY   2176                                                   // displayTask
 #define STACK_WEBLOG    4096                                                   // webLogTask (HTTP-Server benötigt mehr Stack)
 
 // ── Web-Logger ────────────────────────────────────────────────
 #define WEBLOG_PORT      8080                                                  // HTTP-Port des Log-Servers (8080 ≠ 80 des WiFi-Konfigurators)
 #define WEBLOG_LINES       40                                                  // Anzahl Zeilen auf der Seite
 #define WEBLOG_LINE_LEN   128                                                  // maximale Zeichenanzahl je Zeile
+#define WEBLOG_TAG_WIDTH   12                                                  // [xxx]-Tag im "Allgemeines Log" auf feste Spaltenbreite auffüllen
