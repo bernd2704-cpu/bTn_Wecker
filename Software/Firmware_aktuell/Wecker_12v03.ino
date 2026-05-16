@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_12v02.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_12v03.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
@@ -214,6 +214,14 @@ char    str_cot[3];                     // "hh" von-Zeit
 char    str_coff[3];                    // "hh" bis-Zeit
 bool    light_on   = true;
 bool    wheel_on   = false;
+
+// 12v03: Mühlrad-Motor-Pulsweite zur Laufzeit verstellbar (Web-Slider /motor),
+// NVS-persistiert. motor_duty = wirksamer LEDC-Sollwert (0..255), Default aus
+// SysConf. motorRunning = läuft der Motor gerade? → Live-Übernahme einer
+// Slider-Änderung ohne Neustart. Beide volatile: webLogTask (Core 0) schreibt,
+// alarmTask/inputTask lesen – 8-/32-bit-Zugriff auf Xtensa atomar.
+volatile uint8_t motor_duty   = MOTOR_PWM_DUTY;
+volatile bool    motorRunning = false;
 
 // pageselect: spiegelt (uint8_t)uiState – wird von checkboxAlarm/Sound genutzt
 volatile uint8_t pageselect = 0;
@@ -639,6 +647,7 @@ void writeNVR() {
   data.putInt ("cuckoo_off_h", cuckoo_offTime);
   data.putBool("light_on",    light_on);
   data.putBool("wheel_on",    wheel_on);
+  data.putInt ("motor_duty",  motor_duty);              // 12v03: Web-verstellbare Pulsweite
   data.putInt ("vol",         vol);
 }
 
@@ -656,6 +665,7 @@ void readNVR() {
   cuckoo_offTime = data.getInt ("cuckoo_off_h", cuckoo_offTime);
   light_on    = data.getBool("light_on",     light_on);
   wheel_on    = data.getBool("wheel_on",     wheel_on);
+  motor_duty  = data.getInt ("motor_duty",   motor_duty);
   vol         = data.getInt ("vol",          vol);
 
   // ── Wertebereich-Clamp: korrupte NVS-Daten abfangen ─────────
@@ -670,6 +680,8 @@ void readNVR() {
   if (sound1_assigned < 1) sound1_assigned = 1;                // DFPlayer: Dateinummer min. 1
   if (sound2_assigned < 1) sound2_assigned = 1;                // Obergrenze erst nach mp3Count bekannt
   if (vol > MAX_VOL)   vol = MAX_VOL;                  // Lautstärke 0–MAX_VOL
+  // motor_duty ist uint8_t → Wertebereich 0..255 bereits durch Typ erzwungen
+  // (korrupter NVS-Wert wird beim Zuweisen auf 8 Bit beschnitten, bleibt gültig).
 }
 
 // 9v14: Reset-Zähler in eigener Funktion – readNVR() ist jetzt seiteneffektfrei.
@@ -1141,6 +1153,33 @@ static void wakeDisplay() {
   }
 }
 
+// ── Mühlrad-Motor ein/aus (12v03) ────────────────────────────
+// Zentrale Ansteuerung von E2 statt verstreuter ledcWrite(E2,…)-Aufrufe.
+// motorStart(): respektiert wheel_on; bei motor_duty < MOTOR_PWM_KICK_THRESHOLD
+// kurzer Vollgas-Anlaufimpuls (3-V-Motor läuft sonst aus dem Stand nicht an),
+// danach Sollwert. Das vTaskDelay des Kickstarts ist unkritisch:
+//  • Alle Aufrufer (alarmTask @ALARM_IDLE, inputTask @S2) halten an der
+//    Aufrufstelle KEINEN Mutex → Projektregel "kein vTaskDelay unter Mutex"
+//    eingehalten.
+//  • vTaskDelay gibt die CPU frei (kein Busy-Wait) → weder Hardware-TWDT
+//    noch App-Watchdog (Timeout >> MOTOR_PWM_KICK_MS) sind betroffen.
+//  • 150 ms verzögern lediglich den Folge-Code (Alarm-Statuspolling bzw.
+//    S2-Tastenreaktion) – funktional irrelevant.
+static void motorStart() {
+  if (!wheel_on || motor_duty == 0) { ledcWrite(E2, 0); motorRunning = false; return; }
+  if (motor_duty < MOTOR_PWM_KICK_THRESHOLD) {
+    ledcWrite(E2, MOTOR_PWM_KICK_DUTY);                                                  // Vollgas-Anlaufimpuls
+    vTaskDelay(pdMS_TO_TICKS(MOTOR_PWM_KICK_MS));                                        // außerhalb Mutex – Projektregel eingehalten
+  }
+  ledcWrite(E2, motor_duty);                                                            // auf Laufzeit-Sollwert
+  motorRunning = true;
+}
+
+static void motorStop() {
+  ledcWrite(E2, 0);
+  motorRunning = false;
+}
+
 // ── Alarm-State-Machine ──────────────────────────────────────
 // sec/min/hour: atomarer Zeitschnappschuss aus alarmTask – keine Race Condition mit displayTask
 static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour) {
@@ -1159,7 +1198,7 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour) {
           player.playFolder(1, sound1_assigned);
           xSemaphoreGive(playerMutex);
           lastA1Min = min;                                                               // erst nach erfolgreichem Start sperren
-          if (wheel_on) { ledcWrite(E2, MOTOR_PWM_DUTY); }                                // 12v00: Motor via PWM (60 % Duty ≙ ~3 V)
+          motorStart();                                                                  // 12v03: Motor via PWM + Kickstart (respektiert wheel_on)
           if (light_on) { digitalWrite(E3, HIGH); }
           t_start6   = millis();
           alarmState = ALARM_RUNNING;                                                    // → ALARM_RUNNING
@@ -1173,7 +1212,7 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour) {
           player.playFolder(1, sound2_assigned);
           xSemaphoreGive(playerMutex);
           lastA2Min = min;                                                               // erst nach erfolgreichem Start sperren
-          if (wheel_on) { ledcWrite(E2, MOTOR_PWM_DUTY); }                                // 12v00: Motor via PWM
+          motorStart();                                                                  // 12v03: Motor via PWM + Kickstart (respektiert wheel_on)
           if (light_on) { digitalWrite(E3, HIGH); }
           t_start6   = millis();
           alarmState = ALARM_RUNNING;                                                    // → ALARM_RUNNING
@@ -1197,7 +1236,7 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour) {
         playerStatus = st;
         t_start6 = millis();
         if (playerStatus == 0) {                                                         // MP3 beendet (0=stopped; -1=UART-Timeout → Alarm läuft weiter)
-          if (wheel_on) { ledcWrite(E2, 0); }                                             // 12v00: Motor-PWM abschalten
+          motorStop();                                                                   // 12v03: Motor-PWM abschalten
           if (light_on) { digitalWrite(E3, LOW); }
           lastA1Min  = 0xFF;                                                             // Sperre aufheben → nächster Alarm möglich
           lastA2Min  = 0xFF;
@@ -1485,7 +1524,7 @@ static void inputTask(void *pvParam) {
             player.stop();
             xSemaphoreGive(playerMutex);
           }
-          ledcWrite(E2, 0);                                                              // 12v00: Motor-PWM abschalten (war digitalWrite LOW)
+          motorStop();                                                                   // 12v03: Motor-PWM abschalten (war digitalWrite LOW)
           digitalWrite(E3, LOW);
           alarmState = ALARM_IDLE;
           lastA1Min  = 0xFF;                                                             // Sperren aufheben → Alarm in gleicher Minute neu auslösbar
@@ -1520,10 +1559,10 @@ static void inputTask(void *pvParam) {
         S2_SW = !S2_SW;
         if (S2_SW) {
           t_start_S2 = t_now;                                                              // 12v02: Start der 30-min-Einschaltzeitbegrenzung
-          if (wheel_on) { ledcWrite(E2, MOTOR_PWM_DUTY); }                                // 12v00: Motor via PWM
+          motorStart();                                                                  // 12v03: Motor via PWM + Kickstart (respektiert wheel_on)
           if (light_on) { digitalWrite(E3, HIGH); }
         } else {
-          ledcWrite(E2, 0);                                                               // 12v00: Motor-PWM abschalten
+          motorStop();                                                                    // 12v03: Motor-PWM abschalten
           digitalWrite(E3, LOW);
         }
       }
@@ -1677,7 +1716,7 @@ static void displayTask(void *pvParam) {
     // bleibt unverändert. Spiegelt den OFF-Zweig des S2-Handlers.
     if (S2_SW && (millis() - t_start_S2 >= S2_TIMEOUT_MS)) {
       S2_SW = false;
-      ledcWrite(E2, 0);
+      motorStop();                                                                       // 12v03: Motor-PWM abschalten
       digitalWrite(E3, LOW);
     }
 
@@ -1876,6 +1915,23 @@ static void webLogTask(void *pvParam) {
       "<h3>IP: " + ip + ":" + String(WEBLOG_PORT) + " &nbsp;|&nbsp; Auto-Refresh: 20 s"
       " &nbsp;|&nbsp; Aktualisiert: <span id='upd'></span></h3>";
 
+    // ── 12v03: Mühlrad-Motor Pulsweiten-Slider ───────────────
+    // GET-Form auf /motor (0..100 %). Auto-Refresh (20 s) lädt den
+    // aktuellen Wert nach; oninput aktualisiert die %-Anzeige live.
+    {
+      int mpct = ((int)motor_duty * 100 + 127) / 255;                 // 0..255 → 0..100 % (gerundet)
+      String mp = String(mpct);
+      html += "<div class='sec-title'>M&uuml;hlrad-Motor &ndash; Pulsweite (Drehzahl)</div>"
+              "<form action='/motor' method='get' class='snap-box' style='color:#b0d0b0'>"
+              "Duty: <output id='dv'>" + mp + "</output> %"
+              " &nbsp;<input type='range' name='duty' min='0' max='100' value='" + mp + "'"
+              " style='vertical-align:middle;width:55%' oninput='dv.value=this.value'>"
+              " &nbsp;<button type='submit'>Setzen</button>"
+              "<div style='color:#78909c;font-size:0.85rem;margin-top:6px'>"
+              "&lt; 35 % &rarr; Kickstart-Anlaufimpuls &middot; Wert wird in NVS gespeichert</div>"
+              "</form>";
+    }
+
     // ── Ring-Puffer ──────────────────────────────────────────
     {
       String ntpTs = strlen(snapNtpTime) > 0 ? String(snapNtpTime) : String("–");
@@ -1966,6 +2022,25 @@ static void webLogTask(void *pvParam) {
       xSemaphoreGive(webLogMutex);
     }
     logServer.send(200, "text/plain; charset=UTF-8", out);
+  });
+
+  // 12v03: GET /motor?duty=NN (0..100 %) → Mühlrad-Pulsweite zur Laufzeit
+  // setzen. Live-Übernahme falls Motor gerade läuft; Persistenz über die
+  // bestehende safeChange→nvrSemaphore→nvrTask-Kette (kein Flash-Zugriff
+  // aus dem HTTP-Handler). Antwort 303 → zurück auf die Log-Seite.
+  logServer.on("/motor", HTTP_GET, [&logServer]() {
+    if (logServer.hasArg("duty")) {
+      long pct = logServer.arg("duty").toInt();
+      if (pct < 0)   pct = 0;
+      if (pct > 100) pct = 100;
+      uint8_t d = (uint8_t)((pct * 255 + 50) / 100);                 // % → 0..255 (gerundet)
+      motor_duty = d;
+      if (motorRunning) ledcWrite(E2, d);                            // Live-Übernahme, falls Motor läuft
+      markSafeChange();                                              // nvrTask sichert nach Ruhezeit
+      webLogf("[MOTOR] Duty -> %ld %% (%u/255)", pct, (unsigned)d);
+    }
+    logServer.sendHeader("Location", "/");
+    logServer.send(303, "text/plain", "");
   });
 
   logServer.begin();
@@ -2227,7 +2302,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v02.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v03.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

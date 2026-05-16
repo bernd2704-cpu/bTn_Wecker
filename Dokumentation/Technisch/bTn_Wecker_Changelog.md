@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v02
+Basis 4v1  →  12v03
 
 ## Kategorien
 
@@ -185,4 +185,12 @@ Basis 4v1  →  12v02
 | 12v02 | Funktion | Max. Einschaltzeit Licht/Mühlrad (Zugschalter S2) auf 30 min begrenzt – analog Auto-Rückkehr der Menü-Seiten. Neue Konstante `S2_TIMEOUT_MS` (1800000 ms). `displayTask` schaltet E2 (Motor-PWM) und E3 (Licht) nach Ablauf ab und setzt `S2_SW` zurück; Zeitstempel `t_start_S2` wird im S2-Handler beim Einschalten gesetzt. |
 | 12v02 | Qualität | Web-Log „Allgemeines Log": `[xxx]`-Tag wird mit Leerzeichen auf feste Breite `WEBLOG_TAG_WIDTH` (12 Zeichen) aufgefüllt, damit der Text dahinter immer in derselben Spalte beginnt. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v02
+## Version 12v03
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v03 | Funktion | Mühlrad-Motor-Pulsweite (Drehzahl) zur Laufzeit über Web-Slider verstellbar: Web-Log-Server erhält `GET /motor?duty=NN` (0–100 %) und einen Slider auf der Seite. `MOTOR_PWM_DUTY` ist nur noch der Default-Sollwert beim ersten Boot; der wirksame Wert liegt in der Laufzeit-Variable `motor_duty` (0–255) und wird in NVS persistiert (Schlüssel `motor_duty`). Live-Übernahme falls der Motor gerade läuft. |
+| 12v03 | Funktion | Kickstart: liegt der Sollwert unter `MOTOR_PWM_KICK_THRESHOLD` (~35 % Duty), läuft der 3-V-Motor evtl. nicht aus dem Stand an → kurzer Vollgas-Anlaufimpuls (`MOTOR_PWM_KICK_DUTY` für `MOTOR_PWM_KICK_MS`), dann Sollwert. Neue zentrale Konstanten `MOTOR_PWM_KICK_THRESHOLD` / `_KICK_DUTY` / `_KICK_MS`. |
+| 12v03 | Refactoring | Zentrale Helfer `motorStart()` / `motorStop()` ersetzen die verstreuten `ledcWrite(E2, …)`-Aufrufe in `runAlarmMachine`, am S2-Zugschalter und beim S2-Timeout. Persistenz über die bestehende `safeChange`→`nvrSemaphore`→`nvrTask`-Kette (kein Flash-Zugriff im HTTP-Handler). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v03

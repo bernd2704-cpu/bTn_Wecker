@@ -1,10 +1,25 @@
 #pragma once
-// SysConf_12v02.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v02
-// Datei-Version    : 12v02
+// SysConf_12v03.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v03
+// Datei-Version    : 12v03
 // Boardverwalter   : esp32 3.3.8 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v03–Mühlrad-Motor-Pulsweite zur Laufzeit über Web-Slider verstellbar:
+//         (1) MOTOR_PWM_DUTY ist nur noch der Default-Sollwert beim ersten
+//             Boot; der wirksame Wert liegt in der Laufzeit-Variable
+//             motor_duty (0..255) und wird in NVS persistiert
+//             (Schlüssel "motor_duty", in writeNVR()/readNVR()).
+//         (2) Web-Log-Server: GET /motor?duty=NN (0..100 %) + Slider auf
+//             der Seite. Live-Übernahme falls Motor läuft; Persistenz über
+//             die bestehende safeChange→nvrSemaphore→nvrTask-Kette.
+//         (3) Zentrale Helfer motorStart()/motorStop() ersetzen die
+//             verstreuten ledcWrite(E2,…)-Aufrufe. Kickstart: bei Sollwert
+//             < MOTOR_PWM_KICK_THRESHOLD (~35 %) kurzer Vollgas-Anlauf-
+//             impuls (MOTOR_PWM_KICK_DUTY für MOTOR_PWM_KICK_MS), damit der
+//             3-V-Motor sicher aus dem Stand anläuft.
+//         (4) Neue Konstanten MOTOR_PWM_KICK_THRESHOLD / _KICK_DUTY /
+//             _KICK_MS.
 //   12v02–Max. Einschaltzeit Licht/Mühlrad (Zugschalter S2) auf 30 min
 //         begrenzt – analog Auto-Rückkehr der Menü-Seiten. Neue Konstante
 //         S2_TIMEOUT_MS (1800000 ms). displayTask schaltet E2 (Motor-PWM)
@@ -167,7 +182,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v02"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v03"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -245,9 +260,18 @@ const uint8_t E3 = 27;                                                         /
 // ── Motor-PWM (E2 / GPIO26) ───────────────────────────────────
 // 12v00: DC-Motor 3 V an 5 V-Versorgung → PWM mit 60 % Duty ≙ ~3 V Mittelwert.
 // 20 kHz liegt über der Hörschwelle → kein Surren; 8-Bit-Auflösung reicht.
+// 12v03: MOTOR_PWM_DUTY ist nur noch der Default-Sollwert beim ersten Boot –
+//        der wirksame Wert liegt in der Laufzeit-Variable motor_duty, ist
+//        über den Web-Slider (/motor) zur Laufzeit verstellbar und wird in
+//        NVS persistiert. Kickstart: bei Sollwert < MOTOR_PWM_KICK_THRESHOLD
+//        läuft der 3-V-Motor evtl. nicht aus dem Stand an → kurzer Vollgas-
+//        Impuls (MOTOR_PWM_KICK_DUTY für MOTOR_PWM_KICK_MS), dann Sollwert.
 #define MOTOR_PWM_FREQ 20000UL                                                 // 20 kHz Trägerfrequenz (über Hörschwelle)
 #define MOTOR_PWM_RES      8                                                   // 8-Bit Auflösung → Duty-Bereich 0..255
-#define MOTOR_PWM_DUTY   153                                                   // ~60 % Duty ≙ 3 V Mittelwert aus 5 V
+#define MOTOR_PWM_DUTY   153                                                   // Default-Sollwert beim ersten Boot: ~60 % Duty ≙ 3 V aus 5 V
+#define MOTOR_PWM_KICK_THRESHOLD  89                                           // < ~35 % Duty (89/255) → Anlauf-Kickstart nötig
+#define MOTOR_PWM_KICK_DUTY      255                                           // Vollgas-Impuls beim Kickstart
+#define MOTOR_PWM_KICK_MS        150                                           // Dauer des Kickstart-Impulses [ms]
 
 // ── Stack-Größen (Bytes) ──────────────────────────────────────
 // Angepasst auf Basis der Stack High-Water Marks aus stackMonTask.
