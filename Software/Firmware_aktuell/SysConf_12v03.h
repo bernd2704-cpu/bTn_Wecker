@@ -20,6 +20,8 @@
 //             3-V-Motor sicher aus dem Stand anläuft.
 //         (4) Neue Konstanten MOTOR_PWM_KICK_THRESHOLD / _KICK_DUTY /
 //             _KICK_MS.
+//         (5) STACK_WIFI von 2000 auf 2240 Bytes erhöht (wifiTask
+//             benötigte unter ungünstigen Reconnect-Pfaden mehr Reserve).
 //   12v02–Max. Einschaltzeit Licht/Mühlrad (Zugschalter S2) auf 30 min
 //         begrenzt – analog Auto-Rückkehr der Menü-Seiten. Neue Konstante
 //         S2_TIMEOUT_MS (1800000 ms). displayTask schaltet E2 (Motor-PWM)
@@ -278,7 +280,7 @@ const uint8_t E3 = 27;                                                         /
 // setup() verwendet diese Konstanten direkt – Änderungen hier wirken sofort.
 #define STACK_TOUCH     2880                                                   // touchTask
 #define STACK_ALARM     2128                                                   // alarmTask
-#define STACK_WIFI      2000                                                   // wifiTask
+#define STACK_WIFI      2240                                                   // wifiTask
 #define STACK_NVR       2304                                                   // nvrTask
 #define STACK_STACKMON  2912                                                   // stackMonTask
 #define STACK_WATCHDOG  1344                                                   // watchdogTask
