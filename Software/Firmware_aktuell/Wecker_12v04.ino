@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_12v03.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_12v04.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
@@ -1657,6 +1657,18 @@ static void displayTask(void *pvParam) {
         ntpSyncPending = false;
         memcpy(datum_sync, datum_sync_tmp, sizeof(datum_sync));
         memcpy(zeit_sync,  zeit_sync_tmp,  sizeof(zeit_sync));
+
+        // 12v04: Reset-Zeitstempel ("letzter Reset" im Web-Log) nachtragen,
+        // falls beim Boot kein WLAN/NTP zustande kam (z.B. nach Stromausfall,
+        // Router noch nicht oben) und snapNtpTime in setup() nie gesetzt wurde.
+        // Rekonstruiert den tatsächlichen Reset-Zeitpunkt aus aktueller Zeit
+        // minus Uptime (NTP ist hier gerade erst synchron geworden).
+        if (snapNtpTime[0] == '\0') {
+          time_t reset_t = time(nullptr) - (time_t)(millis() / 1000UL);
+          struct tm tm_reset;
+          localtime_r(&reset_t, &tm_reset);
+          strftime(snapNtpTime, sizeof(snapNtpTime), "%d.%m.%Y %H:%M:%S", &tm_reset);
+        }
       }
 
       // WiFi-Verbindungsdaten sicher übertragen (wifiTask schrieb in tmp-Puffer auf Core 0)
@@ -2302,7 +2314,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v03.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v04.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };
