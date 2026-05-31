@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v03
+Basis 4v1  →  12v04
 
 ## Kategorien
 
@@ -193,4 +193,10 @@ Basis 4v1  →  12v03
 | 12v03 | Funktion | Kickstart: liegt der Sollwert unter `MOTOR_PWM_KICK_THRESHOLD` (~35 % Duty), läuft der 3-V-Motor evtl. nicht aus dem Stand an → kurzer Vollgas-Anlaufimpuls (`MOTOR_PWM_KICK_DUTY` für `MOTOR_PWM_KICK_MS`), dann Sollwert. Neue zentrale Konstanten `MOTOR_PWM_KICK_THRESHOLD` / `_KICK_DUTY` / `_KICK_MS`. |
 | 12v03 | Refactoring | Zentrale Helfer `motorStart()` / `motorStop()` ersetzen die verstreuten `ledcWrite(E2, …)`-Aufrufe in `runAlarmMachine`, am S2-Zugschalter und beim S2-Timeout. Persistenz über die bestehende `safeChange`→`nvrSemaphore`→`nvrTask`-Kette (kein Flash-Zugriff im HTTP-Handler). |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v03
+## Version 12v04
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v04 | Bugfix | Web-Log „Allgemeines Log – letzter Reset" zeigte nach einem Stromausfall kein Datum/keine Uhrzeit mehr (nur „–"), während der Reset-Zähler korrekt um 1 hochzählte. Ursache: Der Zeitstempel `snapNtpTime` wird nur in `setup()` nach erfolgreicher NTP-Synchronisation gesetzt; bootet der ESP32 nach Stromausfall schneller als der Router, scheitert die WLAN-Verbindung beim Start und der gesamte NTP-Block (inkl. Befüllung von `snapNtpTime`) wird übersprungen. `displayTask` trägt den Reset-Zeitstempel nun beim ersten NTP-Sync nach dem Boot nach (über `ntpSyncPending`) und rekonstruiert den tatsächlichen Reset-Zeitpunkt aus aktueller Zeit minus Uptime (`millis()`). Der Reset-Zähler war nie betroffen (NVS, unabhängig von WLAN/NTP). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v04

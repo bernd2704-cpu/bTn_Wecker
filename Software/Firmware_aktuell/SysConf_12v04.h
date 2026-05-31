@@ -1,10 +1,67 @@
 #pragma once
-// SysConf_11v05.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 11v05
-// Datei-Version    : 11v05
+// SysConf_12v04.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v04
+// Datei-Version    : 12v04
 // Boardverwalter   : esp32 3.3.8 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v04–Web-Log „letzter Reset" auch nach Stromausfall mit Datum/Uhrzeit:
+//         snapNtpTime wurde bisher nur in setup() nach erfolgreicher NTP-
+//         Synchronisation gesetzt. Kam beim (Kalt-)Start kein WLAN/NTP
+//         zustande (z.B. Router nach Stromausfall noch nicht oben), blieb
+//         das Feld leer und die Web-Log-Zeile zeigte „–". displayTask trägt
+//         den Reset-Zeitstempel jetzt beim ersten NTP-Sync nach (über
+//         ntpSyncPending) und rekonstruiert den tatsächlichen Reset-Zeitpunkt
+//         aus aktueller Zeit minus Uptime. resetCount war nie betroffen
+//         (NVS, unabhängig von WLAN/NTP).
+//   12v03–Mühlrad-Motor-Pulsweite zur Laufzeit über Web-Slider verstellbar:
+//         (1) MOTOR_PWM_DUTY ist nur noch der Default-Sollwert beim ersten
+//             Boot; der wirksame Wert liegt in der Laufzeit-Variable
+//             motor_duty (0..255) und wird in NVS persistiert
+//             (Schlüssel "motor_duty", in writeNVR()/readNVR()).
+//         (2) Web-Log-Server: GET /motor?duty=NN (0..100 %) + Slider auf
+//             der Seite. Live-Übernahme falls Motor läuft; Persistenz über
+//             die bestehende safeChange→nvrSemaphore→nvrTask-Kette.
+//         (3) Zentrale Helfer motorStart()/motorStop() ersetzen die
+//             verstreuten ledcWrite(E2,…)-Aufrufe. Kickstart: bei Sollwert
+//             < MOTOR_PWM_KICK_THRESHOLD (~35 %) kurzer Vollgas-Anlauf-
+//             impuls (MOTOR_PWM_KICK_DUTY für MOTOR_PWM_KICK_MS), damit der
+//             3-V-Motor sicher aus dem Stand anläuft.
+//         (4) Neue Konstanten MOTOR_PWM_KICK_THRESHOLD / _KICK_DUTY /
+//             _KICK_MS.
+//         (5) STACK_WIFI von 2000 auf 2240 Bytes erhöht (wifiTask
+//             benötigte unter ungünstigen Reconnect-Pfaden mehr Reserve).
+//   12v02–Max. Einschaltzeit Licht/Mühlrad (Zugschalter S2) auf 30 min
+//         begrenzt – analog Auto-Rückkehr der Menü-Seiten. Neue Konstante
+//         S2_TIMEOUT_MS (1800000 ms). displayTask schaltet E2 (Motor-PWM)
+//         und E3 (Licht) nach Ablauf ab und setzt S2_SW zurück; Zeitstempel
+//         t_start_S2 wird im S2-Handler beim Einschalten gesetzt.
+//        –Web-Log "Allgemeines Log": [xxx]-Tag wird mit Leerzeichen auf
+//         feste Breite WEBLOG_TAG_WIDTH (12 Zeichen) aufgefüllt, damit
+//         der Text dahinter immer in derselben Spalte beginnt.
+//   12v01–Stack-Größen neu vorgegeben (Bytes): touchTask 2880,
+//         wifiTask 2000, nvrTask 2304, inputTask 2240,
+//         displayTask 2176, alarmTask 2128, watchdogTask 1344,
+//         stackMonTask 2912. webLogTask (4096) unverändert.
+//         Werte direkt als STACK_*-Konstanten gesetzt – setup()
+//         übernimmt sie ohne weitere Codeänderung.
+//   12v00–Hardware-Erweiterung "Motor + LED-Streifen" (siehe
+//         Hardware/hardware_notesmotor_led_driver.md):
+//         (1) E2 (GPIO26, Wasserrad-Motor) wird jetzt per PWM über
+//             LEDC betrieben – 20 kHz / 8 Bit / 60 % Duty (=153),
+//             um den 3-V-Motor an 5 V mit Mittelwert ~3 V zu treiben
+//             ohne hörbares Schaltgeräusch. Ansteuerung in alarmTask
+//             und S2-Zugschalter auf ledcWrite(E2, MOTOR_PWM_DUTY / 0)
+//             umgestellt. pinMode(E2,OUTPUT) in setup() entfällt –
+//             ledcAttach übernimmt die Pinkonfiguration.
+//         (2) E3 (GPIO27, LED-Streifen) bleibt digitalWrite(HIGH/LOW):
+//             ohmsche Last mit Vorwiderstand 47 Ω (48 mA bei 5 V),
+//             kein PWM erforderlich (siehe hardware_notes).
+//         (3) Neue Konstanten MOTOR_PWM_FREQ / MOTOR_PWM_RES /
+//             MOTOR_PWM_DUTY – zentral änderbar analog zu STACK_*.
+//         (4) Beide MOSFET-Kanäle verwenden IRLML6344TRPBF mit
+//             100 Ω Gate-Reihe und 10 kΩ Pull-Down nach GND
+//             (Boot-Safe-Pegel während Pin-Konfiguration).
 //   11v05–Info-Seite: WLAN-Reset von T0 auf T3 verlegt – einheitliche
 //         Bedienung (Taste + = T3 = WLAN-Reset, Taste - = T4 = Werksreset).
 //         Info-Seite neu angeordnet: Z1 Versionsstring, Z2 Web-Log-Adresse,
@@ -136,7 +193,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "11v05"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v04"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -192,6 +249,7 @@ const uint32_t BTN_LOCKOUT_MS       = 1000;                                    /
 const uint32_t CUCKOO_DURATION_MS   = 7500;                                    // Kuckuck-Laufzeit
 const uint32_t AUTO_RETURN_MS       = 20000;                                   // Auto-Rückkehr zu Seite 0
 const uint32_t DISPLAY_TIMEOUT_MS   = 300000UL;                                // OLED aus nach 5 min ohne Touch-Event
+const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               // 12v02: Licht/Mühlrad (Zugschalter S2) aus nach 30 min – analog AUTO_RETURN_MS
 const uint32_t ALARM_POLL_MS        = 5000;                                    // Alarm-Nachlauf Prüfintervall
 const uint32_t WIFI_RECONNECT_MS    = 3000;                                    // WiFi-Reconnect Wiederholrate
 const uint32_t NVR_COMMIT_DELAY_MS  = 2000;                                    // 11v00: Ruhezeit nach letztem Event vor NVR-Commit (Flash-Wear-Schutz)
@@ -206,24 +264,41 @@ const uint8_t S2 = 33;                                                         /
 const uint8_t S3 = 0;                                                          // GPIO0  – Info-Seite ein/aus
 
 // ── Ausgangs-Pins ────────────────────────────────────────────
-const uint8_t E1 = 25;                                                         // GPIO25 – Kuckuck
-const uint8_t E2 = 26;                                                         // GPIO26 – Mühlrad / Motor
-const uint8_t E3 = 27;                                                         // GPIO27 – Licht
+const uint8_t E1 = 25;                                                         // GPIO25 – Kuckuck (digital, MOSFET)
+const uint8_t E2 = 26;                                                         // GPIO26 – Mühlrad / DC-Motor 3 V (PWM via LEDC, MOSFET + Freilaufdiode 1N4148)
+const uint8_t E3 = 27;                                                         // GPIO27 – LED-Streifen Licht (digital, MOSFET + 47 Ω Vorwiderstand High-Side)
+
+// ── Motor-PWM (E2 / GPIO26) ───────────────────────────────────
+// 12v00: DC-Motor 3 V an 5 V-Versorgung → PWM mit 60 % Duty ≙ ~3 V Mittelwert.
+// 20 kHz liegt über der Hörschwelle → kein Surren; 8-Bit-Auflösung reicht.
+// 12v03: MOTOR_PWM_DUTY ist nur noch der Default-Sollwert beim ersten Boot –
+//        der wirksame Wert liegt in der Laufzeit-Variable motor_duty, ist
+//        über den Web-Slider (/motor) zur Laufzeit verstellbar und wird in
+//        NVS persistiert. Kickstart: bei Sollwert < MOTOR_PWM_KICK_THRESHOLD
+//        läuft der 3-V-Motor evtl. nicht aus dem Stand an → kurzer Vollgas-
+//        Impuls (MOTOR_PWM_KICK_DUTY für MOTOR_PWM_KICK_MS), dann Sollwert.
+#define MOTOR_PWM_FREQ 20000UL                                                 // 20 kHz Trägerfrequenz (über Hörschwelle)
+#define MOTOR_PWM_RES      8                                                   // 8-Bit Auflösung → Duty-Bereich 0..255
+#define MOTOR_PWM_DUTY   153                                                   // Default-Sollwert beim ersten Boot: ~60 % Duty ≙ 3 V aus 5 V
+#define MOTOR_PWM_KICK_THRESHOLD  89                                           // < ~35 % Duty (89/255) → Anlauf-Kickstart nötig
+#define MOTOR_PWM_KICK_DUTY      255                                           // Vollgas-Impuls beim Kickstart
+#define MOTOR_PWM_KICK_MS        150                                           // Dauer des Kickstart-Impulses [ms]
 
 // ── Stack-Größen (Bytes) ──────────────────────────────────────
 // Angepasst auf Basis der Stack High-Water Marks aus stackMonTask.
 // setup() verwendet diese Konstanten direkt – Änderungen hier wirken sofort.
-#define STACK_TOUCH     3072                                                   // touchTask
-#define STACK_ALARM     2048                                                   // alarmTask
-#define STACK_WIFI      2560                                                   // wifiTask
-#define STACK_NVR       2560                                                   // nvrTask
-#define STACK_STACKMON  3072                                                   // stackMonTask
-#define STACK_WATCHDOG  1536                                                   // watchdogTask
-#define STACK_INPUT     2560                                                   // inputTask
-#define STACK_DISPLAY   2560                                                   // displayTask
+#define STACK_TOUCH     2880                                                   // touchTask
+#define STACK_ALARM     2128                                                   // alarmTask
+#define STACK_WIFI      2240                                                   // wifiTask
+#define STACK_NVR       2304                                                   // nvrTask
+#define STACK_STACKMON  2912                                                   // stackMonTask
+#define STACK_WATCHDOG  1344                                                   // watchdogTask
+#define STACK_INPUT     2240                                                   // inputTask
+#define STACK_DISPLAY   2176                                                   // displayTask
 #define STACK_WEBLOG    4096                                                   // webLogTask (HTTP-Server benötigt mehr Stack)
 
 // ── Web-Logger ────────────────────────────────────────────────
 #define WEBLOG_PORT      8080                                                  // HTTP-Port des Log-Servers (8080 ≠ 80 des WiFi-Konfigurators)
 #define WEBLOG_LINES       40                                                  // Anzahl Zeilen auf der Seite
 #define WEBLOG_LINE_LEN   128                                                  // maximale Zeichenanzahl je Zeile
+#define WEBLOG_TAG_WIDTH   12                                                  // [xxx]-Tag im "Allgemeines Log" auf feste Spaltenbreite auffüllen

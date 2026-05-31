@@ -1,10 +1,19 @@
 #pragma once
-// SysConf_12v03.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v03
-// Datei-Version    : 12v03
+// SysConf_12v04.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v04
+// Datei-Version    : 12v04
 // Boardverwalter   : esp32 3.3.8 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v04–Web-Log „letzter Reset" auch nach Stromausfall mit Datum/Uhrzeit:
+//         snapNtpTime wurde bisher nur in setup() nach erfolgreicher NTP-
+//         Synchronisation gesetzt. Kam beim (Kalt-)Start kein WLAN/NTP
+//         zustande (z.B. Router nach Stromausfall noch nicht oben), blieb
+//         das Feld leer und die Web-Log-Zeile zeigte „–". displayTask trägt
+//         den Reset-Zeitstempel jetzt beim ersten NTP-Sync nach (über
+//         ntpSyncPending) und rekonstruiert den tatsächlichen Reset-Zeitpunkt
+//         aus aktueller Zeit minus Uptime. resetCount war nie betroffen
+//         (NVS, unabhängig von WLAN/NTP).
 //   12v03–Mühlrad-Motor-Pulsweite zur Laufzeit über Web-Slider verstellbar:
 //         (1) MOTOR_PWM_DUTY ist nur noch der Default-Sollwert beim ersten
 //             Boot; der wirksame Wert liegt in der Laufzeit-Variable
@@ -184,7 +193,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v03"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v04"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
