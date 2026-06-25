@@ -51,7 +51,7 @@ bTn_Wecker_Projekt/
 
 | Bibliothek                | Version   | Quelle             |
 |---------------------------|-----------|--------------------|
-| ESP32 Arduino Core        | 3.3.8     | Espressif          |
+| ESP32 Arduino Core        | 3.3.10    | Espressif          |
 | SSD1306Wire ESP32-ESP8266 | aktuell   | Arduino Library    |
 | DFRobotDFPlayerMini       | aktuell   | Arduino Library    |
 | FreeRTOS                  | (im Core) | Espressif          |
