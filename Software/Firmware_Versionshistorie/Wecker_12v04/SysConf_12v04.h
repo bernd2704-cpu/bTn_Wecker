@@ -2,7 +2,7 @@
 // SysConf_12v04.h – Konfigurationskonstanten für bTn Wecker
 // Firmware-Version : 12v04
 // Datei-Version    : 12v04
-// Boardverwalter   : esp32 3.3.8 von Espressif Systems
+// Boardverwalter   : esp32 3.3.10 von Espressif Systems
 //
 // Änderungshistorie:
 //   12v04–Web-Log „letzter Reset" auch nach Stromausfall mit Datum/Uhrzeit:
