@@ -1,28 +1,64 @@
 # bTn Wecker – Projektkontext für Claude Code
 
 ## Hardware
+
 ESP32 Dev Kit C V4, SSD1306 OLED 128x64 I2C (0x3C, SDA=21, SCL=22),
 DFPlayer Mini (Serial2, RX=16, TX=17), Touch T0=GPIO4/T2=GPIO2/T3=GPIO15/T4=GPIO13,
 Taster S1=GPIO32/S2=GPIO33/S3=GPIO0, Ausgänge E1=GPIO25/E2=GPIO26/E3=GPIO27
 
+**Touch-Beschaltung:** je 1kΩ Reihenwiderstand + 4,7nF nach GND (GPIO-seitig), ca. 30cm twisted pair
+
+**Ausgangsschaltung E2/E3:** IRLML6344TRPBF MOSFET, Gate 330Ω, Freilaufdiode 1N4448, PWM 20kHz.
+DFPlayer Mini GND als Sternpunkt-Topologie.
+
 ## Aktuelle Version
+
 Firmware 12v04, Konfiguration SysConf_12v04.h
 
 ## Architektur
+
 FreeRTOS, 9 Tasks auf 2 Cores, Arduino IDE / ESP32 Core 3.3.10
 Stack-Größen als STACK_*-Konstanten in SysConf_*.h
 
 ## Verwendete externe Libraries
-- SSD1306Wire (Header `SSD1306Wire.h`): ThingPulse *esp8266-oled-ssd1306*,
+
+- **SSD1306Wire** (`SSD1306Wire.h`): ThingPulse *esp8266-oled-ssd1306*,
   Autoren Daniel Eichhorn / Fabrice Weinberg.
   Quelle: https://github.com/ThingPulse/esp8266-oled-ssd1306
-  Hinweis: Nicht zu verwechseln mit Alexander Pronins `SSD1306wire` (kleines w,
-  nur AVR, text-only) – wird hier NICHT verwendet.
-- DFRobotDFPlayerMini (DFPlayer Mini Steuerung über Serial2)
+  ⚠ Nicht zu verwechseln mit Alexander Pronins `SSD1306wire` (kleines w, nur AVR,
+  text-only) – wird hier NICHT verwendet.
+- **DFRobotDFPlayerMini**: DFPlayer Mini Steuerung über Serial2
 
-## Wichtige Regeln
-- Niemals vTaskDelay() unter gehaltenem Mutex aufrufen
-- Alle Serial-Ausgaben nach WiFi-Connect über webLogf() statt Serial.*
+## Pflichtregeln
+
+- Niemals `vTaskDelay()` unter gehaltenem Mutex aufrufen
+- Alle Serial-Ausgaben nach WiFi-Connect über `webLogf()` statt `Serial.*`
 - Versionsnummer bei jeder Änderung inkrementieren
-- Stack-Größen nur über STACK_*-Konstanten in SysConf ändern
-- SysConf immer mit Versionsnummer benennen (SysConf_Xv0.h)
+- Stack-Größen nur über `STACK_*`-Konstanten in SysConf ändern
+- SysConf immer mit Versionsnummer benennen (`SysConf_XvYY.h`)
+- Neue Schaltungen: alle Grenzwerte explizit gegen Datenblatt prüfen
+  (GPIO-Strom, Vds, Id, Pd, Verlustleistung Widerstände)
+
+## Versionsformat
+
+Format: `NvNN` (z.B. `12v04`) – kein führendes `v`.
+
+## Projektstruktur
+
+```
+bTn_Wecker/
+├── CLAUDE.md
+├── README.md
+├── Dokumentation/
+│   ├── Bedienungsanleitung/
+│   ├── Diagramme/
+│   └── Technisch/                 ← Changelog, Funktionsreferenz
+├── Hardware/
+│   ├── Fotos/
+│   ├── Schaltplan/
+│   └── Stückliste/
+└── Software/
+    ├── Bibliotheken/
+    ├── Firmware_aktuell/          ← Wecker_12v04.ino, SysConf_12v04.h, WEB.h
+    └── Firmware_Versionshistorie/ ← ältere 12vNN-Stände
+```
