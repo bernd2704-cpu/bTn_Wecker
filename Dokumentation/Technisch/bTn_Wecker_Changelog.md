@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v04
+Basis 4v1  →  12v05
 
 ## Kategorien
 
@@ -199,4 +199,12 @@ Basis 4v1  →  12v04
 |---|---|---|
 | 12v04 | Bugfix | Web-Log „Allgemeines Log – letzter Reset" zeigte nach einem Stromausfall kein Datum/keine Uhrzeit mehr (nur „–"), während der Reset-Zähler korrekt um 1 hochzählte. Ursache: Der Zeitstempel `snapNtpTime` wird nur in `setup()` nach erfolgreicher NTP-Synchronisation gesetzt; bootet der ESP32 nach Stromausfall schneller als der Router, scheitert die WLAN-Verbindung beim Start und der gesamte NTP-Block (inkl. Befüllung von `snapNtpTime`) wird übersprungen. `displayTask` trägt den Reset-Zeitstempel nun beim ersten NTP-Sync nach dem Boot nach (über `ntpSyncPending`) und rekonstruiert den tatsächlichen Reset-Zeitpunkt aus aktueller Zeit minus Uptime (`millis()`). Der Reset-Zähler war nie betroffen (NVS, unabhängig von WLAN/NTP). |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v04
+## Version 12v05
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v05 | Stabilität | DFPlayer Start-Check: Neue Funktion `verifyPlayStarted()` fragt direkt nach `player.playFolder()` (Alarm 1 + Alarm 2 in `runAlarmMachine`) per `readState()`-Doppel-Poll (analog `ALARM_RUNNING`) ab, ob der DFPlayer den Play-Befehl tatsächlich angenommen hat. Bisher wurde weder der ACK-Modus aus `player.begin()` noch der Player-Status nach dem Play-Befehl ausgewertet – ein nicht reagierender DFPlayer (Kabel ab, Modul defekt, SD-Karte fehlt) blieb unbemerkt, und der Alarm (Motor/Licht) lief mangels Zeitbegrenzung in `ALARM_RUNNING` potenziell unbegrenzt weiter. Bei `st<=0` (0=idle, -1=UART-Timeout) jetzt `webLogf()`-Fehlermeldung mit Alarm-Label und Dateinummer. |
+| 12v05 | Stabilität | DFPlayer-Absturzerkennung: Bestätigt `verifyPlayStarted()` den Play-Befehl nicht, gilt der DFPlayer als abgestürzt – die neue Funktion `triggerAlarm()` (löst jetzt beide Alarme aus, ersetzt den bisherigen Inline-Code in `runAlarmMachine`) löst dann unmittelbar `ESP.restart()` aus (einzige verlässliche Wiederherstellung für ein hängendes DFPlayer/UART). |
+| 12v05 | Stabilität | Verpasster-Alarm-Retry nach Absturz-Neustart: `triggerAlarm()` hinterlegt Alarmnummer, Dateinummer und Minute in `RTC_NOINIT_ATTR`-Variablen (`rtcRetryMagic`/`-Alarm`/`-FileNo`/`-Min`), bevor es `ESP.restart()` auslöst – diese überstehen den Software-Reset. `setup()` prüft `rtcRetryMagic` nach der DFPlayer-Initialisierung und ruft `triggerAlarm()` mit den gemerkten Werten erneut auf, sodass der durch den Absturz verpasste Alarm nach dem Neustart doch noch abgespielt wird. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v05

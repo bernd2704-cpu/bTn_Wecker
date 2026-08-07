@@ -1,10 +1,26 @@
 #pragma once
-// SysConf_12v04.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v04
-// Datei-Version    : 12v04
+// SysConf_12v05.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v05
+// Datei-Version    : 12v05
 // Boardverwalter   : esp32 3.3.10 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v05–DFPlayer Start-Check: verifyPlayStarted() bestätigt direkt nach
+//         playFolder() (Alarm 1 + Alarm 2) per readState()-Doppel-Poll, dass
+//         der DFPlayer den Play-Befehl tatsächlich angenommen hat. Bisher
+//         wurde weder der ACK-Modus noch der Player-Status nach dem
+//         Play-Befehl ausgewertet – ein nicht reagierender DFPlayer (Kabel
+//         ab, Modul defekt, SD-Karte fehlt) blieb unbemerkt und der Alarm
+//         (Motor/Licht) lief mangels Zeitbegrenzung in ALARM_RUNNING
+//         potenziell unbegrenzt weiter. Bei st<=0 (0=idle, -1=UART-Timeout)
+//         jetzt webLogf()-Fehlermeldung mit Alarm-Label und Dateinummer;
+//         DFPlayer gilt dann als abgestürzt → ESP.restart() als einzige
+//         verlässliche Wiederherstellung. Der ausgefallene Alarm (Nummer,
+//         Datei, Minute) wird zuvor in RTC_NOINIT_ATTR-Variablen
+//         (rtcRetryMagic/-Alarm/-FileNo/-Min) hinterlegt – diese überstehen
+//         ESP.restart() – und in setup() nach dem Neustart über denselben
+//         triggerAlarm()-Pfad erneut ausgelöst, sodass der verpasste Alarm
+//         nicht ausfällt.
 //   12v04–Web-Log „letzter Reset" auch nach Stromausfall mit Datum/Uhrzeit:
 //         snapNtpTime wurde bisher nur in setup() nach erfolgreicher NTP-
 //         Synchronisation gesetzt. Kam beim (Kalt-)Start kein WLAN/NTP
@@ -193,7 +209,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v04"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v05"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.

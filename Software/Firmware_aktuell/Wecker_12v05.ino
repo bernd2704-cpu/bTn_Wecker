@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_12v04.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_12v05.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
@@ -1141,6 +1141,18 @@ static UiState uiDispatch(UiState s, uint8_t evt) {
 static uint8_t lastA1Min = 0xFF;  // Alarm-Minuten-Sperre (file-scope: auch vom manuellen Abbruch setzbar)
 static uint8_t lastA2Min = 0xFF;
 
+// ── DFPlayer-Absturz-Neustart: Alarm-Merker in RTC-Speicher ──
+// RTC_NOINIT_ATTR übersteht ESP.restart() (Software-Reset, kein Power-On) –
+// dadurch weiß setup() nach einem durch verifyPlayStarted()/triggerAlarm()
+// ausgelösten Neustart, welcher Alarm nicht mehr abgespielt werden konnte,
+// und löst ihn dort erneut aus. rtcRetryMagic dient als Gültigkeits-Flag,
+// da RTC_NOINIT_ATTR nach echtem Power-On undefinierten Inhalt hat.
+#define RTC_RETRY_MAGIC 0xA1A2B3C4UL
+RTC_NOINIT_ATTR uint32_t rtcRetryMagic;
+RTC_NOINIT_ATTR uint8_t  rtcRetryAlarm;    // 1 oder 2
+RTC_NOINIT_ATTR uint8_t  rtcRetryFileNo;   // sound1_assigned bzw. sound2_assigned zum Ausfallzeitpunkt
+RTC_NOINIT_ATTR uint8_t  rtcRetryMin;      // Minute zum Ausfallzeitpunkt – für lastA1Min/lastA2Min nach Retry
+
 // Display einschalten, falls abgeschaltet – analog zum Touch-Wake in inputTask.
 static void wakeDisplay() {
   if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -1180,6 +1192,57 @@ static void motorStop() {
   motorRunning = false;
 }
 
+// ── DFPlayer Start-Check ──────────────────────────────────────
+// Doppel-Poll wie in ALARM_RUNNING (Zeile ~1231): bestätigt direkt nach
+// playFolder(), dass der DFPlayer den Play-Befehl tatsächlich angenommen
+// hat. st<=0 (0=idle, -1=UART-Timeout) → Befehl vermutlich nicht angekommen,
+// DFPlayer wahrscheinlich abgestürzt. Rückgabe false löst beim Aufrufer
+// einen ESP.restart() aus (einzige verlässliche Wiederherstellung für ein
+// hängendes DFPlayer/UART).
+static bool verifyPlayStarted(const char* label, uint8_t fileNo) {
+  int16_t st = -1;
+  if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+    st = player.readState();
+    xSemaphoreGive(playerMutex);
+  }
+  vTaskDelay(pdMS_TO_TICKS(1));                                                        // außerhalb Mutex: DFPlayer-Antwort stabilisieren
+  if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+    st = player.readState();
+    xSemaphoreGive(playerMutex);
+  }
+  if (st <= 0) {
+    webLogf("[DFPlayer] %s: kein Start-Status nach playFolder (st=%d, Datei %d) – DFPlayer vermutlich abgestürzt, Neustart", label, st, fileNo);
+    return false;
+  }
+  return true;
+}
+
+// Startet Sound + Motor + Licht für Alarm 1 (alarmNum=1) oder Alarm 2
+// (alarmNum=2) und geht in ALARM_RUNNING über. Bestätigt der DFPlayer den
+// Play-Befehl nicht (verifyPlayStarted()==false), hinterlegt die Funktion
+// den Alarm im RTC-Merker (siehe rtcRetryMagic) und löst ESP.restart() aus –
+// setup() löst den Alarm nach dem Neustart erneut über denselben Pfad aus.
+static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min) {
+  const char* label = (alarmNum == 1) ? "Alarm 1" : "Alarm 2";
+  if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+    player.playFolder(1, fileNo);
+    xSemaphoreGive(playerMutex);
+    if (!verifyPlayStarted(label, fileNo)) {
+      rtcRetryAlarm  = alarmNum;                                                         // DFPlayer reagiert nicht – nach Neustart in setup() erneut auslösen
+      rtcRetryFileNo = fileNo;
+      rtcRetryMin    = min;
+      rtcRetryMagic  = RTC_RETRY_MAGIC;
+      ESP.restart();
+    }
+    if (alarmNum == 1) { lastA1Min = min; } else { lastA2Min = min; }                     // erst nach erfolgreichem Start sperren
+    motorStart();                                                                        // 12v03: Motor via PWM + Kickstart (respektiert wheel_on)
+    if (light_on) { digitalWrite(E3, HIGH); }
+    t_start6   = millis();
+    alarmState = ALARM_RUNNING;                                                          // → ALARM_RUNNING
+    wakeDisplay();
+  }
+}
+
 // ── Alarm-State-Machine ──────────────────────────────────────
 // sec/min/hour: atomarer Zeitschnappschuss aus alarmTask – keine Race Condition mit displayTask
 static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour) {
@@ -1194,30 +1257,12 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour) {
       // Alarm 1 prüfen
       if (a1_on && sec == 0 && min == a1_min && hour == a1_hour
           && min != lastA1Min) {                                                         // nicht dieselbe Minute wiederholen
-        if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
-          player.playFolder(1, sound1_assigned);
-          xSemaphoreGive(playerMutex);
-          lastA1Min = min;                                                               // erst nach erfolgreichem Start sperren
-          motorStart();                                                                  // 12v03: Motor via PWM + Kickstart (respektiert wheel_on)
-          if (light_on) { digitalWrite(E3, HIGH); }
-          t_start6   = millis();
-          alarmState = ALARM_RUNNING;                                                    // → ALARM_RUNNING
-          wakeDisplay();
-        }
+        triggerAlarm(1, sound1_assigned, min);
       }
       // Alarm 2 prüfen (else if → Alarm 1 hat Vorrang bei gleicher Zeit)
       else if (a2_on && sec == 0 && min == a2_min && hour == a2_hour
           && min != lastA2Min) {                                                         // nicht dieselbe Minute wiederholen
-        if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
-          player.playFolder(1, sound2_assigned);
-          xSemaphoreGive(playerMutex);
-          lastA2Min = min;                                                               // erst nach erfolgreichem Start sperren
-          motorStart();                                                                  // 12v03: Motor via PWM + Kickstart (respektiert wheel_on)
-          if (light_on) { digitalWrite(E3, HIGH); }
-          t_start6   = millis();
-          alarmState = ALARM_RUNNING;                                                    // → ALARM_RUNNING
-          wakeDisplay();
-        }
+        triggerAlarm(2, sound2_assigned, min);
       }
       break;
 
@@ -2272,6 +2317,18 @@ void setup() {
   snprintf(str_reset, sizeof(str_reset), "%04lu", (unsigned long)resetCount);            // rechtsbündig 4-stellig
   webLogf("[DFPlayer] mp3Count: %d", mp3Count);
 
+  // ── DFPlayer-Absturz-Neustart: verpassten Alarm erneut auslösen ──
+  // rtcRetryMagic übersteht ESP.restart() (RTC_NOINIT_ATTR) und wird nur
+  // durch triggerAlarm()/verifyPlayStarted() bei fehlgeschlagenem Play-
+  // Befehl gesetzt – ein echter Power-On liefert hier undefinierten
+  // Speicherinhalt, daher die Prüfung gegen RTC_RETRY_MAGIC statt nur != 0.
+  if (rtcRetryMagic == RTC_RETRY_MAGIC) {
+    rtcRetryMagic = 0;                                                                    // Merker sofort löschen – kein Retry-Loop bei erneutem Fehlschlag
+    webLogf("[DFPlayer] Nach Neustart: %s wird erneut ausgelöst (Datei %d)",
+            (rtcRetryAlarm == 1) ? "Alarm 1" : "Alarm 2", rtcRetryFileNo);
+    triggerAlarm(rtcRetryAlarm, rtcRetryFileNo, rtcRetryMin);
+  }
+
   // ── Startseite ───────────────────────────────────────────
   // 9v12: showTime() vor snprintf, damit timeinfo sicher gültig ist
   // (ohne WiFi/NTP wurde sie in der NTP-Warteschleife nie aufgerufen
@@ -2314,7 +2371,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v04.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v05.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };
