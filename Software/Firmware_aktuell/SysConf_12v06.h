@@ -2,7 +2,7 @@
 // SysConf_12v06.h – Konfigurationskonstanten für bTn Wecker
 // Firmware-Version : 12v06
 // Datei-Version    : 12v06
-// Boardverwalter   : esp32 3.3.10 von Espressif Systems
+// Boardverwalter   : esp32 3.3.11 von Espressif Systems
 //
 // Änderungshistorie:
 //   12v06–DFPlayer Start-Check: verifyPlayStarted() löste Fehlalarm-Neustarts
