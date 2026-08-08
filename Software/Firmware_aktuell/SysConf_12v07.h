@@ -1,10 +1,17 @@
 #pragma once
-// SysConf_12v06.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v06
-// Datei-Version    : 12v06
+// SysConf_12v07.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v07
+// Datei-Version    : 12v07
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v07–DFPlayer-Absturz-Neustart begrenzt: triggerAlarm() zählte Fehlschläge
+//         bisher nicht mit – ein dauerhaft defekter/nicht angeschlossener
+//         DFPlayer löste eine unbegrenzte ESP.restart()-Schleife aus. Neuer
+//         Zähler rtcRetryCount (RTC_NOINIT_ATTR, übersteht Neustart) bricht
+//         nach ALARM_MAX_RESTARTS (10) Fehlversuchen ab: kein weiterer
+//         Neustart, Alarm bleibt inaktiv, stattdessen roter Fehlereintrag
+//         mit Datum/Uhrzeit im Web-Log ([FEHLER]-Tag).
 //   12v06–DFPlayer Start-Check: verifyPlayStarted() löste Fehlalarm-Neustarts
 //         aus, obwohl der DFPlayer korrekt spielte. Ursache: die Statusabfrage
 //         (readState()) erfolgte nur 1 ms nach playFolder() – der DFPlayer
@@ -217,7 +224,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v06"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v07"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -277,6 +284,7 @@ const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               /
 const uint32_t ALARM_POLL_MS        = 5000;                                    // Alarm-Nachlauf Prüfintervall
 const uint32_t VERIFY_PLAY_DELAY_MS =  500;                                    // 12v06: Start-Check – Wartezeit je Versuch (DFPlayer braucht Zeit zum Laden)
 const uint8_t  VERIFY_PLAY_RETRIES  =    3;                                    // 12v06: Start-Check – Versuche (1 initial + 2 Retries), Reset spätestens nach 1500 ms
+const uint8_t  ALARM_MAX_RESTARTS   =   10;                                    // 12v07: max. ESP.restart()-Versuche je Alarm, danach Abbruch statt Endlos-Neustart
 const uint32_t WIFI_RECONNECT_MS    = 3000;                                    // WiFi-Reconnect Wiederholrate
 const uint32_t NVR_COMMIT_DELAY_MS  = 2000;                                    // 11v00: Ruhezeit nach letztem Event vor NVR-Commit (Flash-Wear-Schutz)
 

@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_12v06.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_12v07.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
@@ -1152,6 +1152,7 @@ RTC_NOINIT_ATTR uint32_t rtcRetryMagic;
 RTC_NOINIT_ATTR uint8_t  rtcRetryAlarm;    // 1 oder 2
 RTC_NOINIT_ATTR uint8_t  rtcRetryFileNo;   // sound1_assigned bzw. sound2_assigned zum Ausfallzeitpunkt
 RTC_NOINIT_ATTR uint8_t  rtcRetryMin;      // Minute zum Ausfallzeitpunkt – für lastA1Min/lastA2Min nach Retry
+RTC_NOINIT_ATTR uint8_t  rtcRetryCount;    // 12v07: bisherige Fehlversuche – nur gültig wenn rtcRetryMagic zuvor gesetzt war
 
 // Display einschalten, falls abgeschaltet – analog zum Touch-Wake in inputTask.
 static void wakeDisplay() {
@@ -1203,7 +1204,8 @@ static void motorStop() {
 // fest. Bleibt st<=0 (0=idle, -1=UART-Timeout) über alle Versuche, gilt der
 // DFPlayer als abgestürzt; Rückgabe false löst beim Aufrufer einen
 // ESP.restart() aus (einzige verlässliche Wiederherstellung für ein
-// hängendes DFPlayer/UART).
+// hängendes DFPlayer/UART) – begrenzt auf ALARM_MAX_RESTARTS Versuche
+// (12v07), siehe triggerAlarm().
 static bool verifyPlayStarted(const char* label, uint8_t fileNo) {
   int16_t st = -1;
   for (uint8_t attempt = 1; attempt <= VERIFY_PLAY_RETRIES; attempt++) {
@@ -1224,15 +1226,32 @@ static bool verifyPlayStarted(const char* label, uint8_t fileNo) {
 // Play-Befehl nicht (verifyPlayStarted()==false), hinterlegt die Funktion
 // den Alarm im RTC-Merker (siehe rtcRetryMagic) und löst ESP.restart() aus –
 // setup() löst den Alarm nach dem Neustart erneut über denselben Pfad aus.
-static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min) {
+// failCount zählt die bisherigen Fehlversuche dieses Alarms mit (0 bei
+// regulärem Erstaufruf aus runAlarmMachine, sonst rtcRetryCount aus setup()).
+// Ab ALARM_MAX_RESTARTS (12v07) bricht die Funktion statt eines weiteren
+// ESP.restart() endgültig ab: kein Neustart mehr, Alarm bleibt inaktiv
+// (Motor/Licht aus – vermeidet Endlos-Neustartschleife bei dauerhaft
+// defektem/nicht angeschlossenem DFPlayer), stattdessen roter Fehlereintrag
+// mit Datum/Uhrzeit im Web-Log ([FEHLER]-Tag, siehe webLogTask()).
+static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t failCount) {
   const char* label = (alarmNum == 1) ? "Alarm 1" : "Alarm 2";
   if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
     player.playFolder(1, fileNo);
     xSemaphoreGive(playerMutex);
     if (!verifyPlayStarted(label, fileNo)) {
+      failCount++;
+      if (failCount >= ALARM_MAX_RESTARTS) {
+        char ts[20];
+        snapTimeStr(ts, sizeof(ts));
+        webLogf("[FEHLER] %s: DFPlayer antwortet nach %u Versuchen weiterhin nicht (Datei %d) – Alarm abgebrochen, %s",
+                label, (unsigned)failCount, fileNo, ts);
+        rtcRetryMagic = 0;                                                                // kein weiterer Retry nach Abbruch
+        return;
+      }
       rtcRetryAlarm  = alarmNum;                                                         // DFPlayer reagiert nicht – nach Neustart in setup() erneut auslösen
       rtcRetryFileNo = fileNo;
       rtcRetryMin    = min;
+      rtcRetryCount  = failCount;
       rtcRetryMagic  = RTC_RETRY_MAGIC;
       ESP.restart();
     }
@@ -1259,12 +1278,12 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour) {
       // Alarm 1 prüfen
       if (a1_on && sec == 0 && min == a1_min && hour == a1_hour
           && min != lastA1Min) {                                                         // nicht dieselbe Minute wiederholen
-        triggerAlarm(1, sound1_assigned, min);
+        triggerAlarm(1, sound1_assigned, min, 0);
       }
       // Alarm 2 prüfen (else if → Alarm 1 hat Vorrang bei gleicher Zeit)
       else if (a2_on && sec == 0 && min == a2_min && hour == a2_hour
           && min != lastA2Min) {                                                         // nicht dieselbe Minute wiederholen
-        triggerAlarm(2, sound2_assigned, min);
+        triggerAlarm(2, sound2_assigned, min, 0);
       }
       break;
 
@@ -2016,7 +2035,7 @@ static void webLogTask(void *pvParam) {
             line += rest;
           }
         }
-        if (line.indexOf("[WATCHDOG]") >= 0 || line.indexOf("[PANIC]") >= 0 || line.indexOf("failed") >= 0)
+        if (line.indexOf("[WATCHDOG]") >= 0 || line.indexOf("[PANIC]") >= 0 || line.indexOf("[FEHLER]") >= 0 || line.indexOf("failed") >= 0)
           html += "<span class='err'>";
         else if (line.indexOf("OK") >= 0 || line.indexOf("ready") >= 0 || line.indexOf("connected") >= 0)
           html += "<span class='ok'>";
@@ -2324,11 +2343,13 @@ void setup() {
   // durch triggerAlarm()/verifyPlayStarted() bei fehlgeschlagenem Play-
   // Befehl gesetzt – ein echter Power-On liefert hier undefinierten
   // Speicherinhalt, daher die Prüfung gegen RTC_RETRY_MAGIC statt nur != 0.
+  // rtcRetryCount (12v07) läuft mit durch triggerAlarm() – ab
+  // ALARM_MAX_RESTARTS Fehlversuchen bricht triggerAlarm() endgültig ab.
   if (rtcRetryMagic == RTC_RETRY_MAGIC) {
     rtcRetryMagic = 0;                                                                    // Merker sofort löschen – kein Retry-Loop bei erneutem Fehlschlag
-    webLogf("[DFPlayer] Nach Neustart: %s wird erneut ausgelöst (Datei %d)",
-            (rtcRetryAlarm == 1) ? "Alarm 1" : "Alarm 2", rtcRetryFileNo);
-    triggerAlarm(rtcRetryAlarm, rtcRetryFileNo, rtcRetryMin);
+    webLogf("[DFPlayer] Nach Neustart: %s wird erneut ausgelöst (Datei %d, Versuch %u/%u)",
+            (rtcRetryAlarm == 1) ? "Alarm 1" : "Alarm 2", rtcRetryFileNo, (unsigned)rtcRetryCount + 1, (unsigned)ALARM_MAX_RESTARTS);
+    triggerAlarm(rtcRetryAlarm, rtcRetryFileNo, rtcRetryMin, rtcRetryCount);
   }
 
   // ── Startseite ───────────────────────────────────────────
@@ -2373,7 +2394,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v06.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v07.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

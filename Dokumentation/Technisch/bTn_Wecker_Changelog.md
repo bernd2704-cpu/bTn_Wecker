@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v06
+Basis 4v1  →  12v07
 
 ## Kategorien
 
@@ -213,4 +213,12 @@ Basis 4v1  →  12v06
 |---|---|---|
 | 12v06 | Bugfix | DFPlayer Start-Check löste Fehlalarm-Neustarts aus, obwohl der DFPlayer korrekt spielte: `verifyPlayStarted()` fragte `readState()` bisher nur 1 ms nach `player.playFolder()` ab – der DFPlayer braucht nach dem Play-Befehl jedoch Zeit, um die Datei von der SD-Karte zu laden und den Status auf „playing" zu setzen, sodass die Abfrage noch den alten Zustand (`st<=0`) auslas und `ESP.restart()` fälschlich ausgelöst wurde. `verifyPlayStarted()` wartet jetzt vor jeder Abfrage `VERIFY_PLAY_DELAY_MS` (500 ms) und erlaubt bis zu `VERIFY_PLAY_RETRIES` (3) Versuche – bei anhaltendem `st<=0` steht das Ergebnis spätestens nach 1500 ms fest, bevor der Neustart folgt. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v06
+## Version 12v07
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v07 | Stabilität | DFPlayer-Absturz-Neustart war unbegrenzt: Reagierte der DFPlayer dauerhaft nicht (z. B. Kabel ab, Modul defekt), löste `triggerAlarm()` bei jedem Fehlversuch erneut `ESP.restart()` aus – der ESP32 startete potenziell endlos neu. Neuer Parameter `failCount` in `triggerAlarm()` sowie `RTC_NOINIT_ATTR`-Zähler `rtcRetryCount` (übersteht `ESP.restart()` wie die bestehenden `rtcRetry*`-Variablen) zählen die Fehlversuche über die Neustarts hinweg mit. |
+| 12v07 | Stabilität | Neue Konstante `ALARM_MAX_RESTARTS` (10) in SysConf begrenzt die Anzahl der Versuche: Ab dem 10. erfolglosen Versuch löst `triggerAlarm()` keinen weiteren `ESP.restart()` mehr aus, sondern bricht den Alarm für diesen Tag endgültig ab (Motor/Licht bleiben aus, `rtcRetryMagic` wird gelöscht). Am nächsten Tag wird der Alarm zur regulären Zeit wieder frisch versucht (`failCount` startet dann bei 0). |
+| 12v07 | Funktion | Neuer Fehlereintrag im Web-Log beim endgültigen Abbruch: `webLogf()` schreibt eine `[FEHLER]`-Zeile mit Alarm-Label, Dateinummer, Versuchsanzahl und Datum/Uhrzeit (`snapTimeStr()`). Die Log-Seite (`webLogTask()`) färbt Zeilen mit `[FEHLER]`-Tag rot (analog `[WATCHDOG]`/`[PANIC]`). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v07
