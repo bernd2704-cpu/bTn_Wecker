@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_12v05.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_12v06.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
@@ -1193,28 +1193,30 @@ static void motorStop() {
 }
 
 // ── DFPlayer Start-Check ──────────────────────────────────────
-// Doppel-Poll wie in ALARM_RUNNING (Zeile ~1231): bestätigt direkt nach
-// playFolder(), dass der DFPlayer den Play-Befehl tatsächlich angenommen
-// hat. st<=0 (0=idle, -1=UART-Timeout) → Befehl vermutlich nicht angekommen,
-// DFPlayer wahrscheinlich abgestürzt. Rückgabe false löst beim Aufrufer
-// einen ESP.restart() aus (einzige verlässliche Wiederherstellung für ein
+// Bestätigt nach playFolder(), dass der DFPlayer den Play-Befehl tatsächlich
+// angenommen hat. Der DFPlayer braucht nach dem Kommando etwas Zeit, um die
+// Datei von der SD-Karte zu laden und den Status auf "playing" zu setzen –
+// zu frühes Abfragen liefert sonst fälschlich st<=0, obwohl der Player
+// korrekt gestartet ist (12v06: löste unnötige Neustarts aus). Deshalb bis
+// zu VERIFY_PLAY_RETRIES Versuche im Abstand von VERIFY_PLAY_DELAY_MS –
+// bei aktuell 500 ms/3 Versuchen steht das Ergebnis spätestens nach 1500 ms
+// fest. Bleibt st<=0 (0=idle, -1=UART-Timeout) über alle Versuche, gilt der
+// DFPlayer als abgestürzt; Rückgabe false löst beim Aufrufer einen
+// ESP.restart() aus (einzige verlässliche Wiederherstellung für ein
 // hängendes DFPlayer/UART).
 static bool verifyPlayStarted(const char* label, uint8_t fileNo) {
   int16_t st = -1;
-  if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
-    st = player.readState();
-    xSemaphoreGive(playerMutex);
+  for (uint8_t attempt = 1; attempt <= VERIFY_PLAY_RETRIES; attempt++) {
+    vTaskDelay(pdMS_TO_TICKS(VERIFY_PLAY_DELAY_MS));                                    // außerhalb Mutex: DFPlayer Zeit zum Laden/Starten geben
+    if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+      st = player.readState();
+      xSemaphoreGive(playerMutex);
+    }
+    if (st > 0) { return true; }
+    webLogf("[DFPlayer] %s: kein Start-Status nach playFolder (Versuch %d/%d, st=%d, Datei %d)", label, attempt, VERIFY_PLAY_RETRIES, st, fileNo);
   }
-  vTaskDelay(pdMS_TO_TICKS(1));                                                        // außerhalb Mutex: DFPlayer-Antwort stabilisieren
-  if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
-    st = player.readState();
-    xSemaphoreGive(playerMutex);
-  }
-  if (st <= 0) {
-    webLogf("[DFPlayer] %s: kein Start-Status nach playFolder (st=%d, Datei %d) – DFPlayer vermutlich abgestürzt, Neustart", label, st, fileNo);
-    return false;
-  }
-  return true;
+  webLogf("[DFPlayer] %s: DFPlayer vermutlich abgestürzt nach %d Versuchen (Datei %d), Neustart", label, VERIFY_PLAY_RETRIES, fileNo);
+  return false;
 }
 
 // Startet Sound + Motor + Licht für Alarm 1 (alarmNum=1) oder Alarm 2
@@ -2371,7 +2373,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v05.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v06.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

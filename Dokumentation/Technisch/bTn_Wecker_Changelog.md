@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v05
+Basis 4v1  →  12v06
 
 ## Kategorien
 
@@ -207,4 +207,10 @@ Basis 4v1  →  12v05
 | 12v05 | Stabilität | DFPlayer-Absturzerkennung: Bestätigt `verifyPlayStarted()` den Play-Befehl nicht, gilt der DFPlayer als abgestürzt – die neue Funktion `triggerAlarm()` (löst jetzt beide Alarme aus, ersetzt den bisherigen Inline-Code in `runAlarmMachine`) löst dann unmittelbar `ESP.restart()` aus (einzige verlässliche Wiederherstellung für ein hängendes DFPlayer/UART). |
 | 12v05 | Stabilität | Verpasster-Alarm-Retry nach Absturz-Neustart: `triggerAlarm()` hinterlegt Alarmnummer, Dateinummer und Minute in `RTC_NOINIT_ATTR`-Variablen (`rtcRetryMagic`/`-Alarm`/`-FileNo`/`-Min`), bevor es `ESP.restart()` auslöst – diese überstehen den Software-Reset. `setup()` prüft `rtcRetryMagic` nach der DFPlayer-Initialisierung und ruft `triggerAlarm()` mit den gemerkten Werten erneut auf, sodass der durch den Absturz verpasste Alarm nach dem Neustart doch noch abgespielt wird. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v05
+## Version 12v06
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v06 | Bugfix | DFPlayer Start-Check löste Fehlalarm-Neustarts aus, obwohl der DFPlayer korrekt spielte: `verifyPlayStarted()` fragte `readState()` bisher nur 1 ms nach `player.playFolder()` ab – der DFPlayer braucht nach dem Play-Befehl jedoch Zeit, um die Datei von der SD-Karte zu laden und den Status auf „playing" zu setzen, sodass die Abfrage noch den alten Zustand (`st<=0`) auslas und `ESP.restart()` fälschlich ausgelöst wurde. `verifyPlayStarted()` wartet jetzt vor jeder Abfrage `VERIFY_PLAY_DELAY_MS` (500 ms) und erlaubt bis zu `VERIFY_PLAY_RETRIES` (3) Versuche – bei anhaltendem `st<=0` steht das Ergebnis spätestens nach 1500 ms fest, bevor der Neustart folgt. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v06

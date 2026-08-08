@@ -1,10 +1,18 @@
 #pragma once
-// SysConf_12v05.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v05
-// Datei-Version    : 12v05
+// SysConf_12v06.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v06
+// Datei-Version    : 12v06
 // Boardverwalter   : esp32 3.3.10 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v06–DFPlayer Start-Check: verifyPlayStarted() löste Fehlalarm-Neustarts
+//         aus, obwohl der DFPlayer korrekt spielte. Ursache: die Statusabfrage
+//         (readState()) erfolgte nur 1 ms nach playFolder() – der DFPlayer
+//         braucht nach dem Play-Befehl jedoch Zeit, um die Datei von der
+//         SD-Karte zu laden und den Status auf "playing" zu setzen. Jetzt
+//         bis zu VERIFY_PLAY_RETRIES (3) Versuche im Abstand von
+//         VERIFY_PLAY_DELAY_MS (500 ms) – Ergebnis steht spätestens nach
+//         1500 ms fest, bevor bei anhaltendem st<=0 ein ESP.restart() folgt.
 //   12v05–DFPlayer Start-Check: verifyPlayStarted() bestätigt direkt nach
 //         playFolder() (Alarm 1 + Alarm 2) per readState()-Doppel-Poll, dass
 //         der DFPlayer den Play-Befehl tatsächlich angenommen hat. Bisher
@@ -209,7 +217,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v05"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v06"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -267,6 +275,8 @@ const uint32_t AUTO_RETURN_MS       = 20000;                                   /
 const uint32_t DISPLAY_TIMEOUT_MS   = 300000UL;                                // OLED aus nach 5 min ohne Touch-Event
 const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               // 12v02: Licht/Mühlrad (Zugschalter S2) aus nach 30 min – analog AUTO_RETURN_MS
 const uint32_t ALARM_POLL_MS        = 5000;                                    // Alarm-Nachlauf Prüfintervall
+const uint32_t VERIFY_PLAY_DELAY_MS =  500;                                    // 12v06: Start-Check – Wartezeit je Versuch (DFPlayer braucht Zeit zum Laden)
+const uint8_t  VERIFY_PLAY_RETRIES  =    3;                                    // 12v06: Start-Check – Versuche (1 initial + 2 Retries), Reset spätestens nach 1500 ms
 const uint32_t WIFI_RECONNECT_MS    = 3000;                                    // WiFi-Reconnect Wiederholrate
 const uint32_t NVR_COMMIT_DELAY_MS  = 2000;                                    // 11v00: Ruhezeit nach letztem Event vor NVR-Commit (Flash-Wear-Schutz)
 
