@@ -1,10 +1,31 @@
 #pragma once
-// SysConf_12v12.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v12
-// Datei-Version    : 12v12
+// SysConf_12v13.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v13
+// Datei-Version    : 12v13
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v13–Root Cause des 12v12-Vorfalls (Reboot ohne Ersatzalarm trotz
+//         12v11/12v12-Fixes) gefunden: Hardware-TWDT-Backtrace zeigte den
+//         Hang in triggerAlarm() → player.playFolder() → sendStack() →
+//         waitAvailable() → DFRobotDFPlayerMini::available()
+//         (DFRobotDFPlayerMini.cpp:229). Die innere
+//         while(_serial->available())-Schleife dieser Bibliotheksfunktion
+//         hatte im Original KEINE Zeitbegrenzung – bei anhaltendem
+//         Byte-Zustrom (floatende/gestörte RX-Leitung bei getrenntem/
+//         defektem DFPlayer) blockierte sie unbegrenzt, noch bevor
+//         waitAvailable() seinen eigenen 500-ms-Timeout prüfen konnte
+//         (der nur ZWISCHEN Aufrufen von available() greift). Das erklärt
+//         auch "CPU 1: IDLE1" im TWDT-Log: echter Systemstillstand, kein
+//         reiner alarmTask-Hänger. Unsere 12v09–12v12-Fixes (begrenzte
+//         Drain-Schleifen, alarmTriggerInFlight) griffen nicht, weil der
+//         Hänger bereits innerhalb der Bibliothek passierte, bevor sie
+//         zum Zug kamen. Fix: DFRobotDFPlayerMini.cpp direkt gepatcht –
+//         available() bricht nach 100 ms auch bei anhaltendem
+//         Byte-Zustrom ab (siehe Software/Bibliotheken/README.md, Patch
+//         muss nach jeder Neuinstallation der Bibliothek erneut
+//         angewendet werden). Kein Code in dieser Datei geändert – Version
+//         nur für Nachvollziehbarkeit auf dem Gerät hochgezählt.
 //   12v12–watchdogTask als zusätzlicher Fallback für rtcRetryMagic: friert
 //         alarmTask während eines laufenden triggerAlarm()-Versuchs ein (egal
 //         aus welchem Grund), hätte bisher kein Ersatzalarm-Retry nach dem
@@ -274,7 +295,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v12"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v13"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.

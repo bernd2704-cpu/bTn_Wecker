@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v12
+Basis 4v1  →  12v13
 
 ## Kategorien
 
@@ -256,4 +256,11 @@ Basis 4v1  →  12v12
 | 12v12 | Stabilität | `watchdogTask` als zusätzlicher Fallback für `rtcRetryMagic`: Fror `alarmTask` während eines laufenden `triggerAlarm()`-Versuchs ein (egal aus welchem Grund), fand bisher kein Ersatzalarm-Retry nach dem `watchdogTask`-Neustart statt – dieser Pfad war komplett unabhängig vom regulären DFPlayer-Absturz-Retry in `triggerAlarm()` selbst. Neuer In-Flight-Marker `alarmTriggerInFlight` (+ Snapshot `alarmTriggerNum`/`-FileNo`/`-Min`/`-FailCount`) wird zu Beginn des riskanten Abschnitts in `triggerAlarm()` gesetzt und nach jedem Ausgang (Erfolg, regulärer Retry, endgültiger Abbruch) wieder gelöscht. |
 | 12v12 | Stabilität | `watchdogTask` prüft bei einem `alarmTask`-Freeze gezielt diesen Marker (nicht bei input-/displayTask-Freezes, die stehen in keinem Zusammenhang mit einem laufenden Alarm) und setzt vor dem eigenen `ESP.restart()` ebenfalls `rtcRetryMagic`, sodass `setup()` den Alarm nach dem Neustart genauso erneut auslöst wie beim regulären Retry-Pfad. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v12
+## Version 12v13
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v13 | Bugfix | Root Cause des 12v12-Vorfalls gefunden (Reboot ohne Ersatzalarm trotz 12v11/12v12-Fixes): Hardware-TWDT-Backtrace zeigte den Hang in `triggerAlarm()` → `player.playFolder()` → `sendStack()` → `waitAvailable()` → `DFRobotDFPlayerMini::available()`. Die innere `while(_serial->available())`-Schleife dieser Bibliotheksfunktion hatte im Original keine Zeitbegrenzung – bei anhaltendem Byte-Zustrom (floatende/gestörte RX-Leitung bei getrenntem/defektem DFPlayer) blockierte sie unbegrenzt, noch bevor `waitAvailable()` seinen eigenen 500-ms-Timeout prüfen konnte. Erklärt auch `CPU 1: IDLE1` im TWDT-Log: echter Systemstillstand, kein reiner `alarmTask`-Hänger. Die 12v09–12v12-Fixes griffen nicht, weil der Hänger bereits innerhalb der Bibliothek passierte. |
+| 12v13 | Bugfix | Fix direkt in `DFRobotDFPlayerMini.cpp` (lokale Installation `D:\Arduino\libraries\DFRobotDFPlayerMini\`, außerhalb dieses Repos): `available()` bricht jetzt nach 100 ms auch bei anhaltendem Byte-Zustrom ab, `_receivedIndex` bleibt für den nächsten Aufruf erhalten. Muss nach jeder Neuinstallation der Bibliothek erneut angewendet werden – dokumentiert in `Software/Bibliotheken/README.md`. Kein Code in der Firmware selbst geändert, Version nur für Nachvollziehbarkeit auf dem Gerät hochgezählt. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v13
