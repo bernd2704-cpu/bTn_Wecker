@@ -2471,47 +2471,47 @@ void setup() {
   cleanTXT(0, 49, 128, 15);
   zeigeZ16C(64, 49, "Sound ...");
   display.display();                                                                   // DFPlayer-Initialisierung anzeigen
-  // 13v00: ACK-Modus aus – sendStack() der Bibliothek wartet bei aktivem ACK
-  // vor jedem neuen Befehl blockierend auf das 0x41-ACK des vorherigen
-  // (while(_isSending){waitAvailable();}), was bei ausbleibendem/verzögertem
-  // ACK unnötige Latenz erzeugt. Der ACK-Frame selbst war nie die Ursache der
-  // "kein Start-Status"-Fehlschläge (siehe readStateDrained()) – der Erfolg
-  // eines Befehls wird hier ohnehin über die tatsächliche Statusabfrage
-  // verifiziert (verifyPlayStarted()), nicht über das reine UART-ACK.
-  // Nebeneffekt (DFRobotDFPlayerMini::begin()): der Rückgabewert prüft bei
-  // deaktiviertem ACK nicht mehr auf DFPlayerCardOnline/USBOnline, sondern
-  // liefert unbedingt true (`!isACK` im Bibliotheks-Code) – der bisherige
-  // if/else um begin() war damit unreachable code und wurde entfernt. Die
-  // Verbindungsprüfung übernimmt jetzt allein die readFileCounts()-Schleife
-  // unten: reagiert der DFPlayer nicht, greift ihr eigener
-  // SETUP_MP3_TIMEOUT_MS-Fallback ("Timeout – mp3Count unbekannt").
-  player.begin(Serial2, false, true);
-  webLog("[DFPlayer] Serial2 OK");
-  // readFileCounts() als Bereitschaftsprüfung: DFPlayer antwortet erst, wenn
-  // SD-Karte vollständig indiziert ist. Nach Power-On/Flash dauert das länger
-  // als nach Reset-Taste (DFPlayer bleibt dort unter Spannung). Erst danach
-  // playFolder aufrufen – kein UART-Verkehr mehr während der Wiedergabe.
-  {
-    uint32_t t0 = millis();
-    while (mp3Count < 1) {
-      if (millis() - t0 >= SETUP_MP3_TIMEOUT_MS) {
-        webLog("[DFPlayer] Timeout – mp3Count unbekannt");
-        mp3Count = 99;                                                                   // Fallback: MP3-Auswahl bis Datei 99 erlauben
-        break;
+  // 13v00: ACK-Modus zunächst deaktiviert, dann noch am selben Tag wieder
+  // aktiviert (Regression): sendStack() der Bibliothek wartet bei aktivem
+  // ACK vor jedem neuen Befehl blockierend auf das 0x41-ACK des vorherigen
+  // (while(_isSending){waitAvailable();}) – ohne ACK sendet sie stattdessen
+  // nur ein pauschales 10-ms-Delay, unabhängig davon, ob der DFPlayer den
+  // vorherigen Befehl schon verarbeitet hat. Direkt nach reset() folgen hier
+  // volume()/EQ()/playFolder() (Startsound) unmittelbar hintereinander –
+  // ohne die ACK-Wartelogik kam der DFPlayer damit nicht mehr mit, der
+  // Startsound blieb aus. Der 0x41-ACK-Frame war ohnehin nie die Ursache der
+  // "kein Start-Status"-Fehlschläge (siehe readStateDrained()) – ACK bleibt
+  // daher aktiv.
+  if (player.begin(Serial2, true, true)) {
+    webLog("[DFPlayer] Serial2 OK");
+    // readFileCounts() als Bereitschaftsprüfung: DFPlayer antwortet erst, wenn
+    // SD-Karte vollständig indiziert ist. Nach Power-On/Flash dauert das länger
+    // als nach Reset-Taste (DFPlayer bleibt dort unter Spannung). Erst danach
+    // playFolder aufrufen – kein UART-Verkehr mehr während der Wiedergabe.
+    {
+      uint32_t t0 = millis();
+      while (mp3Count < 1) {
+        if (millis() - t0 >= SETUP_MP3_TIMEOUT_MS) {
+          webLog("[DFPlayer] Timeout – mp3Count unbekannt");
+          mp3Count = 99;                                                                 // Fallback: MP3-Auswahl bis Datei 99 erlauben
+          break;
+        }
+        checkSerial2Leftover("readFileCounts (setup)");
+        int16_t c = player.readFileCounts();
+        if (c > 0) mp3Count = c - 1;                                                     // c==0 → mp3Count bleibt 0, kein uint8_t-Unterlauf auf 255
       }
-      checkSerial2Leftover("readFileCounts (setup)");
-      int16_t c = player.readFileCounts();
-      if (c > 0) mp3Count = c - 1;                                                       // c==0 → mp3Count bleibt 0, kein uint8_t-Unterlauf auf 255
     }
+    checkSerial2Leftover("volume (setup)");
+    player.volume(vol);
+    checkSerial2Leftover("EQ (setup)");
+    player.EQ(DFPLAYER_EQ_BASS);
+    checkSerial2Leftover("playFolder (setup Startsound)");
+    player.playFolder(2, 1);
+    delay(4000);
+    playerStatus = 1;
+  } else {
+    webLog("[DFPlayer] Verbindung fehlgeschlagen!");
   }
-  checkSerial2Leftover("volume (setup)");
-  player.volume(vol);
-  checkSerial2Leftover("EQ (setup)");
-  player.EQ(DFPLAYER_EQ_BASS);
-  checkSerial2Leftover("playFolder (setup Startsound)");
-  player.playFolder(2, 1);
-  delay(4000);
-  playerStatus = 1;
   if (sound1_assigned > mp3Count) sound1_assigned = 1;                                    // NVR-Wert > SD-Inhalt abfangen
   if (sound2_assigned > mp3Count) sound2_assigned = 1;
   snprintf(str_mp3, sizeof(str_mp3), "%03u", mp3Count);

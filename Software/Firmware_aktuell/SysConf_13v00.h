@@ -16,18 +16,17 @@
 //         bis zu SERIAL2_FEEDBACK_GRACE_MS lang aktiv auf einen echten
 //         Feedback-Frame (Timer wird bei jedem weiteren Störframe
 //         zurückgesetzt), statt sofort aufzugeben.
-//   13v00–Fix 2: ACK-Modus deaktiviert (player.begin(Serial2, false, true)) –
-//         entfernt die blockierende Wartelogik in sendStack() der Bibliothek
-//         (wartet bei aktivem ACK vor jedem neuen Befehl auf das ACK des
-//         vorherigen). War nicht die Ursache des st=-1-Problems, aber
-//         unnötige Latenzquelle; der Erfolg eines Befehls wird ohnehin über
-//         die tatsächliche Statusabfrage verifiziert, nicht über das ACK.
-//         Nebeneffekt: player.begin() prüft ohne ACK nicht mehr auf Card-/
-//         USB-Online, liefert unbedingt true – das bisherige if/else um
-//         begin() in setup() war damit unreachable code und wurde entfernt.
-//         Die Verbindungsprüfung übernimmt jetzt allein die dort bereits
-//         vorhandene readFileCounts()-Schleife mit SETUP_MP3_TIMEOUT_MS-
-//         Fallback.
+//   13v00–Fix 2 (zurückgenommen, Regression): ACK-Modus deaktiviert
+//         (player.begin(Serial2, false, true)), um die blockierende
+//         Wartelogik in sendStack() der Bibliothek zu entfernen (wartet bei
+//         aktivem ACK vor jedem neuen Befehl auf das ACK des vorherigen).
+//         War nicht die Ursache des st=-1-Problems, führte aber dazu, dass
+//         volume()/EQ()/playFolder() in setup() (Startsound) ohne die
+//         ACK-Wartelogik zu schnell aufeinanderfolgten – der DFPlayer kam
+//         direkt nach reset() nicht mehr mit, der Startsound blieb aus.
+//         Noch am selben Tag zurückgenommen: ACK bleibt aktiv, player.begin()
+//         wieder mit isACK=true, if/else-Verbindungscheck in setup()
+//         wiederhergestellt.
 //   12v19–Vorab-Drain (bisher nur vor Alarm-playFolder aktiv, siehe 12v18-
 //         Historie unten) jetzt auch vor volume()/stop()/Testsound-
 //         playFolder() (drainSerial2Pre()): stray ACK-/Statusframes aus
