@@ -1,6 +1,6 @@
 # bTn Wecker – Funktions- und Task-Referenz
 
-*Firmware 12v07 · ESP32 / FreeRTOS*
+*Firmware 12v08 · ESP32 / FreeRTOS*
 
 ## 1. FreeRTOS Tasks
 
@@ -14,7 +14,7 @@
 | nvrTask<br>Core 0 · Pri 1<br>Stack 2304 | Task | Wartet auf nvrSemaphore. Öffnet NVS-Namespace "varSafe", ruft writeNVR() auf. inputTask gibt das Semaphore erst nach NVR_COMMIT_DELAY_MS (2 s) Ruhezeit frei (Flash-Wear-Schutz gegen Touch-REPEAT-Hammer, 11v00). |
 | stackMonTask<br>Core 0 · Pri 1<br>Stack 2912 | Task | Aktualisiert alle STACK_MON_INTERVAL_MS (60 s) den Stack-HWM-Snapshot (snapStackBuf/snapStackTime) via updateSnapStack(): alle 9 Tasks + freier Heap. Wird auf der Web-Log-Seite als dedizierte Sektion angezeigt. |
 | watchdogTask<br>Core 0 · Pri 1<br>Stack 1344 | Task | Software-Watchdog: prüft alle WDG_CHECK_MS (5s) ob wdg_inputTask/displayTask/alarmTask innerhalb WDG_TIMEOUT_MS (30s) aktualisiert wurden. Bei Freeze: webLog + OLED-Meldung + ESP.restart(). |
-| webLogTask<br>Core 0 · Pri 1<br>Stack 4096 | Task | HTTP-Log-Server auf Port WEBLOG_PORT (8080). Wartet auf WiFi, dann: GET / → HTML-Seite mit Auto-Refresh alle 20 s und farbiger Darstellung (grün/rot/gelb). GET /log → plain text. Sektionen: Ring-Puffer WEBLOG_LINES × WEBLOG_LINE_LEN (Allg. Log, Titel zeigt NTP-Zeitstempel des letzten Resets, 9v8), „Verbindung – letzter WiFi Reconnect / NTP Sync" (WiFi+NTP analog Info-Seite, 11v01; umbenannt+unter Ring-Puffer verschoben 11v02), Touch-Baseline und Stack-HWM. |
+| webLogTask<br>Core 0 · Pri 1<br>Stack 4096 | Task | HTTP-Log-Server auf Port WEBLOG_PORT (8080). Wartet auf WiFi, dann: GET / → HTML-Seite mit Auto-Refresh alle 20 s und farbiger Darstellung (grün/rot/gelb). GET /log → plain text. Sektionen: Ring-Puffer WEBLOG_LINES × WEBLOG_LINE_LEN, aufgeteilt in DFPlayer (alle Zeilen mit „DFPlayer" im Text, Titel zeigt Zeitstempel des letzten erfolgreichen Alarms snapAlarmTime, 12v08) und Allg. Log (übrige Zeilen, Titel zeigt NTP-Zeitstempel des letzten Resets, 9v8), „Verbindung – letzter WiFi Reconnect / NTP Sync" (WiFi+NTP analog Info-Seite, 11v01; umbenannt+unter Ring-Puffer verschoben 11v02), Touch-Baseline und Stack-HWM. |
 | inputTask<br>Core 1 · Pri 2<br>Stack 2240 | Task | Konsumiert inputQueue (50 ms-Timeout). S1/S2 ohne displayMutex. Alle anderen Events: displayMutex → uiDispatch() → uiTransition(). safeChange + safeChangeMs: nvrSemaphore erst nach NVR_COMMIT_DELAY_MS (2 s) Ruhezeit ohne weiteres Event freigeben (11v00). Display-Wake bei displayBlanked: T0–T4 wecken und verwerfen, S3 weckt und reicht das Event weiter → Info-Seite (11v04). Setzt wdg_inputTask + esp_task_wdt_reset(). |
 | displayTask<br>Core 1 · Pri 1<br>Stack 2176 | Task | Aktualisiert OLED alle DISPLAY_UPDATE_MS (300 ms) unter displayMutex. Überträgt NTP/WiFi-Double-Buffer. Auto-Rückkehr zu UI_CLOCK nach AUTO_RETURN_MS (20 s). Schaltet OLED ab nach DISPLAY_TIMEOUT_MS (5 min) ohne Touch (10v00/10v02). Setzt wdg_displayTask + esp_task_wdt_reset(). |
 
@@ -61,6 +61,7 @@ Zwei-Stufen-Debouncing: ISR-Ebene BTN_DEBOUNCE_MS=30ms, Task-Ebene BTN_LOCKOUT_M
 | updateSnapStack() | Web-Logger | Aktualisiert den Stack-HWM-Snapshot-Puffer (snapStackBuf) thread-safe unter webLogMutex. Erfasst alle 9 Tasks (inkl. stackMonTask via hStackMonTask und webLogTask via hWebLogTask) + freien Heap sowie Timestamp. Wird von stackMonTask aufgerufen. |
 | webLog(msg) | Web-Logger | Schreibt msg in den Ring-Puffer (WEBLOG_LINES×WEBLOG_LINE_LEN). Thread-sicher via webLogMutex. Null-Guard: if(!webLogMutex) return. Älteste Zeilen werden überschrieben. |
 | webLogf(fmt,...) | Web-Logger | printf-Variante von webLog(). Formatiert in lokalen Puffer, ruft webLog() auf. Ersetzt Serial.*-Ausgaben nach WiFi-Connect. |
+| checkSerial2Leftover(label) | Web-Logger | Prüft Serial2.available() vor jedem an den DFPlayer gesendeten Kommando. Sind Bytes im Puffer (UART-Desync-Hinweis), loggt webLogf() eine [DFPlayer]-Zeile mit label, Byteanzahl, Zeitstempel und dem seit Boot mitlaufenden Zähler serial2LeftoverCount (12v08). |
 
 ## 6. Display-Funktionen
 
@@ -96,4 +97,4 @@ Zwei-Stufen-Debouncing: ISR-Ebene BTN_DEBOUNCE_MS=30ms, Task-Ebene BTN_LOCKOUT_M
 
 ---
 
-*bTn Wecker · Funktionsreferenz · Firmware 12v07*
+*bTn Wecker · Funktionsreferenz · Firmware 12v08*

@@ -1,10 +1,15 @@
 #pragma once
-// SysConf_12v07.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v07
-// Datei-Version    : 12v07
+// SysConf_12v08.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v08
+// Datei-Version    : 12v08
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v08–Web-Log neu organisiert: DFPlayer-Meldungen in eigenem Abschnitt mit
+//         Zeitstempel des letzten erfolgreichen Alarms (snapAlarmTime). Neue
+//         Funktion checkSerial2Leftover() loggt unerwartete Restbytes im
+//         Serial2-Puffer vor jedem DFPlayer-Kommando (Zeitstempel + Zähler
+//         seit Boot).
 //   12v07–DFPlayer-Absturz-Neustart begrenzt: triggerAlarm() zählte Fehlschläge
 //         bisher nicht mit – ein dauerhaft defekter/nicht angeschlossener
 //         DFPlayer löste eine unbegrenzte ESP.restart()-Schleife aus. Neuer
@@ -224,7 +229,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v07"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v08"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.

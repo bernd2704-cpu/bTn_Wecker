@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v07
+Basis 4v1  →  12v08
 
 ## Kategorien
 
@@ -221,4 +221,11 @@ Basis 4v1  →  12v07
 | 12v07 | Stabilität | Neue Konstante `ALARM_MAX_RESTARTS` (10) in SysConf begrenzt die Anzahl der Versuche: Ab dem 10. erfolglosen Versuch löst `triggerAlarm()` keinen weiteren `ESP.restart()` mehr aus, sondern bricht den Alarm für diesen Tag endgültig ab (Motor/Licht bleiben aus, `rtcRetryMagic` wird gelöscht). Am nächsten Tag wird der Alarm zur regulären Zeit wieder frisch versucht (`failCount` startet dann bei 0). |
 | 12v07 | Funktion | Neuer Fehlereintrag im Web-Log beim endgültigen Abbruch: `webLogf()` schreibt eine `[FEHLER]`-Zeile mit Alarm-Label, Dateinummer, Versuchsanzahl und Datum/Uhrzeit (`snapTimeStr()`). Die Log-Seite (`webLogTask()`) färbt Zeilen mit `[FEHLER]`-Tag rot (analog `[WATCHDOG]`/`[PANIC]`). |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v07
+## Version 12v08
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v08 | Funktion | Web-Log neu organisiert: DFPlayer-Meldungen (alle Zeilen mit „DFPlayer" im Text) erscheinen jetzt in einem eigenen Abschnitt `#dflog` statt im „Allgemeinen Log". Titel lautet „DFPlayer – letzter erfolgreicher Alarm: *&lt;Zeitstempel&gt;*" – neuer Snapshot `snapAlarmTime` wird in `triggerAlarm()` direkt nach erfolgreichem `playFolder()` gesetzt (analog `snapTouchTime`/`snapStackTime`). |
+| 12v08 | Funktion | Neue Funktion `checkSerial2Leftover(label)` prüft vor jedem an den DFPlayer gesendeten Kommando `Serial2.available()`. Sind noch Bytes im Empfangspuffer (Hinweis auf verspätete/verlorene Antworten bzw. UART-Desync), schreibt `webLogf()` eine `[DFPlayer]`-Zeile mit Kommando-Label, Byteanzahl, Zeitstempel und einem seit Boot mitlaufenden Zähler `serial2LeftoverCount`. Wird vor allen `player.*()`-Aufrufen aufgerufen, die ein Kommando an den DFPlayer senden. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v08

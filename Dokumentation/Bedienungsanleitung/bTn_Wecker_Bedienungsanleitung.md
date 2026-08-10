@@ -1,6 +1,6 @@
 # bTn Wecker – Bedienungsanleitung
 
-*Firmware 12v07 · ESP32 / FreeRTOS*
+*Firmware 12v08 · ESP32 / FreeRTOS*
 
 ## 1. Übersicht
 
@@ -87,7 +87,7 @@ Die Info-Seite zeigt Systemdaten und bietet Zugang zu Konfigurations- und Reset-
 
 | Zeile | Inhalt |
 |---|---|
-| 1 – Kopfzeile | Firmware-Kennung (z.B. `bTn_Wecker_12v07`) |
+| 1 – Kopfzeile | Firmware-Kennung (z.B. `bTn_Wecker_12v08`) |
 | 2 – IP:8080 | Adresse des Web-Log-Servers – im Browser öffnen für Diagnoseinformationen |
 | 3 – MP3 *nnn*   RESET *nnnn* | Anzahl gefundener MP3-Dateien  ·  Neustart-Zähler (4-stellig) |
 | 4 – Taste +  WiFi Reset | Hinweis: T3 drücken löscht die WLAN-Zugangsdaten und startet den Konfigurator |
@@ -108,7 +108,8 @@ Nach der WiFi-Verbindung ist ein Diagnose-Server erreichbar. Die IP-Adresse wird
 
 | Sektion | Inhalt |
 |---|---|
-| Allg. Log | Ring-Puffer mit Systemereignissen (Start, WiFi/NTP-Events, Watchdog, Alarme). Titel lautet „Allgemeines Log – letzter Reset: *&lt;NTP-Zeitstempel&gt;*" (Zeitpunkt des ersten NTP-Syncs nach dem Reset). |
+| DFPlayer | Eigener Ring-Puffer-Ausschnitt mit allen DFPlayer-Meldungen (Start-Check, Absturz-Neustart, Serial2-Restbytes). Titel lautet „DFPlayer – letzter erfolgreicher Alarm: *&lt;Zeitstempel&gt;*" (12v08). |
+| Allg. Log | Ring-Puffer mit den übrigen Systemereignissen (Start, WiFi/NTP-Events, Watchdog, Alarme). Titel lautet „Allgemeines Log – letzter Reset: *&lt;NTP-Zeitstempel&gt;*" (Zeitpunkt des ersten NTP-Syncs nach dem Reset). |
 | Verbindung – letzter WiFi Reconnect / NTP Sync | Zeigt die Zeitstempel der letzten WiFi-Verbindung und der letzten NTP-Synchronisation (11v02: umbenannt von „Status – Letzter Start" und unter den Ring-Puffer verschoben). |
 | Touch-Baseline | Letzter Messwert und Schwellwert aller vier Touch-Pads |
 | Stack High-Water Marks | Speicherauslastung aller 9 Tasks + freier Heap |
@@ -135,4 +136,4 @@ Info-Seite (S3) öffnen → T4 drücken. Alle gespeicherten Einstellungen (Alarm
 
 ---
 
-*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 12v07*
+*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 12v08*

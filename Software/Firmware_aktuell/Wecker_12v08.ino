@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_12v07.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_12v08.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
@@ -270,6 +270,7 @@ static char snapTouchTime[20]          = "";
 static char snapStackBuf[SNAP_BUF_LEN] = "(noch keine Daten)";
 static char snapStackTime[20]          = "";
 static char snapNtpTime[20]            = "";
+static char snapAlarmTime[20]          = "";              // letzter erfolgreich gestarteter Alarm (siehe triggerAlarm)
 
 // Schreibt eine Nachricht in den Ring-Puffer (thread-safe).
 // Bleibt still wenn Mutex noch nicht initialisiert.
@@ -302,6 +303,23 @@ static void snapTimeStr(char* buf, size_t len) {
     strftime(buf, len, "%d.%m.%Y %H:%M:%S", &tm_val);
   } else {
     snprintf(buf, len, "+%lus", millis() / 1000UL);
+  }
+}
+
+// Zählt seit Boot, wie oft beim Start eines DFPlayer-Befehls noch
+// unerwartete Bytes im Serial2-Empfangspuffer standen (Hinweis auf
+// verspätete/verlorene Antworten bzw. UART-Desync). Vor jedem player.*-
+// Aufruf zu rufen, der ein Kommando an den DFPlayer sendet.
+static uint32_t serial2LeftoverCount = 0;
+
+static void checkSerial2Leftover(const char* label) {
+  int avail = Serial2.available();
+  if (avail > 0) {
+    serial2LeftoverCount++;
+    char ts[20];
+    snapTimeStr(ts, sizeof(ts));
+    webLogf("[DFPlayer] Serial2 Restbytes vor %s: %d (seit Boot: %lu, %s)",
+            label, avail, (unsigned long)serial2LeftoverCount, ts);
   }
 }
 
@@ -473,6 +491,7 @@ void checkboxSound() {
         display.display();                                                               // Checkbox anzeigen bevor Audio startet
         sound1_assigned = sound1_selected;
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
+          checkSerial2Leftover("playFolder (Sound1 an)");
           player.playFolder(1, sound1_assigned);
           xSemaphoreGive(playerMutex);
         }
@@ -480,6 +499,7 @@ void checkboxSound() {
         display.drawRect(67, 37, 10, 10);
         display.display();                                                               // Checkbox anzeigen bevor Player gestoppt
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
+          checkSerial2Leftover("stop (Sound1 aus)");
           player.stop();
           xSemaphoreGive(playerMutex);
         }
@@ -492,6 +512,7 @@ void checkboxSound() {
         display.display();                                                               // Checkbox anzeigen bevor Audio startet
         sound2_assigned = sound2_selected;
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
+          checkSerial2Leftover("playFolder (Sound2 an)");
           player.playFolder(1, sound2_assigned);
           xSemaphoreGive(playerMutex);
         }
@@ -499,6 +520,7 @@ void checkboxSound() {
         display.drawRect(67, 54, 10, 10);
         display.display();                                                               // Checkbox anzeigen bevor Player gestoppt
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
+          checkSerial2Leftover("stop (Sound2 aus)");
           player.stop();
           xSemaphoreGive(playerMutex);
         }
@@ -579,6 +601,7 @@ void menu(uint8_t page) {   // uint8_t: Koordinatenbereich 0–7 entspricht UiSt
       break;
     case 5:
       if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                   // 50 ms < 100 ms displayMutex-Timeout
+        checkSerial2Leftover("stop (Funktionswahl)");
         player.stop();
         xSemaphoreGive(playerMutex);
       }
@@ -865,6 +888,7 @@ static UiState onClock(uint8_t evt) {
       if (vol < MAX_VOL) {
         vol++;
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                 // 50 ms < 100 ms displayMutex-Timeout
+          checkSerial2Leftover("volume+");
           player.volume(vol);
           xSemaphoreGive(playerMutex);
         }
@@ -879,6 +903,7 @@ static UiState onClock(uint8_t evt) {
       if (vol > 0) {
         vol--;
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                 // 50 ms < 100 ms displayMutex-Timeout
+          checkSerial2Leftover("volume-");
           player.volume(vol);
           xSemaphoreGive(playerMutex);
         }
@@ -1211,6 +1236,7 @@ static bool verifyPlayStarted(const char* label, uint8_t fileNo) {
   for (uint8_t attempt = 1; attempt <= VERIFY_PLAY_RETRIES; attempt++) {
     vTaskDelay(pdMS_TO_TICKS(VERIFY_PLAY_DELAY_MS));                                    // außerhalb Mutex: DFPlayer Zeit zum Laden/Starten geben
     if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+      checkSerial2Leftover("readState (verifyPlayStarted)");
       st = player.readState();
       xSemaphoreGive(playerMutex);
     }
@@ -1236,6 +1262,7 @@ static bool verifyPlayStarted(const char* label, uint8_t fileNo) {
 static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t failCount) {
   const char* label = (alarmNum == 1) ? "Alarm 1" : "Alarm 2";
   if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+    checkSerial2Leftover("playFolder (triggerAlarm)");
     player.playFolder(1, fileNo);
     xSemaphoreGive(playerMutex);
     if (!verifyPlayStarted(label, fileNo)) {
@@ -1256,6 +1283,7 @@ static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t 
       ESP.restart();
     }
     if (alarmNum == 1) { lastA1Min = min; } else { lastA2Min = min; }                     // erst nach erfolgreichem Start sperren
+    snapTimeStr(snapAlarmTime, sizeof(snapAlarmTime));                                    // letzter erfolgreicher Alarm für Web-Log
     motorStart();                                                                        // 12v03: Motor via PWM + Kickstart (respektiert wheel_on)
     if (light_on) { digitalWrite(E3, HIGH); }
     t_start6   = millis();
@@ -1291,11 +1319,13 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour) {
       if (delayFunction(t_start6, ALARM_POLL_MS)) {
         int16_t st = -1;
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+          checkSerial2Leftover("readState (ALARM_RUNNING Poll)");
           st = player.readState();
           xSemaphoreGive(playerMutex);                                                     // Mutex SOFORT freigeben – nie mit gehaltenem Mutex schlafen
         }
         vTaskDelay(pdMS_TO_TICKS(1));                                                      // 1ms Pause AUSSERHALB Mutex: DFPlayer-Antwort stabilisieren
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+          checkSerial2Leftover("readState (ALARM_RUNNING Poll, 2. Abfrage)");
           st = player.readState();                                                          // zweite Abfrage → korrekter Status
           xSemaphoreGive(playerMutex);
         }
@@ -1569,6 +1599,7 @@ static void inputTask(void *pvParam) {
         // Erster readState-Versuch außerhalb Mutex-Dauersperre
         int16_t st = -1;
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(500)) == pdTRUE) {
+          checkSerial2Leftover("readState (S1)");
           st = player.readState();
           xSemaphoreGive(playerMutex);                                                   // Mutex sofort freigeben
         }
@@ -1581,12 +1612,14 @@ static void inputTask(void *pvParam) {
           }
           vTaskDelay(pdMS_TO_TICKS(1));                                                 // außerhalb Mutex – Projektregel eingehalten
           if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+            checkSerial2Leftover("readState (S1 Retry)");
             st = player.readState();
             xSemaphoreGive(playerMutex);
           }
         }
         if (st > 0) {
           if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+            checkSerial2Leftover("stop (S1)");
             player.stop();
             xSemaphoreGive(playerMutex);
           }
@@ -1984,8 +2017,9 @@ static void webLogTask(void *pvParam) {
       ".snap-title .ts{color:#4A9EFF;font-weight:bold}"
       ".snap-box{background:#0d1a0d;border:1px solid #2a4a2a;border-radius:6px;padding:10px;"
       "white-space:pre;overflow-x:auto;font-size:19px;color:#b0d0b0}"
-      "#log{background:#0d0d1a;border:1px solid #333;border-radius:6px;padding:12px;"
+      "#log,#dflog{background:#0d0d1a;border:1px solid #333;border-radius:6px;padding:12px;"
       "white-space:pre;overflow-x:auto;max-height:60vh;overflow-y:auto;font-size:19px}"
+      "#dflog{margin-bottom:16px}"
       ".ok{color:#6BCB77}.err{color:#FF6B6B}.warn{color:#FFD93D}"
       ".sec-title{font-size:1rem;color:#78909c;margin:16px 0 4px}"
       "</style></head><body>"
@@ -2010,13 +2044,15 @@ static void webLogTask(void *pvParam) {
               "</form>";
     }
 
-    // ── Ring-Puffer ──────────────────────────────────────────
+    // ── DFPlayer: eigener Abschnitt mit allen DFPlayer-Meldungen ──
     {
-      String ntpTs = strlen(snapNtpTime) > 0 ? String(snapNtpTime) : String("–");
-      html += "<div class='sec-title'>Allgemeines Log &ndash; letzter Reset: "
-              "<span style='color:#4A9EFF'>" + ntpTs + "</span></div>";
+      String alarmTs = strlen(snapAlarmTime) > 0 ? String(snapAlarmTime) : String("–");
+      html += "<div class='sec-title'>DFPlayer &ndash; letzter erfolgreicher Alarm: "
+              "<span style='color:#4A9EFF'>" + alarmTs + "</span></div>";
     }
-    html += "<div id='log'>";
+    html += "<div id='dflog'>";
+    // ── Ring-Puffer: DFPlayer-Meldungen und allgemeine Meldungen getrennt ──
+    String generalLog;
     if (webLogMutex && xSemaphoreTake(webLogMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
       uint16_t start = (webLogCount < WEBLOG_LINES)
                      ? 0
@@ -2024,6 +2060,7 @@ static void webLogTask(void *pvParam) {
       for (uint16_t i = 0; i < webLogCount; i++) {
         uint16_t idx = (start + i) % WEBLOG_LINES;
         String line = String(webLogBuf[idx]);
+        bool isDfPlayer = line.indexOf("DFPlayer") >= 0;
         // [xxx]-Tag mit Leerzeichen auf feste Breite (WEBLOG_TAG_WIDTH)
         // bringen, damit der Text dahinter immer in derselben Spalte beginnt
         if (line.length() > 0 && line[0] == '[') {
@@ -2035,20 +2072,31 @@ static void webLogTask(void *pvParam) {
             line += rest;
           }
         }
+        String entry;
         if (line.indexOf("[WATCHDOG]") >= 0 || line.indexOf("[PANIC]") >= 0 || line.indexOf("[FEHLER]") >= 0 || line.indexOf("failed") >= 0)
-          html += "<span class='err'>";
+          entry += "<span class='err'>";
         else if (line.indexOf("OK") >= 0 || line.indexOf("ready") >= 0 || line.indexOf("connected") >= 0)
-          html += "<span class='ok'>";
+          entry += "<span class='ok'>";
         else if (line.indexOf("Timeout") >= 0 || line.indexOf("Warnung") >= 0)
-          html += "<span class='warn'>";
+          entry += "<span class='warn'>";
         else
-          html += "<span>";
+          entry += "<span>";
         line.replace("<", "&lt;"); line.replace(">", "&gt;");
-        html += line + "</span>\n";
+        entry += line + "</span>\n";
+        if (isDfPlayer) html += entry;
+        else            generalLog += entry;
       }
       xSemaphoreGive(webLogMutex);
     }
     html += "</div>";
+
+    // ── Allgemeines Log ────────────────────────────────────────
+    {
+      String ntpTs = strlen(snapNtpTime) > 0 ? String(snapNtpTime) : String("–");
+      html += "<div class='sec-title'>Allgemeines Log &ndash; letzter Reset: "
+              "<span style='color:#4A9EFF'>" + ntpTs + "</span></div>";
+    }
+    html += "<div id='log'>" + generalLog + "</div>";
 
     // ── Verbindung: letzter Restart (WiFi + NTP analog Info-Seite) ─
     {
@@ -2320,12 +2368,16 @@ void setup() {
           mp3Count = 99;                                                                 // Fallback: MP3-Auswahl bis Datei 99 erlauben
           break;
         }
+        checkSerial2Leftover("readFileCounts (setup)");
         int16_t c = player.readFileCounts();
         if (c > 0) mp3Count = c - 1;                                                     // c==0 → mp3Count bleibt 0, kein uint8_t-Unterlauf auf 255
       }
     }
+    checkSerial2Leftover("volume (setup)");
     player.volume(vol);
+    checkSerial2Leftover("EQ (setup)");
     player.EQ(DFPLAYER_EQ_BASS);
+    checkSerial2Leftover("playFolder (setup Startsound)");
     player.playFolder(2, 1);
     delay(4000);
     playerStatus = 1;
@@ -2394,7 +2446,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v07.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v08.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };
