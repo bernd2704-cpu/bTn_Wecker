@@ -1,10 +1,55 @@
 #pragma once
-// SysConf_12v08.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v08
-// Datei-Version    : 12v08
+// SysConf_12v12.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v12
+// Datei-Version    : 12v12
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v12–watchdogTask als zusätzlicher Fallback für rtcRetryMagic: friert
+//         alarmTask während eines laufenden triggerAlarm()-Versuchs ein (egal
+//         aus welchem Grund), hätte bisher kein Ersatzalarm-Retry nach dem
+//         watchdogTask-Neustart stattgefunden – dieser Pfad war komplett
+//         unabhängig vom regulären DFPlayer-Absturz-Retry in triggerAlarm()
+//         selbst. Neuer In-Flight-Marker alarmTriggerInFlight (+ Snapshot
+//         alarmTriggerNum/-FileNo/-Min/-FailCount) wird zu Beginn des
+//         riskanten Abschnitts in triggerAlarm() gesetzt und nach jedem
+//         Ausgang (Erfolg, regulärer Retry, endgültiger Abbruch) wieder
+//         gelöscht. watchdogTask prüft bei einem alarmTask-Freeze gezielt
+//         diesen Marker (NICHT bei input-/displayTask-Freezes, die stehen in
+//         keinem Zusammenhang mit einem laufenden Alarm) und setzt vor dem
+//         eigenen ESP.restart() ebenfalls rtcRetryMagic, sodass setup() den
+//         Alarm nach dem Neustart genauso erneut auslöst wie beim regulären
+//         Retry-Pfad.
+//   12v11–Bugfix: Reboot statt Alarm ohne Ersatzalarm. Ursache: der in 12v09
+//         eingeführte Puffer-Drain in triggerAlarm() (`while(Serial2.available())
+//         Serial2.read();`) hatte keine Obergrenze. Bei getrenntem/defektem
+//         DFPlayer kann die floatende RX-Leitung (GPIO16) dauerhaft Rauschen
+//         liefern – Serial2.available() wird dann nie 0, die Schleife lief
+//         endlos und hielt dabei playerMutex. alarmTask aktualisierte dadurch
+//         wdg_alarmTask nicht mehr; watchdogTask erkannte nach WDG_TIMEOUT_MS
+//         (30 s) einen Task-Freeze und rief ESP.restart() auf – OHNE
+//         rtcRetryMagic zu setzen, da dieser Pfad unabhängig vom regulären
+//         DFPlayer-Absturz-Neustart in triggerAlarm() ist. Ergebnis: Reboot,
+//         aber kein Ersatzalarm nach dem Neustart. Neue Konstante
+//         SERIAL2_DRAIN_MAX_BYTES (200) begrenzt sowohl diesen Drain als auch
+//         die Drain-Schleife in readStateDrained() (12v09) auf eine feste
+//         Obergrenze – beide Schleifen terminieren jetzt garantiert.
+//   12v10–ALARM_MAX_RESTARTS 10 → 3: max. ESP.restart()-Versuche je Alarm bei
+//         nicht reagierendem DFPlayer deutlich reduziert, bevor triggerAlarm()
+//         den Alarm für diesen Tag endgültig abbricht (Motor/Licht bleiben
+//         aus, roter [FEHLER]-Eintrag im Web-Log).
+//   12v09–DFPlayer Serial2-Puffer-Desync behoben (Diagnose 10.08.2026: konstant
+//         20 Byte / 2 Frames Rückstand vor readState() im ALARM_RUNNING-Poll,
+//         Ursache: player.available() (DFRobotDFPlayerMini) verarbeitet pro
+//         Aufruf nur einen 10-Byte-Frame und kehrt zurück, auch wenn bereits
+//         weitere vollständige Frames im Puffer stehen – z.B. das interne
+//         0x41-ACK zusätzlich zur Feedback-Antwort im ACK-Modus). Neue Funktion
+//         readStateDrained() liest bei jedem Aufruf alle vollständigen Frames
+//         aus dem Puffer und wertet nur den zuletzt empfangenen Feedback-Wert;
+//         ersetzt player.readState() an allen Aufrufstellen. Zusätzlich verwirft
+//         triggerAlarm() unmittelbar vor playFolder() alle noch im Puffer
+//         stehenden Bytes, damit verifyPlayStarted() garantiert nur die Antwort
+//         auf den gerade gesendeten Befehl sieht.
 //   12v08–Web-Log neu organisiert: DFPlayer-Meldungen in eigenem Abschnitt mit
 //         Zeitstempel des letzten erfolgreichen Alarms (snapAlarmTime). Neue
 //         Funktion checkSerial2Leftover() loggt unerwartete Restbytes im
@@ -229,7 +274,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v08"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v12"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -289,7 +334,8 @@ const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               /
 const uint32_t ALARM_POLL_MS        = 5000;                                    // Alarm-Nachlauf Prüfintervall
 const uint32_t VERIFY_PLAY_DELAY_MS =  500;                                    // 12v06: Start-Check – Wartezeit je Versuch (DFPlayer braucht Zeit zum Laden)
 const uint8_t  VERIFY_PLAY_RETRIES  =    3;                                    // 12v06: Start-Check – Versuche (1 initial + 2 Retries), Reset spätestens nach 1500 ms
-const uint8_t  ALARM_MAX_RESTARTS   =   10;                                    // 12v07: max. ESP.restart()-Versuche je Alarm, danach Abbruch statt Endlos-Neustart
+const uint8_t  ALARM_MAX_RESTARTS   =    3;                                    // 12v10: max. ESP.restart()-Versuche je Alarm, danach Abbruch statt Endlos-Neustart (10 → 3)
+const uint16_t SERIAL2_DRAIN_MAX_BYTES = 200;                                  // 12v11: Obergrenze für Puffer-Drain-Schleifen – verhindert Endlosschleife bei dauerhaftem UART-Rauschen (floatende RX-Leitung bei getrenntem/defektem DFPlayer)
 const uint32_t WIFI_RECONNECT_MS    = 3000;                                    // WiFi-Reconnect Wiederholrate
 const uint32_t NVR_COMMIT_DELAY_MS  = 2000;                                    // 11v00: Ruhezeit nach letztem Event vor NVR-Commit (Flash-Wear-Schutz)
 

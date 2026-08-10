@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v08
+Basis 4v1  →  12v12
 
 ## Kategorien
 
@@ -228,4 +228,32 @@ Basis 4v1  →  12v08
 | 12v08 | Funktion | Web-Log neu organisiert: DFPlayer-Meldungen (alle Zeilen mit „DFPlayer" im Text) erscheinen jetzt in einem eigenen Abschnitt `#dflog` statt im „Allgemeinen Log". Titel lautet „DFPlayer – letzter erfolgreicher Alarm: *&lt;Zeitstempel&gt;*" – neuer Snapshot `snapAlarmTime` wird in `triggerAlarm()` direkt nach erfolgreichem `playFolder()` gesetzt (analog `snapTouchTime`/`snapStackTime`). |
 | 12v08 | Funktion | Neue Funktion `checkSerial2Leftover(label)` prüft vor jedem an den DFPlayer gesendeten Kommando `Serial2.available()`. Sind noch Bytes im Empfangspuffer (Hinweis auf verspätete/verlorene Antworten bzw. UART-Desync), schreibt `webLogf()` eine `[DFPlayer]`-Zeile mit Kommando-Label, Byteanzahl, Zeitstempel und einem seit Boot mitlaufenden Zähler `serial2LeftoverCount`. Wird vor allen `player.*()`-Aufrufen aufgerufen, die ein Kommando an den DFPlayer senden. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v08
+## Version 12v09
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v09 | Bugfix | DFPlayer Serial2-Puffer-Desync behoben: Logauswertung vom 10.08.2026 zeigte konstant 20 Byte (2 Frames) Rückstand vor `readState()`-Aufrufen im ALARM_RUNNING-Poll. Ursache: `DFRobotDFPlayerMini::available()` verarbeitet pro Aufruf nur einen vollständigen 10-Byte-Frame und kehrt danach sofort zurück, selbst wenn im Puffer bereits weitere vollständige Frames warten (z. B. das interne 0x41-ACK zusätzlich zur eigentlichen Feedback-Antwort im ACK-Modus). `verifyPlayStarted()` las dadurch nach `triggerAlarm()` teils einen veralteten Frame statt der aktuellen Antwort auf den gerade gesendeten `playFolder`-Befehl. |
+| 12v09 | Bugfix | Neue Funktion `readStateDrained()` liest bei jedem Aufruf so lange weiter, bis kein vollständiger 10-Byte-Frame mehr im Puffer steht, und wertet nur den zuletzt empfangenen Feedback-Wert als aktuellen Status (ältere Frames werden verworfen). Ersetzt `player.readState()` an allen Aufrufstellen (`verifyPlayStarted()`, ALARM_RUNNING-Poll, S1-Handler). Beseitigt den Rückstand strukturell statt nur punktuell vor dem Alarm. |
+| 12v09 | Stabilität | `triggerAlarm()` verwirft unmittelbar vor `playFolder()` alle noch im Serial2-Puffer stehenden Bytes (`while(Serial2.available()) Serial2.read();`) – `verifyPlayStarted()` sieht dadurch garantiert nur die Antwort auf den gerade gesendeten Befehl. Nicht blockierend, daher unkritisch auch unter gehaltenem `playerMutex`. |
+
+## Version 12v10
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v10 | Funktion | `ALARM_MAX_RESTARTS` 10 → 3: reagiert der DFPlayer nach einem Alarm-Start dauerhaft nicht (Kabel ab, Modul defekt, SD-Karte fehlt), bricht `triggerAlarm()` jetzt schon nach 3 statt 10 `ESP.restart()`-Versuchen endgültig ab (Motor/Licht bleiben aus, roter `[FEHLER]`-Eintrag im Web-Log). |
+
+## Version 12v11
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v11 | Bugfix | Reboot statt Alarm ohne Ersatzalarm behoben: Der in 12v09 eingeführte Puffer-Drain in `triggerAlarm()` (`while(Serial2.available()) Serial2.read();`) hatte keine Obergrenze. Bei getrenntem/defektem DFPlayer kann die floatende RX-Leitung (GPIO16) dauerhaft Rauschen liefern – `Serial2.available()` wird dann nie 0, die Schleife lief endlos und hielt dabei `playerMutex`. `alarmTask` aktualisierte dadurch `wdg_alarmTask` nicht mehr; `watchdogTask` erkannte nach `WDG_TIMEOUT_MS` (30 s) einen Task-Freeze und rief `ESP.restart()` auf – ohne `rtcRetryMagic` zu setzen, da dieser Pfad unabhängig vom regulären DFPlayer-Absturz-Neustart in `triggerAlarm()` ist. Ergebnis: Reboot, aber kein Ersatzalarm nach dem Neustart. |
+| 12v11 | Bugfix | Neue Konstante `SERIAL2_DRAIN_MAX_BYTES` (200) begrenzt sowohl den Drain in `triggerAlarm()` als auch die Drain-Schleife in `readStateDrained()` (12v09) auf eine feste Obergrenze – beide Schleifen terminieren jetzt garantiert, auch bei dauerhaftem UART-Rauschen. |
+
+## Version 12v12
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v12 | Stabilität | `watchdogTask` als zusätzlicher Fallback für `rtcRetryMagic`: Fror `alarmTask` während eines laufenden `triggerAlarm()`-Versuchs ein (egal aus welchem Grund), fand bisher kein Ersatzalarm-Retry nach dem `watchdogTask`-Neustart statt – dieser Pfad war komplett unabhängig vom regulären DFPlayer-Absturz-Retry in `triggerAlarm()` selbst. Neuer In-Flight-Marker `alarmTriggerInFlight` (+ Snapshot `alarmTriggerNum`/`-FileNo`/`-Min`/`-FailCount`) wird zu Beginn des riskanten Abschnitts in `triggerAlarm()` gesetzt und nach jedem Ausgang (Erfolg, regulärer Retry, endgültiger Abbruch) wieder gelöscht. |
+| 12v12 | Stabilität | `watchdogTask` prüft bei einem `alarmTask`-Freeze gezielt diesen Marker (nicht bei input-/displayTask-Freezes, die stehen in keinem Zusammenhang mit einem laufenden Alarm) und setzt vor dem eigenen `ESP.restart()` ebenfalls `rtcRetryMagic`, sodass `setup()` den Alarm nach dem Neustart genauso erneut auslöst wie beim regulären Retry-Pfad. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v12

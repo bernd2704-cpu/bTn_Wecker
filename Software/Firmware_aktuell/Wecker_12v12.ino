@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_12v08.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_12v12.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
@@ -321,6 +321,34 @@ static void checkSerial2Leftover(const char* label) {
     webLogf("[DFPlayer] Serial2 Restbytes vor %s: %d (seit Boot: %lu, %s)",
             label, avail, (unsigned long)serial2LeftoverCount, ts);
   }
+}
+
+// player.available() (DFRobotDFPlayerMini) verarbeitet pro Aufruf nur EINEN
+// vollständigen 10-Byte-Frame und kehrt danach sofort zurück, selbst wenn im
+// Serial2-Puffer bereits weitere vollständige Frames warten (z.B. das interne
+// 0x41-ACK zusätzlich zur eigentlichen Statusantwort im ACK-Modus, oder eine
+// unaufgefordert vom DFPlayer gesendete Play-Finished-Meldung). player.
+// readState() ruft intern zwar wiederholt available() auf, bricht aber ab,
+// sobald IRGENDEIN Frame-Typ eintrifft, der nicht die angeforderte Feedback-
+// Antwort ist (Rückgabe -1) – die tatsächliche Antwort bleibt dann bis zum
+// nächsten Aufruf im Puffer stehen. Dadurch wächst der Rückstand über mehrere
+// Poll-Zyklen (siehe Diagnose vom 10.08.2026: konstant 20 Byte / 2 Frames).
+// readStateDrained() behebt das an der Wurzel: nach der ersten Antwort noch
+// so lange weiterlesen, bis kein vollständiger Frame mehr im Puffer steht,
+// und nur den zuletzt empfangenen Feedback-Wert als aktuellen Status werten.
+static int16_t readStateDrained() {
+  int16_t st = (int16_t)player.readState();
+  uint16_t drained = 0;
+  while (Serial2.available() >= DFPLAYER_RECEIVED_LENGTH && drained < SERIAL2_DRAIN_MAX_BYTES) {
+    if (!player.available()) { break; }                                                   // unvollständiger Frame → für nächsten Zyklus stehen lassen
+    if (player.readType() == DFPlayerFeedBack) {
+      st = (int16_t)player.read();                                                         // neuester Feedback-Wert gewinnt, ältere werden verworfen
+    } else {
+      player.read();                                                                       // sonstigen Frame (z.B. Play-Finished) konsumieren, nicht werten
+    }
+    drained += DFPLAYER_RECEIVED_LENGTH;                                                   // 12v11: Obergrenze – nie unbegrenzt schleifen (Watchdog-Schutz)
+  }
+  return st;
 }
 
 // Aktualisiert den Touch-Baseline-Snapshot (thread-safe)
@@ -1179,6 +1207,20 @@ RTC_NOINIT_ATTR uint8_t  rtcRetryFileNo;   // sound1_assigned bzw. sound2_assign
 RTC_NOINIT_ATTR uint8_t  rtcRetryMin;      // Minute zum Ausfallzeitpunkt – für lastA1Min/lastA2Min nach Retry
 RTC_NOINIT_ATTR uint8_t  rtcRetryCount;    // 12v07: bisherige Fehlversuche – nur gültig wenn rtcRetryMagic zuvor gesetzt war
 
+// 12v12: In-Flight-Snapshot des gerade laufenden triggerAlarm()-Versuchs.
+// alarmState wechselt erst NACH erfolgreicher verifyPlayStarted() auf
+// ALARM_RUNNING – friert alarmTask VORHER ein (z.B. in der Drain-Schleife
+// oder in verifyPlayStarted()), sieht watchdogTask nur ALARM_IDLE und weiß
+// ohne diesen Marker nicht, dass gerade ein Alarm-Versuch lief. Gewöhnliche
+// RAM-Variablen genügen: watchdogTask liest sie VOR dem ESP.restart(),
+// müssen also nicht wie rtcRetry* einen Neustart überstehen. uint8_t/bool
+// sind auf Xtensa atomar – kein Mutex nötig (analog wdg_*-Timestamps).
+static volatile bool    alarmTriggerInFlight  = false;  // true nur während des riskanten Abschnitts in triggerAlarm()
+static volatile uint8_t alarmTriggerNum       = 0;
+static volatile uint8_t alarmTriggerFileNo    = 0;
+static volatile uint8_t alarmTriggerMin       = 0;
+static volatile uint8_t alarmTriggerFailCount = 0;
+
 // Display einschalten, falls abgeschaltet – analog zum Touch-Wake in inputTask.
 static void wakeDisplay() {
   if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -1237,7 +1279,7 @@ static bool verifyPlayStarted(const char* label, uint8_t fileNo) {
     vTaskDelay(pdMS_TO_TICKS(VERIFY_PLAY_DELAY_MS));                                    // außerhalb Mutex: DFPlayer Zeit zum Laden/Starten geben
     if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
       checkSerial2Leftover("readState (verifyPlayStarted)");
-      st = player.readState();
+      st = readStateDrained();
       xSemaphoreGive(playerMutex);
     }
     if (st > 0) { return true; }
@@ -1262,7 +1304,21 @@ static bool verifyPlayStarted(const char* label, uint8_t fileNo) {
 static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t failCount) {
   const char* label = (alarmNum == 1) ? "Alarm 1" : "Alarm 2";
   if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+    // 12v12: In-Flight-Marker setzen, BEVOR der riskante Abschnitt beginnt –
+    // watchdogTask kann bei einem Freeze ab hier einen Ersatzalarm auslösen.
+    alarmTriggerNum       = alarmNum;
+    alarmTriggerFileNo    = fileNo;
+    alarmTriggerMin       = min;
+    alarmTriggerFailCount = failCount;
+    alarmTriggerInFlight  = true;
+
     checkSerial2Leftover("playFolder (triggerAlarm)");
+    // 12v11: Obergrenze SERIAL2_DRAIN_MAX_BYTES statt unbegrenzter Schleife – bei
+    // getrenntem/defektem DFPlayer kann die floatende RX-Leitung dauerhaft
+    // Rauschen liefern; ohne Grenze hielt dies playerMutex endlos, alarmTask
+    // aktualisierte wdg_alarmTask nicht mehr → watchdogTask löste nach 30 s
+    // ESP.restart() aus, OHNE rtcRetryMagic zu setzen → kein Ersatzalarm.
+    for (uint16_t i = 0; i < SERIAL2_DRAIN_MAX_BYTES && Serial2.available(); i++) { Serial2.read(); } // Puffer verwerfen: verifyPlayStarted() soll garantiert nur die Antwort auf diesen playFolder sehen
     player.playFolder(1, fileNo);
     xSemaphoreGive(playerMutex);
     if (!verifyPlayStarted(label, fileNo)) {
@@ -1273,6 +1329,7 @@ static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t 
         webLogf("[FEHLER] %s: DFPlayer antwortet nach %u Versuchen weiterhin nicht (Datei %d) – Alarm abgebrochen, %s",
                 label, (unsigned)failCount, fileNo, ts);
         rtcRetryMagic = 0;                                                                // kein weiterer Retry nach Abbruch
+        alarmTriggerInFlight = false;                                                     // 12v12: kein Freeze-Fallback mehr nötig – Abbruch ist final
         return;
       }
       rtcRetryAlarm  = alarmNum;                                                         // DFPlayer reagiert nicht – nach Neustart in setup() erneut auslösen
@@ -1280,8 +1337,10 @@ static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t 
       rtcRetryMin    = min;
       rtcRetryCount  = failCount;
       rtcRetryMagic  = RTC_RETRY_MAGIC;
+      alarmTriggerInFlight = false;                                                       // 12v12: regulärer Retry-Pfad übernimmt – Freeze-Fallback nicht mehr nötig
       ESP.restart();
     }
+    alarmTriggerInFlight = false;                                                         // 12v12: Play erfolgreich bestätigt – kein Freeze-Fallback mehr nötig
     if (alarmNum == 1) { lastA1Min = min; } else { lastA2Min = min; }                     // erst nach erfolgreichem Start sperren
     snapTimeStr(snapAlarmTime, sizeof(snapAlarmTime));                                    // letzter erfolgreicher Alarm für Web-Log
     motorStart();                                                                        // 12v03: Motor via PWM + Kickstart (respektiert wheel_on)
@@ -1320,13 +1379,13 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour) {
         int16_t st = -1;
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
           checkSerial2Leftover("readState (ALARM_RUNNING Poll)");
-          st = player.readState();
+          st = readStateDrained();
           xSemaphoreGive(playerMutex);                                                     // Mutex SOFORT freigeben – nie mit gehaltenem Mutex schlafen
         }
         vTaskDelay(pdMS_TO_TICKS(1));                                                      // 1ms Pause AUSSERHALB Mutex: DFPlayer-Antwort stabilisieren
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
           checkSerial2Leftover("readState (ALARM_RUNNING Poll, 2. Abfrage)");
-          st = player.readState();                                                          // zweite Abfrage → korrekter Status
+          st = readStateDrained();                                                          // zweite Abfrage → korrekter Status
           xSemaphoreGive(playerMutex);
         }
         playerStatus = st;
@@ -1600,7 +1659,7 @@ static void inputTask(void *pvParam) {
         int16_t st = -1;
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(500)) == pdTRUE) {
           checkSerial2Leftover("readState (S1)");
-          st = player.readState();
+          st = readStateDrained();
           xSemaphoreGive(playerMutex);                                                   // Mutex sofort freigeben
         }
         // Standby-Status auflösen: vTaskDelay AUSSERHALB Mutex (Projektregel)
@@ -1613,7 +1672,7 @@ static void inputTask(void *pvParam) {
           vTaskDelay(pdMS_TO_TICKS(1));                                                 // außerhalb Mutex – Projektregel eingehalten
           if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
             checkSerial2Leftover("readState (S1 Retry)");
-            st = player.readState();
+            st = readStateDrained();
             xSemaphoreGive(playerMutex);
           }
         }
@@ -1959,6 +2018,21 @@ static void watchdogTask(void *pvParam) {
       if (!inputOk)   webLogf("  inputTask   : %lu ms ohne Lebenszeichen", now - wdg_inputTask);
       if (!displayOk) webLogf("  displayTask : %lu ms ohne Lebenszeichen", now - wdg_displayTask);
       if (!alarmOk)   webLogf("  alarmTask   : %lu ms ohne Lebenszeichen", now - wdg_alarmTask);
+      // 12v12: Fror alarmTask mitten in einem triggerAlarm()-Versuch ein
+      // (alarmTriggerInFlight, siehe dort), hätte der reguläre DFPlayer-
+      // Absturz-Neustart in triggerAlarm() selbst nie stattgefunden – ohne
+      // diesen Fallback bliebe der Alarm nach diesem Neustart ersatzlos aus.
+      // Nur für alarmTask, nicht für input-/displayTask-Freezes (die stehen
+      // in keinem Zusammenhang mit einem laufenden Alarm-Versuch).
+      if (!alarmOk && alarmTriggerInFlight) {
+        rtcRetryAlarm  = alarmTriggerNum;
+        rtcRetryFileNo = alarmTriggerFileNo;
+        rtcRetryMin    = alarmTriggerMin;
+        rtcRetryCount  = alarmTriggerFailCount;
+        rtcRetryMagic  = RTC_RETRY_MAGIC;
+        webLogf("[WATCHDOG] alarmTask fror während Alarm-Versuch ein (%s, Datei %d) – Ersatzalarm nach Neustart vorgemerkt",
+                (alarmTriggerNum == 1) ? "Alarm 1" : "Alarm 2", alarmTriggerFileNo);
+      }
       // Display-Meldung nur wenn displayTask noch läuft (sonst I2C-Zugriff riskant)
       if (displayOk) {
         if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(500)) == pdTRUE) {
@@ -2446,7 +2520,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v08.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v12.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };
