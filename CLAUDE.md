@@ -13,7 +13,7 @@ DFPlayer Mini GND als Sternpunkt-Topologie.
 
 ## Aktuelle Version
 
-Firmware 12v19, Konfiguration SysConf_12v19.h
+Firmware 13v00, Konfiguration SysConf_13v00.h
 
 ## Architektur
 
@@ -61,6 +61,6 @@ bTn_Wecker/
 │   └── Stückliste/
 └── Software/
     ├── Bibliotheken/
-    ├── Firmware_aktuell/          ← Wecker_12v19.ino, SysConf_12v19.h, WEB.h
+    ├── Firmware_aktuell/          ← Wecker_13v00.ino, SysConf_13v00.h, WEB.h
     └── Firmware_Versionshistorie/ ← ältere 12vNN-Stände
 ```

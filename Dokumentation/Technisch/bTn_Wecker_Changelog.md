@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v19
+Basis 4v1  →  13v00
 
 ## Kategorien
 
@@ -305,4 +305,13 @@ Basis 4v1  →  12v19
 | 12v19 | Bugfix | Log-Analyse vom 10.08.2026 zeigte trotz 12v09–12v18-Fixes weiterhin wiederkehrende Restbytes von 20–30 (2–3 Frames) sowie einen erneuten `verifyPlayStarted()`-Fehlschlag (Versuch 1/3, st=-1). Ursache: Der Vorab-Drain aus 12v14 lief nur unmittelbar vor dem alarmspezifischen `playFolder()` in `triggerAlarm()`. `volume()`, `stop()` und die Testsound-`playFolder()`-Aufrufe (Sound1/Sound2 an/aus, Lautstärke +/−, Funktionswahl-Stop) sendeten dagegen ungedraint – dort entstehende Restframes (z.B. ACK je Befehl) blieben liegen, bis ein zufälliger späterer `readStateDrained()`-Aufruf sie mit abräumte, im ungünstigen Fall genau während der nächsten Alarm-Verifikation. |
 | 12v19 | Bugfix | Fix: Inline-Drain aus `triggerAlarm()` in neue Funktion `drainSerial2Pre()` ausgelagert und zusätzlich vor allen `volume()`-, `stop()`- und Testsound-`playFolder()`-Aufrufen aufgerufen (`onClock()` Lautstärke +/−, `checkboxSound()` Sound1/Sound2 an/aus, Funktionswahl-Stop, S1-Stop). |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v19
+## Version 13v00
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 13v00 | Bugfix | Root Cause von `kein Start-Status nach playFolder` (st=-1) gefunden: `DFRobotDFPlayerMini::readState()` gibt bei JEDER Nicht-Feedback-Frame-Art (z.B. unaufgeforderter Play-Finished-Meldung 0x3C/0x3D vom vorherigen Titel) sofort -1 zurück, ohne weiter auf die tatsächliche Antwort zu warten. Der in 12v19 vermutete Zusammenhang mit dem ACK-Modus (0x41-Frame) traf **nicht** zu – `parseStack()` der Bibliothek verschluckt 0x41 bereits intern, unabhängig vom Fund, und setzt dabei nie `_isAvailable`. |
+| 13v00 | Bugfix | Fix 1: `readStateDrained()` wartet nach einem `-1` von `readState()` noch bis zu `SERIAL2_FEEDBACK_GRACE_MS` (100 ms) lang aktiv auf einen echten Feedback-Frame (Timer wird bei jedem weiteren Störframe zurückgesetzt), statt sofort aufzugeben. |
+| 13v00 | Qualität | Fix 2: ACK-Modus deaktiviert (`player.begin(Serial2, false, true)`) – entfernt die blockierende Wartelogik in `sendStack()` der Bibliothek (wartet bei aktivem ACK vor jedem neuen Befehl auf das ACK des vorherigen). War nicht die Ursache des st=-1-Problems, aber unnötige Latenzquelle; der Erfolg eines Befehls wird ohnehin über die tatsächliche Statusabfrage verifiziert. |
+| 13v00 | Refactoring | Nebeneffekt von Fix 2: `player.begin()` prüft ohne ACK nicht mehr auf Card-/USB-Online, liefert unbedingt `true` – das `if(player.begin(...)) {…} else { webLog("Verbindung fehlgeschlagen!"); }` in `setup()` war dadurch unreachable code. `else`-Zweig entfernt, `if` in unbedingten Ablauf aufgelöst; die Verbindungsprüfung übernimmt jetzt allein die bereits vorhandene `readFileCounts()`-Schleife mit `SETUP_MP3_TIMEOUT_MS`-Fallback ("Timeout – mp3Count unbekannt"). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 13v00
