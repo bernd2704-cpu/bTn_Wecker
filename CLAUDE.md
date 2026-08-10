@@ -13,7 +13,7 @@ DFPlayer Mini GND als Sternpunkt-Topologie.
 
 ## Aktuelle Version
 
-Firmware 12v13, Konfiguration SysConf_12v13.h
+Firmware 12v19, Konfiguration SysConf_12v19.h
 
 ## Architektur
 
@@ -28,9 +28,8 @@ Stack-Größen als STACK_*-Konstanten in SysConf_*.h
   ⚠ Nicht zu verwechseln mit Alexander Pronins `SSD1306wire` (kleines w, nur AVR,
   text-only) – wird hier NICHT verwendet.
 - **DFRobotDFPlayerMini**: DFPlayer Mini Steuerung über Serial2.
-  ⚠ Pflicht-Patch in `available()` (Zeit-Obergrenze 100 ms je Aufruf) nach
-  jeder Neuinstallation erneut anwenden – siehe
-  `Software/Bibliotheken/README.md`.
+  Unveränderte Originalversion – der in 12v13 versuchte Patch in `available()`
+  wurde in 12v14 zurückgenommen, siehe `Software/Bibliotheken/README.md`.
 
 ## Pflichtregeln
 
@@ -62,6 +61,6 @@ bTn_Wecker/
 │   └── Stückliste/
 └── Software/
     ├── Bibliotheken/
-    ├── Firmware_aktuell/          ← Wecker_12v13.ino, SysConf_12v13.h, WEB.h
+    ├── Firmware_aktuell/          ← Wecker_12v19.ino, SysConf_12v19.h, WEB.h
     └── Firmware_Versionshistorie/ ← ältere 12vNN-Stände
 ```

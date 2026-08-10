@@ -3,26 +3,25 @@
 Hinweis: Bibliotheken über den Arduino Library Manager installieren.
 Siehe README.md im Root für Versionsangaben.
 
-## Pflicht-Patch: DFRobotDFPlayerMini::available()
+## DFRobotDFPlayerMini: kein Patch (Stand 12v14)
 
-**Nach jeder (Neu-)Installation der Bibliothek DFRobotDFPlayerMini erneut
-anwenden** – der Library-Manager überschreibt lokale Änderungen.
+**Firmware 12v13 hatte hier fälschlich einen Patch dokumentiert** – nach dem
+Hardware-Watchdog-Reset (TWDT) vom 10.08.2026 mitten in `triggerAlarm()` →
+`playFolder()` → `sendStack()` wurde `available()`s innere
+`while (_serial->available())`-Schleife als Ursache vermutet und dort eine
+100-ms-Obergrenze ergänzt.
 
-`DFRobotDFPlayerMini.cpp`, Funktion `available()`: die innere
-`while (_serial->available())`-Schleife hat im Original keine
-Zeitbegrenzung. Liefert der DFPlayer (z.B. bei getrenntem/defektem Modul,
-floatende RX-Leitung) anhaltend Bytes/Rauschen, blockiert diese Schleife
-unbegrenzt – `waitAvailable()`s eigener 500-ms-Timeout greift nicht, da er
-nur zwischen Aufrufen von `available()` geprüft wird. Führte am 10.08.2026
-zu einem Hardware-Watchdog-Reset (TWDT) mitten in `triggerAlarm()` →
-`playFolder()` → `sendStack()`, ohne dass die Firmware (auch mit
-`SERIAL2_DRAIN_MAX_BYTES`-Begrenzung, Firmware 12v11) reagieren konnte,
-weil der Hänger bereits in der Bibliothek selbst passierte.
+Der Patch wurde in 12v14 **zurückgenommen**: die Hardware wurde mit 12v08
+als voll funktionsfähig verifiziert, dort existierte weder der Patch noch
+war die Bibliothek verändert. Der tatsächliche Fehler steckte in der
+Firmware, nicht in der Bibliothek – siehe `triggerAlarm()` in
+`Wecker_12v14.ino`: ein roher `Serial2.read()`-Discard vor `playFolder()`
+(seit 12v11) griff an der Bibliothek vorbei in deren Frame-Puffer und
+desynchronisierte dabei `_receivedIndex`/`_isSending`. Das erzeugte das
+anhaltende Byte-Durcheinander auf der UART, das dann in `available()` zum
+15-Sekunden-Hänger führte. Fix: Drain in `triggerAlarm()` läuft jetzt über
+`player.available()`/`player.read()` statt über rohe Bytes (analog zu
+`readStateDrained()`).
 
-Fix: harte Obergrenze von 100 ms pro `available()`-Aufruf ergänzt
-(`unsigned long _availableStartMs = millis();` vor der Schleife,
-`if (millis() - _availableStartMs > 100) { break; }` als erste Anweisung
-in der Schleife). `_receivedIndex` bleibt dabei für den nächsten Aufruf
-erhalten – kein Datenverlust bei bereits vollständig empfangenen Frames.
-
-Installationspfad auf diesem Rechner: `D:\Arduino\libraries\DFRobotDFPlayerMini\`
+**DFRobotDFPlayerMini.cpp bleibt daher unverändert im Originalzustand.**
+Kein Patch nach (Neu-)Installation nötig.

@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_12v13.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_12v18.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
@@ -310,16 +310,28 @@ static void snapTimeStr(char* buf, size_t len) {
 // unerwartete Bytes im Serial2-Empfangspuffer standen (Hinweis auf
 // verspätete/verlorene Antworten bzw. UART-Desync). Vor jedem player.*-
 // Aufruf zu rufen, der ein Kommando an den DFPlayer sendet.
-static uint32_t serial2LeftoverCount = 0;
+// serial2LeftoverCount zählt JEDE Abfrage mit Restbytes (unabhängig vom Log);
+// serial2LeftoverLastLogged hält den zuletzt GEMELDETEN Wert, damit
+// webLogf() nur bei einer Änderung der Restbyte-Anzahl schreibt. Bleibt
+// dabei über Nullstände hinweg erhalten (kein Reset bei avail==0): sonst
+// würde z.B. während ALARM_RUNNING derselbe wiederkehrende Restbyte-Wert
+// (Poll → Restbytes → gedraint auf 0 → nächster Poll dieselbe Anzahl) bei
+// jedem Zyklus erneut als "neue" Änderung gemeldet, nur weil der Puffer
+// dazwischen kurz leer war.
+static uint32_t serial2LeftoverCount      = 0;
+static int      serial2LeftoverLastLogged = -1;                                          // -1 = noch nichts gemeldet
 
 static void checkSerial2Leftover(const char* label) {
   int avail = Serial2.available();
   if (avail > 0) {
     serial2LeftoverCount++;
-    char ts[20];
-    snapTimeStr(ts, sizeof(ts));
-    webLogf("[DFPlayer] Serial2 Restbytes vor %s: %d (seit Boot: %lu, %s)",
-            label, avail, (unsigned long)serial2LeftoverCount, ts);
+    if (avail != serial2LeftoverLastLogged) {
+      serial2LeftoverLastLogged = avail;
+      char ts[20];
+      snapTimeStr(ts, sizeof(ts));
+      webLogf("[DFPlayer] Serial2 Restbytes vor %s: %d (seit Boot: %lu, %s)",
+              label, avail, (unsigned long)serial2LeftoverCount, ts);
+    }
   }
 }
 
@@ -1313,12 +1325,20 @@ static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t 
     alarmTriggerInFlight  = true;
 
     checkSerial2Leftover("playFolder (triggerAlarm)");
-    // 12v11: Obergrenze SERIAL2_DRAIN_MAX_BYTES statt unbegrenzter Schleife – bei
-    // getrenntem/defektem DFPlayer kann die floatende RX-Leitung dauerhaft
-    // Rauschen liefern; ohne Grenze hielt dies playerMutex endlos, alarmTask
-    // aktualisierte wdg_alarmTask nicht mehr → watchdogTask löste nach 30 s
-    // ESP.restart() aus, OHNE rtcRetryMagic zu setzen → kein Ersatzalarm.
-    for (uint16_t i = 0; i < SERIAL2_DRAIN_MAX_BYTES && Serial2.available(); i++) { Serial2.read(); } // Puffer verwerfen: verifyPlayStarted() soll garantiert nur die Antwort auf diesen playFolder sehen
+    // 12v14: Drain über die Bibliothek (player.available()/read()) statt roher
+    // Serial2.read()-Bytes – ein roher Discard reißt ggf. mitten in einem noch
+    // eintreffenden Frame ab, ohne dass DFRobotDFPlayerMini davon weiß. Die
+    // Bibliothek verliert dadurch die Synchronisation zu _receivedIndex/
+    // _isSending, was zu anhaltendem Byte-Durcheinander auf der UART und in
+    // der Folge zum 15s-TWDT-Hänger in available() führte (Root Cause des
+    // Hardware-Resets statt Alarmauslösung – nicht in der Bibliothek, siehe
+    // Software/Bibliotheken/README.md, Patch dort zurückgenommen).
+    uint16_t drainedPre = 0;
+    while (Serial2.available() >= DFPLAYER_RECEIVED_LENGTH && drainedPre < SERIAL2_DRAIN_MAX_BYTES) {
+      if (!player.available()) { break; }                                                   // unvollständiger Frame → stehen lassen, Parser-Zustand nicht antasten
+      player.read();                                                                         // Restframe verwerfen, aber über die Bibliothek konsumieren
+      drainedPre += DFPLAYER_RECEIVED_LENGTH;
+    }
     player.playFolder(1, fileNo);
     xSemaphoreGive(playerMutex);
     if (!verifyPlayStarted(label, fileNo)) {
@@ -2502,7 +2522,39 @@ void setup() {
   snprintf(str_coff,    sizeof(str_coff),    "%02u",      cuckoo_offTime);
   uiTransition(UI_CLOCK);                                                               // initialer Zustand + Bildschirm
 
+  // ── Hardware Task Watchdog Timer (TWDT) ──────────────
+  // Initialisierung VOR Task-Start: esp_task_wdt_add() in den Task-Funktionen
+  // setzt ein bereits existierendes TWDT voraus, sonst schlägt die Anmeldung
+  // mit ESP_ERR_INVALID_STATE fehl (Rückgabewert dort ungeprüft) und jeder
+  // spätere esp_task_wdt_reset() bricht mit "task not found" ab, weil der
+  // Task nie wirklich angemeldet wurde – beobachtet am 10.08.2026 (12v14).
+  // 12v16: Auf dieser Hardware ist das TWDT tatsächlich schon vor setup()
+  // initialisiert (esp_task_wdt_init() meldete "already initialized") – die
+  // ursprüngliche Annahme "Core 3.x init bereits beim Boot" war also richtig,
+  // nur die Reihenfolge relativ zum Task-Start war falsch. Blindes
+  // esp_task_wdt_init() erzeugt dabei zusätzlich ein ESP_LOGE (Seiteneffekt
+  // der Bibliotheksfunktion, unabhängig vom Rückgabewert) – daher vorher per
+  // esp_task_wdt_status(NULL) abfragen statt auf den Fehlschlag zu warten:
+  // ESP_ERR_INVALID_STATE bedeutet "TWDT nie initialisiert", jeder andere
+  // Rückgabewert (ESP_OK oder ESP_ERR_NOT_FOUND) bedeutet "existiert bereits".
+  // trigger_panic=true: TWDT-Ablauf erzeugt Backtrace + Reset statt stiller Neustart.
+  // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
+  // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
+  const esp_task_wdt_config_t twdt_cfg = {
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v18.h
+    .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
+    .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
+  };
+  if (esp_task_wdt_status(NULL) == ESP_ERR_INVALID_STATE) {
+    esp_task_wdt_init(&twdt_cfg);                                                        // TWDT existiert noch nicht – anlegen
+  } else {
+    esp_task_wdt_reconfigure(&twdt_cfg);                                                 // TWDT existiert schon (Boot-Default) – nur umkonfigurieren
+  }
+  webLogf("[TWDT] Hardware Watchdog aktiv (%u ms)", (unsigned)WDT_HARDWARE_MS);
+
   // ── FreeRTOS Tasks starten ───────────────────────────────
+  // Jetzt garantiert NACH TWDT-Init: esp_task_wdt_add() in den Task-Funktionen
+  // trifft immer auf ein bereits existierendes TWDT.
   if (xTaskCreatePinnedToCore(touchTask,    "touchTask",    STACK_TOUCH, nullptr, 2, &hTouchTask,   0) != pdPASS) rtosPanic("touchTask");   // Core 0, Prio 2
   if (xTaskCreatePinnedToCore(alarmTask,    "alarmTask",    STACK_ALARM, nullptr, 2, &hAlarmTask,   0) != pdPASS) rtosPanic("alarmTask");   // Core 0, Prio 2 – getrennt von inputTask
   if (xTaskCreatePinnedToCore(wifiTask,     "wifiTask",     STACK_WIFI, nullptr, 1, &hWifiTask,    0) != pdPASS) rtosPanic("wifiTask");    // Core 0, Prio 1
@@ -2512,20 +2564,6 @@ void setup() {
   if (xTaskCreatePinnedToCore(inputTask,    "inputTask",    STACK_INPUT, nullptr, 2, &hInputTask,   1) != pdPASS) rtosPanic("inputTask");   // Core 1, Prio 2
   if (xTaskCreatePinnedToCore(displayTask,  "displayTask",  STACK_DISPLAY, nullptr, 1, &hDisplayTask, 1) != pdPASS) rtosPanic("displayTask"); // Core 1, Prio 1
   if (xTaskCreatePinnedToCore(webLogTask,   "webLogTask",   STACK_WEBLOG,  nullptr, 1, &hWebLogTask,  0) != pdPASS) rtosPanic("webLogTask");  // Core 0, Prio 1
-
-  // ── Hardware Task Watchdog Timer (TWDT) ──────────────
-  // Initialisierung NACH Task-Start: Tasks müssen bereits laufen bevor
-  // sie sich anmelden können (esp_task_wdt_add in Task-Funktion selbst).
-  // trigger_panic=true: TWDT-Ablauf erzeugt Backtrace + Reset statt stiller Neustart.
-  // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
-  // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
-  const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_12v13.h
-    .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
-    .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
-  };
-  esp_task_wdt_reconfigure(&twdt_cfg); // TWDT umkonfigurieren (Core 3.x init bereits beim Boot)
-  webLogf("[TWDT] Hardware Watchdog aktiv (%u ms)", (unsigned)WDT_HARDWARE_MS);
 }
 
 

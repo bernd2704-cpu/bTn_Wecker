@@ -1,10 +1,45 @@
 #pragma once
-// SysConf_12v13.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 12v13
-// Datei-Version    : 12v13
+// SysConf_12v16.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v16
+// Datei-Version    : 12v16
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 //
 // Änderungshistorie:
+//   12v16–12v15 initialisierte das TWDT blind per esp_task_wdt_init(), ohne
+//         vorher zu prüfen ob es (wie sich auf dieser Hardware zeigte)
+//         bereits vom Boot-Vorgang existiert – Folge: "E task_wdt:
+//         esp_task_wdt_init(517): TWDT already initialized" bei jedem
+//         Start. Die ursprüngliche Annahme "Core 3.x init bereits beim
+//         Boot" war also korrekt, nur die Reihenfolge relativ zum
+//         Task-Start (siehe 12v15) war das eigentliche Problem, nicht das
+//         Fehlen der Initialisierung selbst. Fix: esp_task_wdt_status(NULL)
+//         fragt vorher ab, ob das TWDT existiert (ESP_ERR_INVALID_STATE =
+//         nein) – nur dann esp_task_wdt_init(), sonst weiterhin nur
+//         esp_task_wdt_reconfigure(). Kein ESP_LOGE-Seiteneffekt mehr.
+//   12v15–Laufzeitfehler "E task_wdt: esp_task_wdt_reset(707): task not
+//         found" behoben: esp_task_wdt_reconfigure() setzt ein bereits
+//         initialisiertes TWDT voraus, wurde aber erst NACH dem Start von
+//         inputTask/displayTask/alarmTask aufgerufen. Die Annahme "Core 3.x
+//         init bereits beim Boot" traf hier nicht zu (oder war zeitlich
+//         nicht garantiert) – esp_task_wdt_add() dieser Tasks lief ins
+//         Leere, jeder folgende esp_task_wdt_reset() brach mit "task not
+//         found" ab. Damit hätte ein echter Hang nie einen TWDT-Reset
+//         ausgelöst. Fix: esp_task_wdt_init() jetzt VOR Task-Start, mit
+//         Fallback auf esp_task_wdt_reconfigure() falls schon initialisiert.
+//   12v14–12v13-Diagnose (Bibliotheks-Patch) zurückgenommen: Hardware bei
+//         12v08 als voll funktionsfähig verifiziert, dort existierte weder
+//         Patch noch Bibliotheksänderung – der Hang war firmwareseitig
+//         verursacht. Root Cause: triggerAlarm() (Wecker_12v14.ino) verwarf
+//         vor playFolder() rohe Serial2-Bytes direkt per Serial2.read(),
+//         vorbei an DFRobotDFPlayerMini's eigenem Frame-Parser. Riss dieser
+//         Discard mitten in einem noch eintreffenden Frame ab, desynchro-
+//         nisierte das _receivedIndex/_isSending in der Bibliothek und
+//         erzeugte dadurch anhaltendes Byte-Durcheinander auf der UART –
+//         genau die Bedingung, die dann in available() zum 15s-TWDT-Hänger
+//         führte. Fix: Drain läuft jetzt über player.available()/read()
+//         (wie in readStateDrained()) statt über rohe Bytes.
+//         DFRobotDFPlayerMini.cpp bleibt unverändert im Originalzustand,
+//         siehe Software/Bibliotheken/README.md.
 //   12v13–Root Cause des 12v12-Vorfalls (Reboot ohne Ersatzalarm trotz
 //         12v11/12v12-Fixes) gefunden: Hardware-TWDT-Backtrace zeigte den
 //         Hang in triggerAlarm() → player.playFolder() → sendStack() →
@@ -295,7 +330,7 @@
 //          Stack-Größen als Kommentar dokumentiert
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "12v13"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "12v16"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.

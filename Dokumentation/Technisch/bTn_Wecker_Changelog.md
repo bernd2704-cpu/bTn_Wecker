@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  12v13
+Basis 4v1  →  12v19
 
 ## Kategorien
 
@@ -263,4 +263,46 @@ Basis 4v1  →  12v13
 | 12v13 | Bugfix | Root Cause des 12v12-Vorfalls gefunden (Reboot ohne Ersatzalarm trotz 12v11/12v12-Fixes): Hardware-TWDT-Backtrace zeigte den Hang in `triggerAlarm()` → `player.playFolder()` → `sendStack()` → `waitAvailable()` → `DFRobotDFPlayerMini::available()`. Die innere `while(_serial->available())`-Schleife dieser Bibliotheksfunktion hatte im Original keine Zeitbegrenzung – bei anhaltendem Byte-Zustrom (floatende/gestörte RX-Leitung bei getrenntem/defektem DFPlayer) blockierte sie unbegrenzt, noch bevor `waitAvailable()` seinen eigenen 500-ms-Timeout prüfen konnte. Erklärt auch `CPU 1: IDLE1` im TWDT-Log: echter Systemstillstand, kein reiner `alarmTask`-Hänger. Die 12v09–12v12-Fixes griffen nicht, weil der Hänger bereits innerhalb der Bibliothek passierte. |
 | 12v13 | Bugfix | Fix direkt in `DFRobotDFPlayerMini.cpp` (lokale Installation `D:\Arduino\libraries\DFRobotDFPlayerMini\`, außerhalb dieses Repos): `available()` bricht jetzt nach 100 ms auch bei anhaltendem Byte-Zustrom ab, `_receivedIndex` bleibt für den nächsten Aufruf erhalten. Muss nach jeder Neuinstallation der Bibliothek erneut angewendet werden – dokumentiert in `Software/Bibliotheken/README.md`. Kein Code in der Firmware selbst geändert, Version nur für Nachvollziehbarkeit auf dem Gerät hochgezählt. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 12v13
+## Version 12v14
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v14 | Bugfix | 12v13-Diagnose widerlegt und Bibliotheks-Patch zurückgenommen: Hardware wurde mit 12v08 als voll funktionsfähig verifiziert – dort existierte weder Patch noch Bibliotheksänderung, der Hang war also firmwareseitig verursacht, nicht in `DFRobotDFPlayerMini::available()` selbst. `DFRobotDFPlayerMini.cpp` bleibt jetzt unverändert im Originalzustand. |
+| 12v14 | Bugfix | Root Cause tatsächlich gefunden: Der in 12v11 eingeführte Puffer-Drain in `triggerAlarm()` vor `player.playFolder()` las rohe Bytes direkt per `Serial2.read()` – vorbei an `DFRobotDFPlayerMini`s eigenem Frame-Parser. Riss dieser Discard mitten in einem noch eintreffenden Frame ab (z.B. verspätete Antwort auf das vorherige Kommando), desynchronisierte er `_receivedIndex`/`_isSending` der Bibliothek und erzeugte dadurch genau das anhaltende Byte-Durcheinander auf der UART, das dann in `available()` zum 15-Sekunden-TWDT-Hänger führte – ein in 12v08 unmögliches Szenario, da dort kein roher Drain existierte. |
+| 12v14 | Bugfix | Fix: Drain in `triggerAlarm()` läuft jetzt über `player.available()`/`player.read()` statt über rohe Bytes (gleiches Muster wie `readStateDrained()`, 12v09/12v11) – hält den Puffer sauber, ohne den Parser-Zustand der Bibliothek zu zerstören. |
+
+## Version 12v15
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v15 | Bugfix | Laufzeitfehler `E (…) task_wdt: esp_task_wdt_reset(707): task not found` behoben: `esp_task_wdt_reconfigure()` setzt laut ESP-IDF ein bereits initialisiertes TWDT voraus, wurde in `setup()` aber erst **nach** dem Start von `inputTask`/`displayTask`/`alarmTask` aufgerufen. Die Annahme „Core 3.x initialisiert das TWDT bereits beim Boot" traf hier nicht zu (oder war zeitlich nicht garantiert vor dem ersten `esp_task_wdt_add()` der neu erzeugten Tasks) – die Anmeldung lief ins Leere, jeder folgende `esp_task_wdt_reset()` brach ab. Damit hätte ein echter Task-Hang nie einen Hardware-Watchdog-Reset ausgelöst, das TWDT überwachte de facto nichts. |
+| 12v15 | Bugfix | Fix: `esp_task_wdt_init()` wird jetzt **vor** dem Start der FreeRTOS-Tasks aufgerufen; ist das TWDT bereits initialisiert (`ESP_ERR_INVALID_STATE`), erfolgt stattdessen `esp_task_wdt_reconfigure()`. `esp_task_wdt_add()` in den Task-Funktionen trifft dadurch garantiert auf ein existierendes TWDT. |
+
+## Version 12v16
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v16 | Bugfix | Laufzeitfehler `E (…) task_wdt: esp_task_wdt_init(517): TWDT already initialized` behoben: Der 12v15-Fix rief `esp_task_wdt_init()` blind auf und fing nur den Rückgabewert `ESP_ERR_INVALID_STATE` ab – die Bibliotheksfunktion loggt den Fehler aber unabhängig davon per `ESP_LOGE()` selbst, sobald das TWDT (wie sich auf dieser Hardware zeigte) bereits vom Boot-Vorgang existiert. Damit war die ursprüngliche Annahme „Core 3.x initialisiert das TWDT bereits beim Boot" korrekt – das eigentliche 12v14/12v15-Problem lag ausschließlich in der Reihenfolge relativ zum Task-Start, nicht im Fehlen der Initialisierung. |
+| 12v16 | Bugfix | Fix: `esp_task_wdt_status(NULL)` fragt jetzt vorher ab, ob das TWDT existiert (`ESP_ERR_INVALID_STATE` = noch nicht initialisiert) – nur dann `esp_task_wdt_init()`, andernfalls weiterhin nur `esp_task_wdt_reconfigure()`. Kein `ESP_LOGE`-Seiteneffekt mehr bei jedem Boot. |
+
+## Version 12v17
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v17 | Qualität | Web-Log-Rauschen reduziert: `checkSerial2Leftover()` meldete bisher bei jeder DFPlayer-Abfrage mit Restbytes eine eigene `[DFPlayer]`-Zeile, auch wenn die Byteanzahl über viele Aufrufe hinweg unverändert blieb (z.B. bei dauerhaftem UART-Rauschen). Neue statische `serial2LeftoverLastLogged` merkt sich den zuletzt gemeldeten Wert; `webLogf()` schreibt jetzt nur noch, wenn sich die Restbyte-Anzahl gegenüber der letzten Meldung ändert. `serial2LeftoverCount` (der „seit Boot"-Wert in der Log-Zeile) zählt weiterhin jede Abfrage mit Restbytes, unabhängig vom Log. |
+
+## Version 12v18
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v18 | Bugfix | 12v17-Fix griff während `ALARM_RUNNING` nicht: `checkSerial2Leftover()` setzte `serial2LeftoverLastLogged` bei `avail==0` auf 0 zurück – der Puffer wird aber zwischen den beiden `readState`-Abfragen pro Poll-Zyklus durch `readStateDrained()` leergezogen, sodass derselbe wiederkehrende Restbyte-Wert (Poll → Restbytes → auf 0 gedraint → nächster Poll dieselbe Anzahl) bei jedem Zyklus erneut als „neue" Änderung gewertet und geloggt wurde. |
+| 12v18 | Bugfix | Fix: Der zuletzt gemeldete Wert bleibt jetzt über Nullstände hinweg erhalten (Startwert `-1` statt `0`, kein Reset mehr im `avail==0`-Zweig) – nur ein tatsächlich anderer Restbyte-Wert löst noch eine neue Web-Log-Zeile aus. |
+
+## Version 12v19
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 12v19 | Bugfix | Log-Analyse vom 10.08.2026 zeigte trotz 12v09–12v18-Fixes weiterhin wiederkehrende Restbytes von 20–30 (2–3 Frames) sowie einen erneuten `verifyPlayStarted()`-Fehlschlag (Versuch 1/3, st=-1). Ursache: Der Vorab-Drain aus 12v14 lief nur unmittelbar vor dem alarmspezifischen `playFolder()` in `triggerAlarm()`. `volume()`, `stop()` und die Testsound-`playFolder()`-Aufrufe (Sound1/Sound2 an/aus, Lautstärke +/−, Funktionswahl-Stop) sendeten dagegen ungedraint – dort entstehende Restframes (z.B. ACK je Befehl) blieben liegen, bis ein zufälliger späterer `readStateDrained()`-Aufruf sie mit abräumte, im ungünstigen Fall genau während der nächsten Alarm-Verifikation. |
+| 12v19 | Bugfix | Fix: Inline-Drain aus `triggerAlarm()` in neue Funktion `drainSerial2Pre()` ausgelagert und zusätzlich vor allen `volume()`-, `stop()`- und Testsound-`playFolder()`-Aufrufen aufgerufen (`onClock()` Lautstärke +/−, `checkboxSound()` Sound1/Sound2 an/aus, Funktionswahl-Stop, S1-Stop). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 12v19

@@ -1,0 +1,453 @@
+#pragma once
+// SysConf_12v17.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 12v17
+// Datei-Version    : 12v17
+// Boardverwalter   : esp32 3.3.11 von Espressif Systems
+//
+// Änderungshistorie:
+//   12v17–Web-Log-Rauschen reduziert: checkSerial2Leftover() meldete bei
+//         jeder DFPlayer-Abfrage mit Restbytes eine eigene Zeile, auch wenn
+//         die Byteanzahl über viele Aufrufe hinweg unverändert blieb (z.B.
+//         bei dauerhaftem UART-Rauschen). Neue statische
+//         serial2LeftoverLastLogged merkt sich den zuletzt gemeldeten Wert;
+//         webLogf() schreibt nur noch bei einer Änderung der Restbyte-
+//         Anzahl. serial2LeftoverCount zählt weiterhin jede Abfrage mit
+//         Restbytes, unabhängig vom Log – "seit Boot"-Wert bleibt exakt.
+//   12v16–12v15 initialisierte das TWDT blind per esp_task_wdt_init(), ohne
+//         vorher zu prüfen ob es (wie sich auf dieser Hardware zeigte)
+//         bereits vom Boot-Vorgang existiert – Folge: "E task_wdt:
+//         esp_task_wdt_init(517): TWDT already initialized" bei jedem
+//         Start. Die ursprüngliche Annahme "Core 3.x init bereits beim
+//         Boot" war also korrekt, nur die Reihenfolge relativ zum
+//         Task-Start (siehe 12v15) war das eigentliche Problem, nicht das
+//         Fehlen der Initialisierung selbst. Fix: esp_task_wdt_status(NULL)
+//         fragt vorher ab, ob das TWDT existiert (ESP_ERR_INVALID_STATE =
+//         nein) – nur dann esp_task_wdt_init(), sonst weiterhin nur
+//         esp_task_wdt_reconfigure(). Kein ESP_LOGE-Seiteneffekt mehr.
+//   12v15–Laufzeitfehler "E task_wdt: esp_task_wdt_reset(707): task not
+//         found" behoben: esp_task_wdt_reconfigure() setzt ein bereits
+//         initialisiertes TWDT voraus, wurde aber erst NACH dem Start von
+//         inputTask/displayTask/alarmTask aufgerufen. Die Annahme "Core 3.x
+//         init bereits beim Boot" traf hier nicht zu (oder war zeitlich
+//         nicht garantiert) – esp_task_wdt_add() dieser Tasks lief ins
+//         Leere, jeder folgende esp_task_wdt_reset() brach mit "task not
+//         found" ab. Damit hätte ein echter Hang nie einen TWDT-Reset
+//         ausgelöst. Fix: esp_task_wdt_init() jetzt VOR Task-Start, mit
+//         Fallback auf esp_task_wdt_reconfigure() falls schon initialisiert.
+//   12v14–12v13-Diagnose (Bibliotheks-Patch) zurückgenommen: Hardware bei
+//         12v08 als voll funktionsfähig verifiziert, dort existierte weder
+//         Patch noch Bibliotheksänderung – der Hang war firmwareseitig
+//         verursacht. Root Cause: triggerAlarm() (Wecker_12v14.ino) verwarf
+//         vor playFolder() rohe Serial2-Bytes direkt per Serial2.read(),
+//         vorbei an DFRobotDFPlayerMini's eigenem Frame-Parser. Riss dieser
+//         Discard mitten in einem noch eintreffenden Frame ab, desynchro-
+//         nisierte das _receivedIndex/_isSending in der Bibliothek und
+//         erzeugte dadurch anhaltendes Byte-Durcheinander auf der UART –
+//         genau die Bedingung, die dann in available() zum 15s-TWDT-Hänger
+//         führte. Fix: Drain läuft jetzt über player.available()/read()
+//         (wie in readStateDrained()) statt über rohe Bytes.
+//         DFRobotDFPlayerMini.cpp bleibt unverändert im Originalzustand,
+//         siehe Software/Bibliotheken/README.md.
+//   12v13–Root Cause des 12v12-Vorfalls (Reboot ohne Ersatzalarm trotz
+//         12v11/12v12-Fixes) gefunden: Hardware-TWDT-Backtrace zeigte den
+//         Hang in triggerAlarm() → player.playFolder() → sendStack() →
+//         waitAvailable() → DFRobotDFPlayerMini::available()
+//         (DFRobotDFPlayerMini.cpp:229). Die innere
+//         while(_serial->available())-Schleife dieser Bibliotheksfunktion
+//         hatte im Original KEINE Zeitbegrenzung – bei anhaltendem
+//         Byte-Zustrom (floatende/gestörte RX-Leitung bei getrenntem/
+//         defektem DFPlayer) blockierte sie unbegrenzt, noch bevor
+//         waitAvailable() seinen eigenen 500-ms-Timeout prüfen konnte
+//         (der nur ZWISCHEN Aufrufen von available() greift). Das erklärt
+//         auch "CPU 1: IDLE1" im TWDT-Log: echter Systemstillstand, kein
+//         reiner alarmTask-Hänger. Unsere 12v09–12v12-Fixes (begrenzte
+//         Drain-Schleifen, alarmTriggerInFlight) griffen nicht, weil der
+//         Hänger bereits innerhalb der Bibliothek passierte, bevor sie
+//         zum Zug kamen. Fix: DFRobotDFPlayerMini.cpp direkt gepatcht –
+//         available() bricht nach 100 ms auch bei anhaltendem
+//         Byte-Zustrom ab (siehe Software/Bibliotheken/README.md, Patch
+//         muss nach jeder Neuinstallation der Bibliothek erneut
+//         angewendet werden). Kein Code in dieser Datei geändert – Version
+//         nur für Nachvollziehbarkeit auf dem Gerät hochgezählt.
+//   12v12–watchdogTask als zusätzlicher Fallback für rtcRetryMagic: friert
+//         alarmTask während eines laufenden triggerAlarm()-Versuchs ein (egal
+//         aus welchem Grund), hätte bisher kein Ersatzalarm-Retry nach dem
+//         watchdogTask-Neustart stattgefunden – dieser Pfad war komplett
+//         unabhängig vom regulären DFPlayer-Absturz-Retry in triggerAlarm()
+//         selbst. Neuer In-Flight-Marker alarmTriggerInFlight (+ Snapshot
+//         alarmTriggerNum/-FileNo/-Min/-FailCount) wird zu Beginn des
+//         riskanten Abschnitts in triggerAlarm() gesetzt und nach jedem
+//         Ausgang (Erfolg, regulärer Retry, endgültiger Abbruch) wieder
+//         gelöscht. watchdogTask prüft bei einem alarmTask-Freeze gezielt
+//         diesen Marker (NICHT bei input-/displayTask-Freezes, die stehen in
+//         keinem Zusammenhang mit einem laufenden Alarm) und setzt vor dem
+//         eigenen ESP.restart() ebenfalls rtcRetryMagic, sodass setup() den
+//         Alarm nach dem Neustart genauso erneut auslöst wie beim regulären
+//         Retry-Pfad.
+//   12v11–Bugfix: Reboot statt Alarm ohne Ersatzalarm. Ursache: der in 12v09
+//         eingeführte Puffer-Drain in triggerAlarm() (`while(Serial2.available())
+//         Serial2.read();`) hatte keine Obergrenze. Bei getrenntem/defektem
+//         DFPlayer kann die floatende RX-Leitung (GPIO16) dauerhaft Rauschen
+//         liefern – Serial2.available() wird dann nie 0, die Schleife lief
+//         endlos und hielt dabei playerMutex. alarmTask aktualisierte dadurch
+//         wdg_alarmTask nicht mehr; watchdogTask erkannte nach WDG_TIMEOUT_MS
+//         (30 s) einen Task-Freeze und rief ESP.restart() auf – OHNE
+//         rtcRetryMagic zu setzen, da dieser Pfad unabhängig vom regulären
+//         DFPlayer-Absturz-Neustart in triggerAlarm() ist. Ergebnis: Reboot,
+//         aber kein Ersatzalarm nach dem Neustart. Neue Konstante
+//         SERIAL2_DRAIN_MAX_BYTES (200) begrenzt sowohl diesen Drain als auch
+//         die Drain-Schleife in readStateDrained() (12v09) auf eine feste
+//         Obergrenze – beide Schleifen terminieren jetzt garantiert.
+//   12v10–ALARM_MAX_RESTARTS 10 → 3: max. ESP.restart()-Versuche je Alarm bei
+//         nicht reagierendem DFPlayer deutlich reduziert, bevor triggerAlarm()
+//         den Alarm für diesen Tag endgültig abbricht (Motor/Licht bleiben
+//         aus, roter [FEHLER]-Eintrag im Web-Log).
+//   12v09–DFPlayer Serial2-Puffer-Desync behoben (Diagnose 10.08.2026: konstant
+//         20 Byte / 2 Frames Rückstand vor readState() im ALARM_RUNNING-Poll,
+//         Ursache: player.available() (DFRobotDFPlayerMini) verarbeitet pro
+//         Aufruf nur einen 10-Byte-Frame und kehrt zurück, auch wenn bereits
+//         weitere vollständige Frames im Puffer stehen – z.B. das interne
+//         0x41-ACK zusätzlich zur Feedback-Antwort im ACK-Modus). Neue Funktion
+//         readStateDrained() liest bei jedem Aufruf alle vollständigen Frames
+//         aus dem Puffer und wertet nur den zuletzt empfangenen Feedback-Wert;
+//         ersetzt player.readState() an allen Aufrufstellen. Zusätzlich verwirft
+//         triggerAlarm() unmittelbar vor playFolder() alle noch im Puffer
+//         stehenden Bytes, damit verifyPlayStarted() garantiert nur die Antwort
+//         auf den gerade gesendeten Befehl sieht.
+//   12v08–Web-Log neu organisiert: DFPlayer-Meldungen in eigenem Abschnitt mit
+//         Zeitstempel des letzten erfolgreichen Alarms (snapAlarmTime). Neue
+//         Funktion checkSerial2Leftover() loggt unerwartete Restbytes im
+//         Serial2-Puffer vor jedem DFPlayer-Kommando (Zeitstempel + Zähler
+//         seit Boot).
+//   12v07–DFPlayer-Absturz-Neustart begrenzt: triggerAlarm() zählte Fehlschläge
+//         bisher nicht mit – ein dauerhaft defekter/nicht angeschlossener
+//         DFPlayer löste eine unbegrenzte ESP.restart()-Schleife aus. Neuer
+//         Zähler rtcRetryCount (RTC_NOINIT_ATTR, übersteht Neustart) bricht
+//         nach ALARM_MAX_RESTARTS (10) Fehlversuchen ab: kein weiterer
+//         Neustart, Alarm bleibt inaktiv, stattdessen roter Fehlereintrag
+//         mit Datum/Uhrzeit im Web-Log ([FEHLER]-Tag).
+//   12v06–DFPlayer Start-Check: verifyPlayStarted() löste Fehlalarm-Neustarts
+//         aus, obwohl der DFPlayer korrekt spielte. Ursache: die Statusabfrage
+//         (readState()) erfolgte nur 1 ms nach playFolder() – der DFPlayer
+//         braucht nach dem Play-Befehl jedoch Zeit, um die Datei von der
+//         SD-Karte zu laden und den Status auf "playing" zu setzen. Jetzt
+//         bis zu VERIFY_PLAY_RETRIES (3) Versuche im Abstand von
+//         VERIFY_PLAY_DELAY_MS (500 ms) – Ergebnis steht spätestens nach
+//         1500 ms fest, bevor bei anhaltendem st<=0 ein ESP.restart() folgt.
+//   12v05–DFPlayer Start-Check: verifyPlayStarted() bestätigt direkt nach
+//         playFolder() (Alarm 1 + Alarm 2) per readState()-Doppel-Poll, dass
+//         der DFPlayer den Play-Befehl tatsächlich angenommen hat. Bisher
+//         wurde weder der ACK-Modus noch der Player-Status nach dem
+//         Play-Befehl ausgewertet – ein nicht reagierender DFPlayer (Kabel
+//         ab, Modul defekt, SD-Karte fehlt) blieb unbemerkt und der Alarm
+//         (Motor/Licht) lief mangels Zeitbegrenzung in ALARM_RUNNING
+//         potenziell unbegrenzt weiter. Bei st<=0 (0=idle, -1=UART-Timeout)
+//         jetzt webLogf()-Fehlermeldung mit Alarm-Label und Dateinummer;
+//         DFPlayer gilt dann als abgestürzt → ESP.restart() als einzige
+//         verlässliche Wiederherstellung. Der ausgefallene Alarm (Nummer,
+//         Datei, Minute) wird zuvor in RTC_NOINIT_ATTR-Variablen
+//         (rtcRetryMagic/-Alarm/-FileNo/-Min) hinterlegt – diese überstehen
+//         ESP.restart() – und in setup() nach dem Neustart über denselben
+//         triggerAlarm()-Pfad erneut ausgelöst, sodass der verpasste Alarm
+//         nicht ausfällt.
+//   12v04–Web-Log „letzter Reset" auch nach Stromausfall mit Datum/Uhrzeit:
+//         snapNtpTime wurde bisher nur in setup() nach erfolgreicher NTP-
+//         Synchronisation gesetzt. Kam beim (Kalt-)Start kein WLAN/NTP
+//         zustande (z.B. Router nach Stromausfall noch nicht oben), blieb
+//         das Feld leer und die Web-Log-Zeile zeigte „–". displayTask trägt
+//         den Reset-Zeitstempel jetzt beim ersten NTP-Sync nach (über
+//         ntpSyncPending) und rekonstruiert den tatsächlichen Reset-Zeitpunkt
+//         aus aktueller Zeit minus Uptime. resetCount war nie betroffen
+//         (NVS, unabhängig von WLAN/NTP).
+//   12v03–Mühlrad-Motor-Pulsweite zur Laufzeit über Web-Slider verstellbar:
+//         (1) MOTOR_PWM_DUTY ist nur noch der Default-Sollwert beim ersten
+//             Boot; der wirksame Wert liegt in der Laufzeit-Variable
+//             motor_duty (0..255) und wird in NVS persistiert
+//             (Schlüssel "motor_duty", in writeNVR()/readNVR()).
+//         (2) Web-Log-Server: GET /motor?duty=NN (0..100 %) + Slider auf
+//             der Seite. Live-Übernahme falls Motor läuft; Persistenz über
+//             die bestehende safeChange→nvrSemaphore→nvrTask-Kette.
+//         (3) Zentrale Helfer motorStart()/motorStop() ersetzen die
+//             verstreuten ledcWrite(E2,…)-Aufrufe. Kickstart: bei Sollwert
+//             < MOTOR_PWM_KICK_THRESHOLD (~35 %) kurzer Vollgas-Anlauf-
+//             impuls (MOTOR_PWM_KICK_DUTY für MOTOR_PWM_KICK_MS), damit der
+//             3-V-Motor sicher aus dem Stand anläuft.
+//         (4) Neue Konstanten MOTOR_PWM_KICK_THRESHOLD / _KICK_DUTY /
+//             _KICK_MS.
+//         (5) STACK_WIFI von 2000 auf 2240 Bytes erhöht (wifiTask
+//             benötigte unter ungünstigen Reconnect-Pfaden mehr Reserve).
+//   12v02–Max. Einschaltzeit Licht/Mühlrad (Zugschalter S2) auf 30 min
+//         begrenzt – analog Auto-Rückkehr der Menü-Seiten. Neue Konstante
+//         S2_TIMEOUT_MS (1800000 ms). displayTask schaltet E2 (Motor-PWM)
+//         und E3 (Licht) nach Ablauf ab und setzt S2_SW zurück; Zeitstempel
+//         t_start_S2 wird im S2-Handler beim Einschalten gesetzt.
+//        –Web-Log "Allgemeines Log": [xxx]-Tag wird mit Leerzeichen auf
+//         feste Breite WEBLOG_TAG_WIDTH (12 Zeichen) aufgefüllt, damit
+//         der Text dahinter immer in derselben Spalte beginnt.
+//   12v01–Stack-Größen neu vorgegeben (Bytes): touchTask 2880,
+//         wifiTask 2000, nvrTask 2304, inputTask 2240,
+//         displayTask 2176, alarmTask 2128, watchdogTask 1344,
+//         stackMonTask 2912. webLogTask (4096) unverändert.
+//         Werte direkt als STACK_*-Konstanten gesetzt – setup()
+//         übernimmt sie ohne weitere Codeänderung.
+//   12v00–Hardware-Erweiterung "Motor + LED-Streifen" (siehe
+//         Hardware/hardware_notesmotor_led_driver.md):
+//         (1) E2 (GPIO26, Wasserrad-Motor) wird jetzt per PWM über
+//             LEDC betrieben – 20 kHz / 8 Bit / 60 % Duty (=153),
+//             um den 3-V-Motor an 5 V mit Mittelwert ~3 V zu treiben
+//             ohne hörbares Schaltgeräusch. Ansteuerung in alarmTask
+//             und S2-Zugschalter auf ledcWrite(E2, MOTOR_PWM_DUTY / 0)
+//             umgestellt. pinMode(E2,OUTPUT) in setup() entfällt –
+//             ledcAttach übernimmt die Pinkonfiguration.
+//         (2) E3 (GPIO27, LED-Streifen) bleibt digitalWrite(HIGH/LOW):
+//             ohmsche Last mit Vorwiderstand 47 Ω (48 mA bei 5 V),
+//             kein PWM erforderlich (siehe hardware_notes).
+//         (3) Neue Konstanten MOTOR_PWM_FREQ / MOTOR_PWM_RES /
+//             MOTOR_PWM_DUTY – zentral änderbar analog zu STACK_*.
+//         (4) Beide MOSFET-Kanäle verwenden IRLML6344TRPBF mit
+//             100 Ω Gate-Reihe und 10 kΩ Pull-Down nach GND
+//             (Boot-Safe-Pegel während Pin-Konfiguration).
+//   11v05–Info-Seite: WLAN-Reset von T0 auf T3 verlegt – einheitliche
+//         Bedienung (Taste + = T3 = WLAN-Reset, Taste - = T4 = Werksreset).
+//         Info-Seite neu angeordnet: Z1 Versionsstring, Z2 Web-Log-Adresse,
+//         Z3 MP3-/Reset-Zähler, Z4 "Taste +  WiFi Reset", Z5 " Taste -  Full
+//         Reset". T0 auf UI_INFO bleibt wirkungslos (Seitencycle weiter
+//         durch `s != UI_INFO`-Guard geschützt), onInfo() reagiert jetzt
+//         auf EVT_T3 statt EVT_T0. Wake-Discard-Kommentar nachgezogen.
+//   11v04–S3 bei dunklem Display: Display einschalten UND Info-Seite öffnen.
+//         Ändert das 11v02-Verhalten (reines Wake+Discard) zurück zu einem
+//         kombinierten Wake+Open. Touch T0–T4 bleiben reines Wake+Discard –
+//         nur S3 reicht das Event an die UI weiter. Da Auto-Return (20 s)
+//         immer UI_CLOCK erreicht, bevor der Display-Timeout (5 min) greift,
+//         landet die Toggle-Logik in uiDispatch() sicher auf UI_INFO.
+//   11v03–resetCount zählt WiFi-Konfigurator-Boot nicht mehr mit:
+//         bumpResetCount() in setup() wird erst NACH loadWifiCredentials()
+//         aufgerufen. Nach einem Werksreset zeigte der Reset-Zähler 2 an,
+//         weil der erste Boot (leere NVS → WiFi-Konfigurator → ESP.restart)
+//         und der zweite Boot (mit gespeicherten WLAN-Daten) beide zählten.
+//         Jetzt zählt nur der reguläre Boot.
+//   11v02–Sicherheit Info-Seite + Display-Wake:
+//         (1) S3 verhält sich bei ausgeschaltetem Display jetzt analog
+//             zu T0–T4: weckt das Display und verwirft das Event,
+//             statt den Info-Toggle durchzureichen. Verhindert, dass
+//             bei aktiver UI_INFO ohne Anzeige ein blind gedrückter
+//             Taster bzw. anschließender Touch versehentlich T0 (WLAN-
+//             Reset) oder T4 (Werksreset) auslöst.
+//         (2) Info-Seite zeigt die gefährlichen Aktionen explizit:
+//             Zeilen "T0: RESET SSID PW" und "T4: WERKSRESET"
+//             ersetzen die dort zuvor duplizierten WiFi-/NTP-Zeiten.
+//         (3) Web-Log: Rubrik "Status – Letzter Start" umbenannt in
+//             "Verbindung – letzter WiFi Reconnect / NTP Sync" und
+//             unter die Ring-Puffer-Sektion verschoben.
+//   11v01–Web-Log: neue Rubrik "Status – Letzter Start" zeigt die
+//          Zeilen WiFi und NTP analog zur Info-Seite (datum_WiFi/
+//          zeit_WiFi, datum_sync/zeit_sync); platziert oberhalb der
+//          Touch-Baseline-Sektion.
+//   11v00–Review-Fixes:
+//         (1) NVR-Flash-Wear: nvrSemaphore-Release erst NACH Ruhezeit
+//             NVR_COMMIT_DELAY_MS (2 s) ohne neues Event – verhindert
+//             Flash-Writes bei gehaltener Einstelltaste im Touch-REPEAT.
+//         (2) wifiTask Double-Buffer Race: snprintf nur wenn kein altes
+//             Paar mehr pending ist (wifiSyncPending-Guard) – schließt
+//             Torn-Read-Fenster gegen displayTask.
+//         (3) Review-Vorschlag zur Log-Regel (Serial.printf nach
+//             WiFi-Connect durch webLogf ersetzen) bewusst NICHT
+//             übernommen: die Web-Log-URL muss im Serial-Monitor
+//             erscheinen, sonst ist das Web-Log unerreichbar
+//             (Adresse steht ja erst im Web-Log selbst).
+//   10v06–wakeDisplay(): TOCTOU + Race auf lastTouchMs behoben (displayBlanked-Check
+//         und lastTouchMs=millis() jetzt atomar unter displayMutex);
+//         lastTouchMs als volatile deklariert (Cross-Core-Sichtbarkeit Core0→Core1)
+//   10v05–DFPlayer TX-Pin (GPIO17) vor Serial2.begin() 3s LOW halten
+//   10v04–Web-Log: Zeile "[Reset] Anzahl: N" → "[RESET] resetCount: N"
+//   10v03–Display wird bei Alarm-Start automatisch eingeschaltet (analog
+//          Touch-Wake); Helper wakeDisplay() in alarmTask
+//   10v02–Display-Ein-Zeit DISPLAY_TIMEOUT_MS 10 min → 5 min
+//   10v01–DFPlayer-Init: 9v16-Retry-Logik zurückgenommen (player.begin()
+//          wieder als einmaliger Aufruf ohne Schleife); DFP_INIT_TIMEOUT_MS
+//          und DFP_INIT_RETRY_MS entfernt; SETUP_MP3_TIMEOUT_MS
+//          10000 → 5000 ms
+//   10v00–Display-Abschaltung nach 10 min ohne Touch (DISPLAY_TIMEOUT_MS);
+//          Berührung eines beliebigen Touchpads weckt Display erneut für
+//          10 min, das auslösende Touch-Event wird verworfen (andere
+//          Touch-Funktionen nur bei eingeschaltetem Display aktiv);
+//          Checkbox-Rahmen vereinfacht (nur äußerer 10x10 drawRect, keine
+//          inneren 8x8 drawRects mehr – schlankere Darstellung)
+//   9v18– UI: Checkboxen auf 10x10 vergrößert (2px Rahmen + 1px Abstand
+//          + 4x4 Check-Füllung); Checkboxen auf Seite Funktion um 2px
+//          nach links verschoben (x 34 → 32)
+//   9v17– UI: Checkbox-Rahmen von 1px auf 2px verdickt (zwei verschachtelte
+//          drawRect 8x8 und 6x6); alle Checkboxen um 1px nach oben verschoben
+//   9v16– DFPlayer-Kaltstart robuster: player.begin() in Retry-Schleife mit
+//          DFP_INIT_TIMEOUT_MS/DFP_INIT_RETRY_MS; SETUP_MP3_TIMEOUT_MS
+//          5000 → 10000 ms (SD-Indizierung nach Power-On dauert länger als
+//          nach Reset-Taste)
+//   9v15– UI: Checkboxen von 7x7 auf 8x8 vergrößert; Checked-Darstellung als
+//          Rahmen (drawRect 8x8) plus innerer Füllung (fillRect 6x6) gemäß
+//          neuer Icon-Vorlage
+//   9v14– Wartungsqualität (Kosmetik aus Code-Review):
+//          (1) resetCount++ aus readNVR() in bumpResetCount() ausgelagert –
+//              readNVR() hat keine Seiteneffekte mehr
+//          (2) t_sec_alt von file-scope in displayTask als static verschoben –
+//              signalisiert korrekt, dass nur displayTask zugreift
+//          (3) Task-Handles für stackMonTask und webLogTask ergänzt,
+//              updateSnapStack() zeigt jetzt auch deren Stack-HWM
+//   9v13– Mittlere Issues aus Code-Review behoben:
+//          (1) Race auf t_start4/lastCuckooMin zwischen inputTask und
+//              alarmTask dokumentiert – 32-bit-Writes auf Xtensa atomar,
+//              daher logisch harmlos; Kommentar im Code ergänzt
+//          (2) webLogTask "/"-Handler: html.reserve(8192) – verhindert
+//              inkrementelle String-Reallokationen → Heap-Fragmentierung
+//          (3) Mitternachts-Flackern: One-Shot-Flag midnightDrawn –
+//              nur ein einziger Full-Redraw um 00:00:00 statt ~6-7×
+//          (4) sound{1,2}_selected = 0 wenn mp3Count == 0 verhindert:
+//              Fallback auf 1 statt ungültige Dateinummer an DFPlayer
+//          (5) Alarm-Start ohne playerMutex: State nur wechseln wenn
+//              playFolder wirklich lief – kein stiller Alarm bei Mutex-
+//              Timeout, nächster alarmTask-Tick versucht es erneut
+//   9v12– Bugfixes aus Code-Review:
+//          (1) Race Condition auf globaler timeinfo/now behoben –
+//              timeavailable() nutzt lokale tm-Struktur (analog wifiTask)
+//          (2) datum_WiFi/zeit_WiFi ohne NTP-Sync: showTime() vor snprintf
+//              und nur füllen wenn wifiConnected – verhindert "19000101"
+//          (3) Dead Code ax_live entfernt (nie gelesen)
+//          (4) Kommentar-Referenz SysConf_9v6.h → SysConf_9v12.h korrigiert
+//   9v11– Stack-Vorgaben reduziert: wifiTask/nvrTask/inputTask/displayTask
+//          2560, watchdogTask 1536 (basierend auf High-Water-Mark-Messung)
+//   9v10– DFPlayer Start-Sound: readFileCounts() vor playFolder verschoben –
+//          Sound wird erst abgespielt wenn SD-Index aufgebaut ist; behebt
+//          Abbruch des Start-Sounds nach Power-On/Flash
+//   9v9 – Web-Log: Schriftgröße der Überschriften (h2, h3, .sec-title,
+//          .snap-title) auf 1rem / 1.6rem vergrößert
+//   9v8 – Web-Log Auto-Refresh 10 → 20 s; Reihenfolge: Allg. Log,
+//          Touch Baseline, Stack HWM; Allg. Log-Titel zeigt NTP-Sync-
+//          Zeitstempel des ersten Resets
+//   9v7 – Bugfix: EVT_S3 aktualisiert nun lastTouchMs – Auto-Rückkehr von
+//          UI_INFO startete sofort statt nach 20 s (S3 hat EVT-ID 6 > EVT_T4=3)
+//   9v6 – Feature: Auto-Rückkehr zu Seite 0 nach 20 s jetzt auch für
+//          Seite 7 (UI_INFO); UI_INFO-Ausnahme aus displayTask entfernt
+//   9v5 – Bugfix: esp_task_wdt_reconfigure() statt esp_task_wdt_init()
+//          verhindert "TWDT already initialized"-Fehler (Arduino Core 3.x)
+//   9v4 – Bugfix: playerStatus == 0 statt < 1 verhindert fälschlichen
+//          Alarm-Abbruch bei UART-Timeout während WebLog-Zugriff
+//   9v3 – Web-Log-Seite: Touch-Baseline und Stack-HWM als dedizierte
+//          Snapshot-Sektionen (nur jeweils letzter Wert + Timestamp)
+//   9v2 – WEBLOG_LINES 80 → 40, Web-Log-Seite Auto-Refresh 20 → 10 s
+//   9v1 – Datei von SystemConfig.h in SysConf_9v1.h umbenannt,
+//          Versionierung eingeführt, WDT_HARDWARE_MS ergänzt,
+//          Stack-Größen als Kommentar dokumentiert
+
+// ── Firmware-Version ─────────────────────────────────────────
+#define FW_VERSION "12v17"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+
+// ── WiFi ─────────────────────────────────────────────────────
+// STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
+// WLAN-Zugangsdaten werden per WebKonfigurator eingerichtet und
+// im NVR-Namespace "wifiCfg" gespeichert (ab Version 4v0).
+#define STA_SSID  "my_ssid"                                                    // nur als Referenz – nicht mehr in WiFi.begin() genutzt
+#define STA_PSK   "my_passwrd"                                                 // nur als Referenz – nicht mehr in WiFi.begin() genutzt
+
+// Access-Point-Konfiguration für den WiFi-Konfigurator
+#define WIFI_AP_SSID    "bTn-Wecker"                                           // SSID des Konfigurations-Access-Points
+#define WIFI_AP_CHANNEL 1                                                      // WiFi-Kanal des Access-Points
+
+// ── NTP ──────────────────────────────────────────────────────
+#define MY_NTP_SERVER "pool.ntp.org"                                           // NTP-Serveradresse
+#define MY_TZ         "CET-1CEST,M3.5.0/02,M10.5.0/03"                         // Zeitzone (POSIX-Format)
+
+// ── DFPlayer Serial-Pins ─────────────────────────────────────
+#define RXD2 16                                                                // ESP32 GPIO16 → DFPlayer TX
+#define TXD2 17                                                                // ESP32 GPIO17 → DFPlayer RX
+
+// ── Touch-Sensor ─────────────────────────────────────────────
+#define TOUCH_DROP      150                                                    // Mindest-Absenkung zur Touch-Erkennung (kalibrieren, ca. 50 % des Differenzwerts)
+#define TOUCH_POLL_MS    50                                                    // Abtastrate des touchTask in ms
+#define TOUCH_HOLD_MS   750                                                    // Haltezeit bis HOLD-Zustand und erster Wiederholungs-Event
+#define TOUCH_REPEAT_MS 250                                                    // Wiederholrate im REPEAT-Zustand
+#define TOUCH_RECAL_MS  600000UL                                               // Baseline-Rekalibrierung Intervall (10 min, nur wenn TS_IDLE)
+
+// ── Eingabe-Event-IDs (inputQueue) ────────────────────────────
+#define EVT_T0  0                                                              // Touch T0 – GPIO4
+#define EVT_T2  1                                                              // Touch T2 – GPIO2
+#define EVT_T3  2                                                              // Touch T3 – GPIO15
+#define EVT_T4  3                                                              // Touch T4 – GPIO13
+#define EVT_S1  4                                                              // Taster S1 – GPIO32
+#define EVT_S2  5                                                              // Taster S2 – GPIO33
+#define EVT_S3  6                                                              // Taster S3 – GPIO0
+
+// ── Setup-Timeouts (ms) ──────────────────────────────────────
+#define SETUP_WIFI_TIMEOUT_MS 30000                                            // max. Wartezeit auf WiFi-Verbindung
+#define SETUP_NTP_TIMEOUT_MS  30000                                            // max. Wartezeit auf erste NTP-Synchronisation
+#define SETUP_MP3_TIMEOUT_MS   5000                                            // max. Wartezeit auf DFPlayer Dateianzahl
+
+// ── Diagnose ─────────────────────────────────────────────────
+#define STACK_MON_INTERVAL_MS 60000UL                                          // Ausgabe-Intervall Stack-Überwachung (60 s)
+#define WDG_TIMEOUT_MS        30000UL                                          // Watchdog: maximale Zeit ohne Lebenszeichen (30 s)
+#define WDG_CHECK_MS           5000UL                                          // Watchdog: Prüfintervall (5 s)
+#define WDT_HARDWARE_MS       15000UL                                          // Hardware-TWDT: Timeout (15 s) – kürzer als WDG_TIMEOUT_MS
+
+// ── Verzögerungskonstanten (ms) ───────────────────────────────
+const uint32_t TOUCH_REPEAT_RATE_MS =  250;                                    // Touch-Wiederholrate
+const uint32_t DISPLAY_UPDATE_MS    =  300;                                    // Zeitanzeige Seite 0
+const uint32_t BTN_DEBOUNCE_MS      =   30;                                    // ISR-Entprellung: filtert Hardware-Prellen (typ. 5–50 ms)
+const uint32_t BTN_LOCKOUT_MS       = 1000;                                    // Aktionssperre in inputTask: verhindert bewusste Doppeldrücke
+const uint32_t CUCKOO_DURATION_MS   = 7500;                                    // Kuckuck-Laufzeit
+const uint32_t AUTO_RETURN_MS       = 20000;                                   // Auto-Rückkehr zu Seite 0
+const uint32_t DISPLAY_TIMEOUT_MS   = 300000UL;                                // OLED aus nach 5 min ohne Touch-Event
+const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               // 12v02: Licht/Mühlrad (Zugschalter S2) aus nach 30 min – analog AUTO_RETURN_MS
+const uint32_t ALARM_POLL_MS        = 5000;                                    // Alarm-Nachlauf Prüfintervall
+const uint32_t VERIFY_PLAY_DELAY_MS =  500;                                    // 12v06: Start-Check – Wartezeit je Versuch (DFPlayer braucht Zeit zum Laden)
+const uint8_t  VERIFY_PLAY_RETRIES  =    3;                                    // 12v06: Start-Check – Versuche (1 initial + 2 Retries), Reset spätestens nach 1500 ms
+const uint8_t  ALARM_MAX_RESTARTS   =    3;                                    // 12v10: max. ESP.restart()-Versuche je Alarm, danach Abbruch statt Endlos-Neustart (10 → 3)
+const uint16_t SERIAL2_DRAIN_MAX_BYTES = 200;                                  // 12v11: Obergrenze für Puffer-Drain-Schleifen – verhindert Endlosschleife bei dauerhaftem UART-Rauschen (floatende RX-Leitung bei getrenntem/defektem DFPlayer)
+const uint32_t WIFI_RECONNECT_MS    = 3000;                                    // WiFi-Reconnect Wiederholrate
+const uint32_t NVR_COMMIT_DELAY_MS  = 2000;                                    // 11v00: Ruhezeit nach letztem Event vor NVR-Commit (Flash-Wear-Schutz)
+
+// ── NVR-Zugriffsmodus ────────────────────────────────────────
+const bool ReadWrite = false;                                                  // Preferences: Lesen + Schreiben
+const bool ReadOnly  = true;                                                   // Preferences: nur Lesen
+
+// ── Taster-Pins ──────────────────────────────────────────────
+const uint8_t S1 = 32;                                                         // GPIO32 – Alarm aus / Kuckuck einmalig
+const uint8_t S2 = 33;                                                         // GPIO33 – Zugschalter Licht + Mühlrad
+const uint8_t S3 = 0;                                                          // GPIO0  – Info-Seite ein/aus
+
+// ── Ausgangs-Pins ────────────────────────────────────────────
+const uint8_t E1 = 25;                                                         // GPIO25 – Kuckuck (digital, MOSFET)
+const uint8_t E2 = 26;                                                         // GPIO26 – Mühlrad / DC-Motor 3 V (PWM via LEDC, MOSFET + Freilaufdiode 1N4148)
+const uint8_t E3 = 27;                                                         // GPIO27 – LED-Streifen Licht (digital, MOSFET + 47 Ω Vorwiderstand High-Side)
+
+// ── Motor-PWM (E2 / GPIO26) ───────────────────────────────────
+// 12v00: DC-Motor 3 V an 5 V-Versorgung → PWM mit 60 % Duty ≙ ~3 V Mittelwert.
+// 20 kHz liegt über der Hörschwelle → kein Surren; 8-Bit-Auflösung reicht.
+// 12v03: MOTOR_PWM_DUTY ist nur noch der Default-Sollwert beim ersten Boot –
+//        der wirksame Wert liegt in der Laufzeit-Variable motor_duty, ist
+//        über den Web-Slider (/motor) zur Laufzeit verstellbar und wird in
+//        NVS persistiert. Kickstart: bei Sollwert < MOTOR_PWM_KICK_THRESHOLD
+//        läuft der 3-V-Motor evtl. nicht aus dem Stand an → kurzer Vollgas-
+//        Impuls (MOTOR_PWM_KICK_DUTY für MOTOR_PWM_KICK_MS), dann Sollwert.
+#define MOTOR_PWM_FREQ 20000UL                                                 // 20 kHz Trägerfrequenz (über Hörschwelle)
+#define MOTOR_PWM_RES      8                                                   // 8-Bit Auflösung → Duty-Bereich 0..255
+#define MOTOR_PWM_DUTY   153                                                   // Default-Sollwert beim ersten Boot: ~60 % Duty ≙ 3 V aus 5 V
+#define MOTOR_PWM_KICK_THRESHOLD  89                                           // < ~35 % Duty (89/255) → Anlauf-Kickstart nötig
+#define MOTOR_PWM_KICK_DUTY      255                                           // Vollgas-Impuls beim Kickstart
+#define MOTOR_PWM_KICK_MS        150                                           // Dauer des Kickstart-Impulses [ms]
+
+// ── Stack-Größen (Bytes) ──────────────────────────────────────
+// Angepasst auf Basis der Stack High-Water Marks aus stackMonTask.
+// setup() verwendet diese Konstanten direkt – Änderungen hier wirken sofort.
+#define STACK_TOUCH     2880                                                   // touchTask
+#define STACK_ALARM     2128                                                   // alarmTask
+#define STACK_WIFI      2240                                                   // wifiTask
+#define STACK_NVR       2304                                                   // nvrTask
+#define STACK_STACKMON  2912                                                   // stackMonTask
+#define STACK_WATCHDOG  1344                                                   // watchdogTask
+#define STACK_INPUT     2240                                                   // inputTask
+#define STACK_DISPLAY   2176                                                   // displayTask
+#define STACK_WEBLOG    4096                                                   // webLogTask (HTTP-Server benötigt mehr Stack)
+
+// ── Web-Logger ────────────────────────────────────────────────
+#define WEBLOG_PORT      8080                                                  // HTTP-Port des Log-Servers (8080 ≠ 80 des WiFi-Konfigurators)
+#define WEBLOG_LINES       40                                                  // Anzahl Zeilen auf der Seite
+#define WEBLOG_LINE_LEN   128                                                  // maximale Zeichenanzahl je Zeile
+#define WEBLOG_TAG_WIDTH   12                                                  // [xxx]-Tag im "Allgemeines Log" auf feste Spaltenbreite auffüllen
