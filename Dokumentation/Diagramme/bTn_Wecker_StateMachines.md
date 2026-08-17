@@ -1,6 +1,6 @@
 # bTn Wecker – State Machines
 
-*Firmware 12v08 · Mermaid-Diagramme (aus `bTn_Wecker_StateMachines.pptx`)*
+*Firmware 13v00 · Mermaid-Diagramme (aus `bTn_Wecker_StateMachines.pptx`)*
 
 ---
 
@@ -11,19 +11,27 @@
 ```mermaid
 stateDiagram-v2
     [*] --> ALARM_IDLE
-    ALARM_IDLE --> ALARM_RUNNING : Alarmzeit erreicht<br/>sec==0 · min==a1_min · hour==a1_hour<br/>min≠lastA1Min  (a2 analog)
+    ALARM_IDLE --> triggerAlarm : Alarmzeit erreicht<br/>sec==0 · min==a1_min · hour==a1_hour<br/>min≠lastA1Min  (a2 analog)
+    triggerAlarm --> ALARM_RUNNING : verifyPlayStarted() == true<br/>(Play-Befehl bestätigt)
+    triggerAlarm --> Neustart : verifyPlayStarted() == false<br/>failCount < ALARM_MAX_RESTARTS (3)<br/>→ rtcRetryMagic gesetzt, ESP.restart()
+    triggerAlarm --> ALARM_IDLE : verifyPlayStarted() == false<br/>failCount ≥ ALARM_MAX_RESTARTS<br/>→ [FEHLER]-Eintrag, endgültiger Abbruch
+    Neustart --> triggerAlarm : setup() liest rtcRetryMagic<br/>(RTC_NOINIT_ATTR übersteht Neustart)<br/>→ Alarm erneut auslösen
     ALARM_RUNNING --> ALARM_IDLE : playerStatus == 0<br/>(MP3 beendet,<br/>Prüfung alle ALARM_POLL_MS = 5 s)
     ALARM_RUNNING --> ALARM_IDLE : S1 – manueller Abbruch
-    ALARM_RUNNING --> ALARM_RUNNING : alle ALARM_POLL_MS<br/>readState()
+    ALARM_RUNNING --> ALARM_RUNNING : alle ALARM_POLL_MS<br/>readStateDrained()
 ```
 
 **Bedingungen**
 
-- **IDLE → RUNNING:** `a1_on && sec==0 && min==a1_min && hour==a1_hour && min != lastA1Min` (Minuten-Sperre); Alarm 2 analog.
-- **RUNNING → IDLE:** nach `ALARM_POLL_MS` (5 s) → `playerStatus == 0` (MP3 beendet).
+- **IDLE → triggerAlarm:** `a1_on && sec==0 && min==a1_min && hour==a1_hour && min != lastA1Min` (Minuten-Sperre); Alarm 2 analog.
 - **Alarm 1 Vorrang:** Alarm 2 wird nur per `else if` geprüft → Alarm 1 hat Vorrang bei gleicher Zeit.
-- **playerMutex:** schützt `playFolder()` und `readState()`. `vTaskDelay(1 ms)` liegt AUSSERHALB des Mutex (Projektregel).
+- **triggerAlarm() → ALARM_RUNNING:** `drainSerial2Pre()` räumt den Serial2-Puffer über die Bibliothek ab (12v14/12v19), dann `playFolder()` + `verifyPlayStarted()` (bis zu 3 Versuche à 500 ms, 12v06). Bestätigt: Motor/Licht ein, `wakeDisplay()` (10v03), `alarmState = ALARM_RUNNING`.
+- **triggerAlarm() → Neustart (12v05/12v07/12v10):** Bestätigt der DFPlayer den Play-Befehl nicht, gilt er als abgestürzt. Alarmnummer/Datei/Minute/Fehlversuche werden in `RTC_NOINIT_ATTR`-Variablen hinterlegt (übersteht `ESP.restart()`), danach Neustart – einzige verlässliche Wiederherstellung für ein hängendes DFPlayer/UART. Ab `ALARM_MAX_RESTARTS` (3, seit 12v10; ursprünglich 10) Fehlversuchen kein weiterer Neustart mehr, Alarm bricht für diesen Tag endgültig ab.
+- **watchdogTask-Fallback (12v12):** Friert `alarmTask` mitten in `triggerAlarm()` ein (`alarmTriggerInFlight`-Marker), setzt `watchdogTask` selbst `rtcRetryMagic` vor seinem eigenen Neustart – sonst bliebe der Alarm nach diesem Freeze-Neustart ersatzlos aus.
+- **RUNNING → IDLE:** nach `ALARM_POLL_MS` (5 s) → `playerStatus == 0` (MP3 beendet), Doppel-Abfrage über `readStateDrained()` mit 1 ms Pause außerhalb des Mutex.
+- **playerMutex:** schützt `playFolder()` und `readState()`/`readStateDrained()`. `vTaskDelay(1 ms)` liegt AUSSERHALB des Mutex (Projektregel).
 - **playerStatus:** `== 0` (seit 9v4, war vorher `< 1`) – verhindert Fehlabbruch bei `readState()`-Timeout (UART-Konflikt mit `webLogTask`).
+- **readStateDrained() (12v09/13v00):** liest alle vollständigen Frames aus dem Puffer und wertet nur den zuletzt empfangenen Feedback-Wert; wartet nach einem `-1` zusätzlich bis zu `SERIAL2_FEEDBACK_GRACE_MS` (100 ms) aktiv auf einen echten Feedback-Frame, statt sofort aufzugeben (behebt „kein Start-Status nach playFolder").
 
 ---
 
@@ -126,4 +134,4 @@ stateDiagram-v2
 
 ---
 
-*bTn Wecker · State Machines · Firmware 12v08*
+*bTn Wecker · State Machines · Firmware 13v00*
