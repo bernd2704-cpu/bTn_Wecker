@@ -66,7 +66,8 @@ Basis 4v1  →  13v00
 | Version | Kategorie | Änderung |
 |---|---|---|
 | 9v0 | Stabilität | Hardware-TWDT (esp_task_wdt): inputTask, displayTask, alarmTask angemeldet; Timeout 15 s, trigger_panic=true |
-| 9v0 | Qualität | Stack-Größen als STACK_*-Konstanten in SysConf; SystemConfig.h → SysConf_9v0.h mit Versionshistorie |
+| 9v0 | Qualität | Stack-Größen als STACK_*-Konstanten ausgelagert |
+| 9v1 | Qualität | SystemConfig.h → SysConf_9v1.h umbenannt, Versionshistorie im Datei-Header eingeführt |
 | 9v0 | Qualität | Stack-Größen angepasst: touchTask 3072, alarmTask 2048, inputTask 3072, displayTask 3072 |
 | 9v1/9v2 | Funktion | Web-Logger: webLog()/webLogf() mit Thread-sicherem Ring-Puffer (Mutex-geschützt) |
 | 9v1/9v2 | Funktion | webLogTask (Core 0, Pri 1): HTTP-Server Port 8080, GET / (HTML+Auto-Refresh), GET /log (plain text) |

@@ -1,5 +1,8 @@
 # bTn Wecker – Hardware-Erweiterung: LED-Streifen & DC-Motor
 
+Bauteilauswahl und Dimensionierung zu den Schaltplänen [Motor-Treiber.md](Motor-Treiber.md)
+und [LED-Treiber.md](LED-Treiber.md).
+
 ## Versorgung
 - Betriebsspannung Lastseite: 5V
 - ESP32 GPIO-Pegel: 3,3V
@@ -43,7 +46,7 @@ ledcWrite(E2, 153);          // 60% Duty → ~3V Mittelwert
 ---
 
 ## Hinweise zur Integration
-- GPIOs E2 (26) und E3 (27) sind bereits in SysConf_10v05.h definiert
+- GPIOs E2 (26) und E3 (27) sind in SysConf_*.h definiert (siehe `Software/Firmware_aktuell/`)
 - Stack-Größen und Task-Zuordnung gemäß bestehender SysConf-Konventionen
 - Kein vTaskDelay() unter gehaltenem Mutex
 - PWM-Initialisierung in setup() vor Task-Start

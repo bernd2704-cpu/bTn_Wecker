@@ -5,7 +5,7 @@
 ESP32-basierter Wecker mit OLED-Anzeige, DFPlayer Mini (MP3),
 kapazitiven Touch-Pads, FreeRTOS und WiFi/NTP.
 
-**Aktuelle Firmware:** 12v08
+Änderungshistorie siehe [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -14,21 +14,28 @@ kapazitiven Touch-Pads, FreeRTOS und WiFi/NTP.
 ```
 bTn_Wecker_Projekt/
 │
+├── CHANGELOG.md           Änderungshistorie (alle Versionen)
+│
 ├── Hardware/
 │   ├── Schaltplan/        Schaltplan und PCB-Layout
-│   ├── Stückliste/        Bauteilliste (BOM)
+│   ├── Stückliste/        Bauteilliste (BOM) – nicht versioniert, siehe unten
 │   └── Fotos/             Fotos des Aufbaus
 │
 ├── Software/
-│   ├── Firmware_aktuell/  Aktuelle Firmware (12v08) + Konfiguration
+│   ├── Firmware_aktuell/  Aktuelle Firmware + Konfiguration
 │   ├── Firmware_Versionshistorie/  Alle Vorgängerversionen
 │   └── Bibliotheken/      Verwendete Arduino-Bibliotheken (Hinweise)
 │
 └── Dokumentation/
     ├── Bedienungsanleitung/  Kurzanleitung für den Endnutzer
-    ├── Technisch/            Funktionsreferenz, Changelog
+    ├── Technisch/            Funktionsreferenz
+    │   └── Review/           Audit-/Review-Notizen, Arbeitsanweisungen
     └── Diagramme/            State-Machine-Diagramme (PPTX + DOCX)
 ```
+
+**Hinweis:** `Hardware/Stückliste/` enthält Hersteller-Datenblätter und Produktfotos
+und ist per `.gitignore` von der Versionierung ausgeschlossen (Urheberrecht) –
+lokal weiterhin vorhanden, im Repository nicht enthalten.
 
 ---
 

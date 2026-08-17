@@ -49,12 +49,14 @@ Format: `NvNN` (z.B. `12v04`) – kein führendes `v`.
 
 ```
 bTn_Wecker/
+├── CHANGELOG.md
 ├── CLAUDE.md
 ├── README.md
 ├── Dokumentation/
 │   ├── Bedienungsanleitung/
 │   ├── Diagramme/
-│   └── Technisch/                 ← Changelog, Funktionsreferenz
+│   └── Technisch/                 ← Funktionsreferenz
+│       └── Review/                ← Audit-/Review-Notizen, Arbeitsanweisungen
 ├── Hardware/
 │   ├── Fotos/
 │   ├── Schaltplan/
