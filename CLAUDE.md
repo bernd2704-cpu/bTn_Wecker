@@ -8,7 +8,8 @@ Taster S1=GPIO32/S2=GPIO33/S3=GPIO0, Ausgänge E1=GPIO25/E2=GPIO26/E3=GPIO27
 
 **Touch-Beschaltung:** je 1kΩ Reihenwiderstand + 4,7nF nach GND (GPIO-seitig), ca. 30cm twisted pair
 
-**Ausgangsschaltung E2/E3:** IRLML6344TRPBF MOSFET, Gate 330Ω, Freilaufdiode 1N4448, PWM 20kHz.
+**Ausgangsschaltung E2/E3:** IRLML6344TRPBF MOSFET, Gate 330Ω, Freilaufdiode 1N4148, PWM 20kHz,
+Motor direkt an 5V (kein Spannungsregler).
 DFPlayer Mini GND als Sternpunkt-Topologie.
 
 ## Aktuelle Version

@@ -157,10 +157,15 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   hat bereits dreimal (12v09–12v14) Regressionen erzeugt – vor dem Einsatz als Wecker unbedingt
   auf echter Hardware durchspielen; bei Auffälligkeiten steht `git checkout vor-C2-20v10` als
   Rückfallebene bereit.
-- [ ] **9. E5** – Rail am Motor+ mit Multimeter messen (Duty 100 %), danach **eine** Quelle
-  korrigieren (SysConf-Kommentar oder Hardware-Notiz auf 3,3 V, `MOTOR_PWM_DUTY`/
-  `MOTOR_PWM_KICK_THRESHOLD` ggf. anpassen). Nebenbei Diodentyp-Widerspruch `1N4148`/`1N4448`
-  zwischen SysConf und Schaltplan/Stückliste klären. Unabhängig von allem anderen, jederzeit machbar.
+- [x] **9. E5** – Gemessen (2026-08-18, Bernd): Motor liegt direkt an 5V, kein Spannungsregler.
+  Firmware/SysConf-Kommentare (`MOTOR_PWM_DUTY`=153 ≙ 60 % von 5V ≈ 3V) sowie
+  `Motor-LED-Treiber_Bauteilnotizen.md` waren bereits korrekt und unverändert richtig – die
+  Falschdarstellung lag ausschließlich in `Hardware/Schaltplan/Motor-Treiber.md` (AMS1117-3.3-LDO
+  im Schaltplan) und `Hardware/Stückliste/Stückliste.md` (AMS1117-Zeile). Beide korrigiert: LDO aus
+  dem Schaltplan entfernt (Motor jetzt direkt an 5V gezeichnet), AMS1117-Zeile aus der Stückliste
+  gestrichen. Diodentyp-Widerspruch ebenfalls geklärt: real verbaut ist `1N4148` (wie SysConf und
+  Bauteilnotizen schon sagten) – Schaltplan, Stückliste und `CLAUDE.md` (bisher `1N4448`)
+  entsprechend korrigiert.
 - [ ] **10. Kleinere Punkte** – Wirkung geringer oder Hardwareeingriff nötig:
   - [ ] E1: max. Zusammenhangsdauer für `TS_PRESSED`/`TS_REPEAT` (Touch-Rekalibrierung) +
     `player.volume(vol)` in `triggerAlarm()` vor `playFolder()` senden
