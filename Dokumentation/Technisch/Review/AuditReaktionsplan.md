@@ -109,17 +109,29 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   **Noch nicht getestet:** Feldverhalten mit den neuen Schwellwerten (wie ursprünglich vom Audit
   vorgesehen) – insbesondere ob 10 s/1 s im Alltag Fehlalarme erzeugt oder echte Freezes zuverlässig
   erkennt, lässt sich nur auf der realen Hardware über längere Zeit beobachten.
-- [ ] **6. C3** – `st == 0` (Modul lebt, gestoppt) von `st == -1` (keine Antwort) trennen; nur
-  `-1` rechtfertigt Neustart. Bei wiederholtem `st == 0` Alarm trotzdem als laufend behandeln
-  (Motor+Licht an). **Zusammen mit A3 verifizieren** – sonst läuft ein Wecker ohne Ton bis zum
-  A3-Timeout, statt zeitnah in einen erkennbaren Fehlerzustand zu wechseln. Getrennt committen.
-  BUSY-Zusatzkriterium in `verifyPlayStarted()` (seit 20v02, Z. 1354) deckt diesen Fall nicht ab –
-  bei echtem `st==0` (Datei fehlt) meldet BUSY ebenfalls „nicht busy", Reboot-Kaskade bleibt. BUSY
-  ist binär (spielt/spielt nicht) und liefert keine Fehlerursache – daher zusätzlich zur
-  `st==0`/`st==-1`-Trennung: `readStateDrained()` den Frame-Typ vor dem Verwerfen auswerten und
-  `DFPlayerError` (0x40) mit Fehlercode ins Web-Log schreiben (statt wie bisher stillschweigend
-  verworfen, siehe Ursachengruppe-C-Intro im Audit). Erst diese UART-Error-Frame-Auswertung macht
-  „Datei fehlt" von „Modul abgestürzt" im Log unterscheidbar – BUSY kann das nicht leisten.
+- [x] **6. C3** – Umgesetzt in **20v09** (`Wecker_20v09.ino`/`SysConf_20v09.h`). `verifyPlayStarted()`
+  liefert jetzt `PLAY_OK`/`PLAY_NO_SOUND`/`PLAY_CRASHED` statt `bool` – nur wenn nie eine Antwort
+  ankam (`PLAY_CRASHED`), löst `triggerAlarm()` noch `ESP.restart()` aus. Kam mindestens einmal
+  `st==0` an (`PLAY_NO_SOUND`), läuft der Alarm in denselben Erfolgspfad wie `PLAY_OK` (Motor/Licht
+  an), statt zwei sinnlose Reboots auszulösen und danach still zu bleiben.
+  **Zusammen mit A3 verifiziert** wie gefordert: neues Flag `alarmSilentFallback` hält
+  `ALARM_RUNNING` bei `PLAY_NO_SOUND` am Laufen, obwohl `playerStatus` dauerhaft `0` meldet – ohne
+  dieses Gate hätte `mp3Finished` den Alarm schon beim ersten Poll (5 s) sofort wieder beendet.
+  Einziger Ausstieg dann `ALARM_MAX_RUN_MS` (A3) oder S1.
+  **Zusätzlich beim Umsetzen entdeckt und mitbehoben:** der S1-Handler entschied bisher
+  ausschließlich anhand des (möglicherweise stillen) Playerstatus, ob gestoppt oder Kuckuck
+  ausgelöst wird – ein `alarmSilentFallback`-Alarm (playerStatus==0, Motor/Licht laufen aber
+  tatsächlich) wäre von S1 NICHT gestoppt worden, sondern hätte versehentlich den Kuckuck
+  ausgelöst. Jetzt `if (alarmState == ALARM_RUNNING || st > 0)` – genau die im ursprünglichen
+  C1-Fix-Vorschlag des Audits genannte, aber in 20v02 nicht übernommene Bedingung.
+  `readStateDrained()` wertet `DFPlayerError`-Frames vor dem Verwerfen aus und loggt den
+  Fehlercode – macht „Datei fehlt" von „Modul abgestürzt" im Log erstmals unterscheidbar.
+  „Optional auf Datei 1 zurückfallen" aus dem Audit-Fix-Vorschlag bewusst NICHT umgesetzt – hätte
+  eine weitere blockierende playFolder()/verify-Runde eingeführt, genau zu der Zeit, in der Schritt 5
+  die Watchdog-Marge knapp kalkuliert hat.
+  **Noch nicht getestet:** realer Alarm mit absichtlich fehlender Sounddatei (auf Datei-Nummer
+  zeigen, die nicht auf der SD-Karte existiert) – prüfen, dass Motor/Licht bis `ALARM_MAX_RUN_MS`
+  laufen und S1 den Alarm zuverlässig stoppt.
 - [ ] **7. C4** – `readFileCountsInFolder(1)` statt `readFileCounts() - 1`, kein 99-Fallback bei
   Timeout (`mp3Count` bei 0 lassen). Beseitigt eine Ursache von C3. Neuer Bibliotheksaufruf →
   nach C3, einzeln testen.

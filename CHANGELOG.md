@@ -395,4 +395,15 @@ Audit-Reaktionsplan Schritt 5, B1 sekundär.
 |---|---|---|
 | 20v08 | Stabilität | `WDG_TIMEOUT_MS` 30000→10000, `WDG_CHECK_MS` 5000→1000 (SysConf). Bei den bisherigen Werten gewinnt der Hardware-TWDT (15 s) bei jedem Freeze immer zuerst – der Software-Watchdog kam nie zum Zug (Audit-Befund B1). Abweichend vom Audit-Vorschlag (6000/1000) wurde der Wert anhand einer eigenen Worst-Case-Rechnung gewählt: `verifyPlayStarted()` kann bei einem dauerhaft nicht antwortenden DFPlayer bis zu ~5,5–6 s blockieren (3× `VERIFY_PLAY_RETRIES`, je `VERIFY_PLAY_DELAY_MS` + Mutex-Take + `readStateDrained()`-Gnadenfrist bei UART-Rauschen, deckt sich mit der im Audit selbst hergeleiteten Summe). Bei 6000 wäre die Marge dazu praktisch null gewesen – ein nur ungewöhnlich langsamer, aber regulärer Alarmversuch hätte den Watchdog fälschlich als Freeze werten können. Mit 10000/1000 liegt die Erkennung spätestens bei ~11 s: rund 5 s Marge über dem berechneten Worst-Case, weiterhin rund 4 s Marge unter den 15 s des TWDT. Begründung als Kommentar direkt bei den Konstanten in SysConf dokumentiert. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v08
+## Version 20v09
+
+Audit-Reaktionsplan Schritt 6 (C3), zusammen mit A3 verifiziert.
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v09 | Bugfix | `verifyPlayStarted()` liefert jetzt `PLAY_OK`/`PLAY_NO_SOUND`/`PLAY_CRASHED` statt `bool` (C3). `st==0` (Modul antwortet, „gestoppt" – typisch für „Datei nicht gefunden") und `st==-1` (keine Antwort) wurden bisher identisch als Absturz behandelt und lösten beide `ESP.restart()` aus – ein Neustart behebt einen Datei-/Kartenfehler aber nicht. Nur wenn nie eine Antwort ankam (`PLAY_CRASHED`), rechtfertigt das noch einen Neustart. Kam mindestens einmal `st==0` an (`PLAY_NO_SOUND`), gilt das Modul als lebendig; `triggerAlarm()` läuft in denselben Erfolgspfad wie `PLAY_OK` (Motor/Licht), statt zwei sinnlose Reboots auszulösen und danach still zu bleiben. |
+| 20v09 | Bugfix | Neues Flag `alarmSilentFallback`: hält `ALARM_RUNNING` bei `PLAY_NO_SOUND` am Laufen, obwohl `playerStatus` dauerhaft `0` meldet – ohne dieses Gate hätte `mp3Finished` den Alarm schon beim ersten Poll (5 s) sofort wieder beendet. Einziger Ausstieg dann `ALARM_MAX_RUN_MS` (A3, zusammen mit C3 verifiziert wie von der Review-Notiz gefordert) oder manueller Stopp über S1. |
+| 20v09 | Bugfix | S1-Handler (`inputTask`) entscheidet jetzt zusätzlich anhand von `alarmState`, nicht mehr nur anhand des Playerstatus, ob gestoppt oder Kuckuck ausgelöst wird (`if (alarmState == ALARM_RUNNING \|\| st > 0)`). Ohne diese Ergänzung hätte S1 einen `alarmSilentFallback`-Alarm (playerStatus==0, aber Motor/Licht laufen) nicht gestoppt, sondern versehentlich den Kuckuck ausgelöst. |
+| 20v09 | Funktion | `readStateDrained()` wertet `DFPlayerError`-Frames vor dem Verwerfen aus und schreibt den Fehlercode ins Web-Log, statt sie wie jeden anderen Nicht-Feedback-Frame kommentarlos zu verwerfen – macht „Datei fehlt" von „Modul abgestürzt" im Log erstmals unterscheidbar. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v09
