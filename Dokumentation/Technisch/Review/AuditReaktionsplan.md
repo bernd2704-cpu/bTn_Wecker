@@ -7,6 +7,30 @@ Zweck: die dortige „Empfohlene Reihenfolge" als abarbeitbare Checkliste mit St
 
 `[ ]` offen · `[~]` in Arbeit · `[x]` erledigt · `[-]` zurückgestellt
 
+## Zwischenstand 2026-08-18 (Gültigkeitsprüfung gegen 20v03)
+
+Firmware ist ohne Bezug auf diesen Plan direkt von der Audit-Basis 13v00 auf 20v00
+(Hardware 2v0, DFPlayer-BUSY-Signal GPIO34) gesprungen. Die 20v00–20v03-Änderungen
+dienten der Hardware-Anbindung, haben aber als Nebeneffekt drei Befunde berührt:
+
+- **C1 erledigt** – S1-Handler nutzt bei UART-Timeout jetzt `dfPlayerBusy()` statt
+  blind `st = 0` zu setzen (`Wecker_20v03.ino:1752-1755`, seit 20v02). Laufender
+  Alarm/Sound wird zuverlässig gestoppt statt fälschlich Kuckuck auszulösen.
+- **A3 teilweise entschärft** – `runAlarmMachine()`/`ALARM_RUNNING` beendet den Alarm
+  jetzt auch bei dauerhaftem `st == -1`, wenn `dfPlayerIdleDebounced()` das über den
+  BUSY-Pin bestätigt (Z. 1474-1475, seit 20v01/20v03). Deckt den Audit-Hauptfall
+  (Modul tot/TX-Leitung lose) ab. Der harte Zeit-Deckel `ALARM_MAX_RUN_MS` aus dem
+  Fix-Vorschlag fehlt weiterhin – bleibt BUSY selbst dauerhaft LOW hängen, entwaffnet
+  sich das Gerät wie beschrieben. Schritt 2 unten daher nur noch mit reduziertem Risiko,
+  nicht als erledigt zu werten.
+- **C3 nur am Rand berührt** – `verifyPlayStarted()` nutzt BUSY zusätzlich (Z. 1354),
+  das hilft aber nur gegen „läuft eigentlich, UART lügt". Der Audit-Kernfall (Datei
+  fehlt auf SD, Modul meldet `st == 0`, BUSY bestätigt korrekt „nicht busy" → trotzdem
+  als Absturz behandelt, 2 Reboots, danach still) besteht unverändert. Schritt 6 bleibt offen.
+
+Alle übrigen Befunde (A1, A2, A4–A6, B1, B2, C2, C4–C8, D1, D2, E1, E2, E4, E5) wurden
+1:1 gegen `Wecker_20v03.ino`/`SysConf_20v03.h` verifiziert und sind unverändert gültig.
+
 ## Nicht antasten (Gesamtbild-Fazit des Audits)
 
 Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetzung nicht wegoptimiert werden:
@@ -27,10 +51,14 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   setzen oder DST-Vorwärtslücke separat behandeln; `lastA1Min`/`lastA2Min`-Nutzung in `inputTask`
   (S1-Handler) und `lastCuckooMin` im selben Zug auf Tages-Logik umstellen (überschneidet sich
   mit C1, nicht getrennt umsetzen). Test ohne Hardware: Systemzeit per NTP-Attrappe springen lassen.
-- [ ] **2. A3** – Maximallaufzeit für `ALARM_RUNNING` (`ALARM_MAX_RUN_MS`, eigener Zeitstempel
+- [~] **2. A3** – Maximallaufzeit für `ALARM_RUNNING` (`ALARM_MAX_RUN_MS`, eigener Zeitstempel
   `alarmRunStart`). Zusammen mit **C1** (S1 wirkt bei `ALARM_RUNNING` unabhängig vom Playerstatus,
   inkl. drittem Zweig „Status unbekannt bei `ALARM_IDLE`" laut Review-Notiz). Reine Anwendungslogik,
   keine Bibliotheksberührung.
+  **[x] C1 seit 20v02 erledigt** (`dfPlayerBusy()` statt blindem `st=0` im S1-Handler, Z. 1752-1755).
+  **A3 seit 20v01/20v03 teilweise entschärft** (`dfPlayerIdleDebounced()` beendet `ALARM_RUNNING`
+  auch bei totem UART, Z. 1474-1475) – der harte `ALARM_MAX_RUN_MS`-Deckel als Rückfallebene gegen
+  dauerhaft LOW hängendes BUSY-Signal ist trotzdem noch offen, siehe Zwischenstand oben.
 - [ ] **3. B2** – RTC-Merker (`rtcRetryMagic` u.a.) vor dem riskanten Abschnitt in `triggerAlarm()`
   setzen, erst nach erstem erfolgreichem Poll (`playerStatus > 0`) bzw. finalem Abbruch löschen.
   **Nicht vor Schritt 1** – ohne Nachholfenster kann ein spät im Alarm liegender Reboot sonst einen
@@ -46,6 +74,8 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   `-1` rechtfertigt Neustart. Bei wiederholtem `st == 0` Alarm trotzdem als laufend behandeln
   (Motor+Licht an). **Zusammen mit A3 verifizieren** – sonst läuft ein Wecker ohne Ton bis zum
   A3-Timeout, statt zeitnah in einen erkennbaren Fehlerzustand zu wechseln. Getrennt committen.
+  BUSY-Zusatzkriterium in `verifyPlayStarted()` (seit 20v02, Z. 1354) deckt diesen Fall nicht ab –
+  bei echtem `st==0` (Datei fehlt) meldet BUSY ebenfalls „nicht busy", Reboot-Kaskade bleibt.
 - [ ] **7. C4** – `readFileCountsInFolder(1)` statt `readFileCounts() - 1`, kein 99-Fallback bei
   Timeout (`mp3Count` bei 0 lassen). Beseitigt eine Ursache von C3. Neuer Bibliotheksaufruf →
   nach C3, einzeln testen.
