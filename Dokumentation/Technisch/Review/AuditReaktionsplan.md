@@ -192,11 +192,19 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   S1/Vorschau-Stopp exakt im Verifikationsfenster (schwer gezielt reproduzierbar, am ehesten durch
   wiederholte Alarme mit sofortigem S1-Druck); `/`- und `/log`-Seite nach längerer Laufzeit mit
   vollem Ringpuffer aufrufen.
-- [ ] **11. Zweizeiler aus „Ungeprüft geblieben"** – sobald ohnehin an `setup()` gearbeitet wird:
-  - [ ] Rückgabewerte von `esp_task_wdt_init()`/`reconfigure()`/`esp_task_wdt_add(NULL)` auswerten,
-    bevor „[TWDT] Hardware Watchdog aktiv" geloggt wird
-  - [ ] `webLog("[NTP] Synchronisation OK")` und `snapTimeStr(snapNtpTime, …)` nur bei
-    tatsächlichem NTP-Erfolg ausführen, nicht unbedingt nach Timeout
+- [x] **11. Zweizeiler aus „Ungeprüft geblieben"** – Umgesetzt in **20v13**
+  (`Wecker_20v13.ino`/`SysConf_20v13.h`), letzter Punkt der Umsetzungsreihenfolge.
+  - [x] Rückgabewerte von `esp_task_wdt_add(NULL)` (in `inputTask`/`displayTask`/`alarmTask`) sowie
+    `esp_task_wdt_init()`/`esp_task_wdt_reconfigure()` in `setup()` werden jetzt ausgewertet;
+    Fehlschlag wird als `[FEHLER]` geloggt statt „[TWDT] Hardware Watchdog aktiv" blind zu behaupten.
+  - [x] `webLog("[NTP] Synchronisation OK")` und `snapTimeStr(snapNtpTime, …)` laufen jetzt nur noch
+    bei tatsächlichem NTP-Erfolg (`ntpTimedOut`-Flag), nicht mehr unbedingt nach der Warteschleife.
+  **Noch nicht getestet:** beide Fehlerpfade sind auf reeller Hardware kaum gezielt provozierbar
+  (TWDT-Anmeldefehler, NTP-Timeout erfordert getrennten Router/DNS-Ausfall bei sonst funktionierendem
+  WLAN) – nur durch Lesen verifiziert.
+
+Damit ist die Umsetzungsreihenfolge des Audit-Reaktionsplans (Schritte 1–11) vollständig
+abgearbeitet. Offen bleiben nur noch die nie gegengeprüften Punkte unter „Offene Prüfpunkte" unten.
 
 ## Bewusst nicht umgesetzt
 

@@ -440,4 +440,17 @@ Audit-Reaktionsplan Schritt 10 (E1, C6, C7, D2). E2 und E4 auf Nutzerwunsch bewu
 | 20v12 | Bugfix | `onClock()` (T3/T4, Lautstärke) und `checkboxSound()` (Sound-Vorschau) ändern `vol`/`sound*_assigned`, Anzeige und `markSafeChange()` jetzt erst nach erfolgreichem `playerMutex`-Take (C7). Bisher liefen Zustandsänderung und Anzeige unbedingt, auch wenn der Take fehlschlug (z.B. während `alarmTask` den Mutex im Poll hält) – Anzeige/NVS und tatsächliche Player-Lautstärke liefen dann auseinander. Fehlschlag jetzt als `[FEHLER]` geloggt. |
 | 20v12 | Stabilität | `html.reserve()` in der Web-Log-Startseite von 8192 auf 12288 Byte angehoben – der bisherige Wert deckte den Worst Case (festes Markup + 40 Ringpufferzeilen + Snapshots, real bis ~9,8 kB) nicht (D2). `/log`-Handler reserviert jetzt ebenfalls (`out.reserve(6144)`), vorher gar nicht. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v12
+## Version 20v13
+
+Audit-Reaktionsplan Schritt 11 (zwei Zweizeiler) – letzter offener Punkt der Umsetzungsreihenfolge.
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v13 | Bugfix | `esp_task_wdt_add(NULL)` in `inputTask`/`displayTask`/`alarmTask` sowie `esp_task_wdt_init()`/`esp_task_wdt_reconfigure()` in `setup()` werten jetzt den Rückgabewert aus. Schlägt die Anmeldung fehl, wird `[FEHLER]` geloggt statt wie bisher unbedingt "[TWDT] Hardware Watchdog aktiv" zu behaupten – genau der 12v15-Fehler (TWDT nie wirklich initialisiert, `esp_task_wdt_reset()` läuft ins Leere) wäre bisher symptomfrei geblieben. |
+| 20v13 | Bugfix | `webLog("[NTP] Synchronisation OK")` und `snapTimeStr(snapNtpTime, …)` laufen jetzt nur noch bei tatsächlichem NTP-Erfolg, nicht mehr unbedingt nach der Warteschleife (auch nach einem Timeout-`break`). Vorher hätte das Log nach einem ausgefallenen Alarm einen Uhrzeitfehler fälschlich ausgeschlossen – diagnostisch teuer im Zusammenspiel mit A1/A5. |
+
+Damit ist die im Audit-Reaktionsplan vorgesehene Umsetzungsreihenfolge (Schritte 1–11) vollständig
+abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Punkte (siehe
+`AuditReaktionsplan.md`, Abschnitt „Offene Prüfpunkte").
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v13
