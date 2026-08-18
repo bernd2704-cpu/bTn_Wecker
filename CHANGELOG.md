@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  13v00
+Basis 4v1  →  13v00 (Hardware 1v0, eingefroren)  →  20v02 (Hardware 2v0, DFPlayer-BUSY an GPIO34)
 
 ## Kategorien
 
@@ -317,4 +317,27 @@ Basis 4v1  →  13v00
 | 13v00 | Bugfix | Regression durch Fix 2 entdeckt: Startsound blieb nach Boot aus. Ursache: Ohne die ACK-Wartelogik sendet `sendStack()` `volume()`/`EQ()`/`playFolder()` (Startsound) in `setup()` nur noch mit einem pauschalen 10-ms-Delay hintereinander, statt auf die tatsächliche Verarbeitung des jeweils vorherigen Befehls zu warten – direkt nach `reset()` kam der DFPlayer damit nicht mehr mit, `playFolder(2, 1)` ging unterwegs verloren. |
 | 13v00 | Bugfix | Fix 2 zurückgenommen: ACK-Modus bleibt aktiv (`player.begin(Serial2, true, true)`), `if/else`-Verbindungscheck in `setup()` wiederhergestellt. Der 0x41-ACK-Frame war ohnehin nie die Ursache des st=-1-Problems (siehe oben) – Fix 1 bleibt unverändert wirksam. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 13v00
+Firmware 13v00 eingefroren, verknüpft mit Hardware 1v0 (kein BUSY-Signal).
+Ab hier neue Basis Hardware 2v0 (DFPlayer-BUSY-Signal, GPIO34) / Firmware 20v00.
+
+## Version 20v00
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v00 | Funktion | Basis 13v00, Hardware ab 2v0: `SysConf_20v00.h` – Pin-Konstante `DFPLAYER_BUSY` (GPIO34, DFPlayer BUSY-Pin) ergänzt. |
+| 20v00 | Funktion | `pinMode(DFPLAYER_BUSY, INPUT)` in `setup()`; neue Hilfsfunktion `dfPlayerBusy()` (direkter GPIO-Read, LOW=Wiedergabe läuft) – zunächst ungenutzt bereitgestellt. |
+
+## Version 20v01
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v01 | Stabilität | `runAlarmMachine()`/`ALARM_RUNNING`: `dfPlayerBusy()` löst den bisherigen "-1=UART-Timeout → Alarm läuft sicherheitshalber weiter"-Fallback ab. Serial2-Timeouts von `readStateDrained()` gelten jetzt nur noch als "MP3 beendet", wenn der BUSY-Pin (direktes Hardware-Signal, kein UART) das bestätigt. |
+
+## Version 20v02
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v02 | Stabilität | `verifyPlayStarted()`: Erfolgskriterium von `st > 0` auf `st > 0 \|\| dfPlayerBusy()` erweitert – vermeidet einen unnötigen `ESP.restart()`, wenn der DFPlayer tatsächlich läuft, aber `readStateDrained()` (UART) trotz Gnadenfrist weiter `st<=0` liefert. |
+| 20v02 | Stabilität | S1-Handling (`inputTask`): 200-ms-Timeout-Fallback bei anhaltendem `st==-1` fragt jetzt `dfPlayerBusy()` statt blind `st=0` ("idle") zu setzen – verhindert, dass bei einem UART-Timeout fälschlich der Kuckuck statt `stop()` ausgelöst wird, obwohl noch ein Alarm/Sound läuft. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v02
