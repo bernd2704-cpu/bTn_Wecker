@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  13v00 (Hardware 1v0, eingefroren)  →  20v02 (Hardware 2v0, DFPlayer-BUSY an GPIO34)
+Basis 4v1  →  13v00 (Hardware 1v0, eingefroren)  →  20v03 (Hardware 2v0, DFPlayer-BUSY an GPIO34)
 
 ## Kategorien
 
@@ -340,4 +340,10 @@ Ab hier neue Basis Hardware 2v0 (DFPlayer-BUSY-Signal, GPIO34) / Firmware 20v00.
 | 20v02 | Stabilität | `verifyPlayStarted()`: Erfolgskriterium von `st > 0` auf `st > 0 \|\| dfPlayerBusy()` erweitert – vermeidet einen unnötigen `ESP.restart()`, wenn der DFPlayer tatsächlich läuft, aber `readStateDrained()` (UART) trotz Gnadenfrist weiter `st<=0` liefert. |
 | 20v02 | Stabilität | S1-Handling (`inputTask`): 200-ms-Timeout-Fallback bei anhaltendem `st==-1` fragt jetzt `dfPlayerBusy()` statt blind `st=0` ("idle") zu setzen – verhindert, dass bei einem UART-Timeout fälschlich der Kuckuck statt `stop()` ausgelöst wird, obwohl noch ein Alarm/Sound läuft. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v02
+## Version 20v03
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v03 | Stabilität | QA-Review (Code-Review-Agent) identifizierte `dfPlayerBusy()` als ungefilterten Einzel-`digitalRead()` ohne Software-Debounce, anders als Touch-Pads/Taster. Für die einzige unwiderrufliche Entscheidungsstelle (`ALARM_RUNNING`: Motor/Licht aus, State-Reset bei jedem Poll) neue Funktion `dfPlayerIdleDebounced()` – 3 Abtastungen im Abstand von 5 ms müssen übereinstimmend "idle" melden, sonst gilt der Alarm als weiterhin laufend. Ergänzt den bereits vorhandenen Hardware-RC-Filter (100µs Zeitkonstante, siehe `Hardware/Schaltplan/DFPlayer-BUSY.md`) um Software-seitige Absicherung gegen Störimpulse, die den Filter überdauern. `verifyPlayStarted()` und S1-Handling bleiben bei einfachem `dfPlayerBusy()` (geringere Konsequenz eines Fehlreads: Retry-Schleife bzw. einmaliger Tastendruck). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v03

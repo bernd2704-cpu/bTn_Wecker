@@ -343,6 +343,7 @@ static bool dfPlayerBusy() {
   return digitalRead(DFPLAYER_BUSY) == LOW;
 }
 
+
 // 13v00: player.readState() (DFRobotDFPlayerMini) sendet die 0x42-Abfrage und
 // wertet dann NUR den erstbesten eintreffenden Frame aus – ist dieser nicht
 // vom Typ DFPlayerFeedBack (z.B. eine unaufgefordert gesendete Play-Finished-
