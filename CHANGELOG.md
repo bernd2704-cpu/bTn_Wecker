@@ -426,4 +426,18 @@ Audit-Reaktionsplan Schritt 8 (C2) – zuletzt und ausdrücklich isoliert (diese
 | 20v11 | Bugfix | `drainSerial2Pre()`/`readStateDrained()` auf gemeinsame fortschrittsbasierte Drain-Schleife (`drainSerial2Progress()`) umgestellt. Bisher brach `drainSerial2Pre()` am Rückgabewert von `player.available()` ab – der auch nach einem vollständig konsumierten 0x41-ACK-Frame `false` liefert (`parseStack()` der Bibliothek behandelt den ACK intern, ohne `_isAvailable` zu setzen). Bei Pufferinhalt `[ACK][Feedback]` brach der Drain dadurch nach dem ACK ab und ließ den Feedback-Frame stehen; ein späterer `readStateDrained()`-Aufruf konnte diesen Altframe als Antwort auf eine ganz andere, neue Abfrage werten (Motor/Licht liefen, obwohl kein Ton spielte, ohne Fehlerlog). Die neue Schleife macht Fortschritt am Rohpuffer selbst fest (`Serial2.available()` vor/nach dem Read vergleichen) statt am Parser-Rückgabewert. |
 | 20v11 | Bugfix | `readStateDrained()` ruft `drainSerial2Progress()` jetzt zusätzlich VOR der eigenen `player.readState()`-Abfrage auf – verhindert, dass ein bereits vor diesem Aufruf im Puffer liegender Altframe als Antwort auf die gerade gesendete Abfrage gewertet wird. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v11
+## Version 20v12
+
+Audit-Reaktionsplan Schritt 10 (E1, C6, C7, D2). E2 und E4 auf Nutzerwunsch bewusst zurückgestellt
+(Boot-Taster des DevKit gewollt genutzt bzw. Bestätigungsabfrage bewusst nicht gewünscht).
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v12 | Bugfix | `touchTask`: erzwungener Reset auf `TS_IDLE` inkl. Baseline-Neuerfassung, wenn ein Pad länger als `TOUCH_MAX_HOLD_MS` (30 s) ununterbrochen "gedrückt" bleibt (E1). Bisher hatten `TS_PRESSED`/`TS_REPEAT` keinen Ausstieg außer dem Loslassen selbst – ein klemmendes Pad (Feuchtigkeit, Kabeldefekt) sendete unbegrenzt alle `TOUCH_REPEAT_MS` ein Event, z.B. zählte T4 die Lautstärke bis 0 herunter. `[WARNUNG]`-Log bei Auslösung. |
+| 20v12 | Bugfix | `triggerAlarm()` sendet vor jedem Alarm `player.volume()` mit Untergrenze `ALARM_MIN_VOL` (10), unabhängig vom zuletzt gesendeten Wert (E1). Schützt gegen einen durch ein klemmendes Touch-Pad auf 0 heruntergezählten `vol`, ohne die persistierte Einstellung selbst zu verändern. |
+| 20v12 | Bugfix | Neues Flag `alarmCancelRequested` (C6): S1, Sound-Vorschau-Stopp und das Funktionswahl-Menü setzen es über `requestAlarmCancelIfActive()`, wenn ihr `player.stop()` einen laufenden oder gerade startenden Alarm treffen könnte. `verifyPlayStarted()` liefert dann `PLAY_CANCELLED` statt `PLAY_CRASHED` – `triggerAlarm()` bricht sauber ab (Tages-Sperre trotzdem gesetzt) statt neu zu starten oder `alarmSilentFallback` zu aktivieren (Motor/Licht wären sonst kurz nach dem Stopp wieder angegangen). |
+| 20v12 | Refactoring | Die Tages-Sperren-Zuweisung in `triggerAlarm()` in die neue Funktion `lockAlarmDayGuard()` ausgelagert – wird jetzt sowohl vom Erfolgspfad als auch vom neuen `PLAY_CANCELLED`-Abbruchpfad genutzt. |
+| 20v12 | Bugfix | `onClock()` (T3/T4, Lautstärke) und `checkboxSound()` (Sound-Vorschau) ändern `vol`/`sound*_assigned`, Anzeige und `markSafeChange()` jetzt erst nach erfolgreichem `playerMutex`-Take (C7). Bisher liefen Zustandsänderung und Anzeige unbedingt, auch wenn der Take fehlschlug (z.B. während `alarmTask` den Mutex im Poll hält) – Anzeige/NVS und tatsächliche Player-Lautstärke liefen dann auseinander. Fehlschlag jetzt als `[FEHLER]` geloggt. |
+| 20v12 | Stabilität | `html.reserve()` in der Web-Log-Startseite von 8192 auf 12288 Byte angehoben – der bisherige Wert deckte den Worst Case (festes Markup + 40 Ringpufferzeilen + Snapshots, real bis ~9,8 kB) nicht (D2). `/log`-Handler reserviert jetzt ebenfalls (`out.reserve(6144)`), vorher gar nicht. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v12

@@ -166,17 +166,32 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   gestrichen. Diodentyp-Widerspruch ebenfalls geklärt: real verbaut ist `1N4148` (wie SysConf und
   Bauteilnotizen schon sagten) – Schaltplan, Stückliste und `CLAUDE.md` (bisher `1N4448`)
   entsprechend korrigiert.
-- [ ] **10. Kleinere Punkte** – Wirkung geringer oder Hardwareeingriff nötig:
-  - [ ] E1: max. Zusammenhangsdauer für `TS_PRESSED`/`TS_REPEAT` (Touch-Rekalibrierung) +
-    `player.volume(vol)` in `triggerAlarm()` vor `playFolder()` senden
-  - [ ] E2: S3 von GPIO0 (Boot-Strapping-Pin) auf unkritischen GPIO verlegen – nur bei ohnehin
-    anstehender Platinenänderung
-  - [ ] C6: Abbruch-Flag `alarmCancelRequested`, damit S1/Vorschau-Stopp während
-    `verifyPlayStarted()` keinen unnötigen Reboot auslöst
-  - [ ] C7: Lautstärke-/Sound-Auswahl erst nach erfolgreichem Mutex-Take übernehmen (Anzeige,
-    NVS), Fehlschlag loggen
-  - [ ] D2: Web-Log-Seite streamen statt `String`-Aufbau, oder `reserve()` auf 12288 anheben
-  - [ ] E4: Bestätigungsabfrage für T3 (WLAN-Zugangsdaten löschen), zweiter Druck nötig
+- [x] **10. Kleinere Punkte** – Umgesetzt in **20v12** (`Wecker_20v12.ino`/`SysConf_20v12.h`), bis
+  auf zwei bewusst zurückgestellte Punkte:
+  - [x] E1: `touchTask` erzwingt einen Reset auf `TS_IDLE` inkl. Baseline-Neuerfassung, wenn ein
+    Pad länger als `TOUCH_MAX_HOLD_MS` (30 s) klemmt (`[WARNUNG]`-Log). `triggerAlarm()` sendet vor
+    jedem Alarm `player.volume()` mit Untergrenze `ALARM_MIN_VOL` (10), unabhängig vom zuletzt
+    gesendeten Wert – `vol` selbst bleibt unverändert.
+  - [-] E2: **Zurückgestellt auf Nutzerwunsch** – S3 bleibt bewusst auf GPIO0, weil der vorhandene
+    interne Boot-Taster des ESP32 DevKit C V4 dafür genutzt wird (kein zusätzliches Bauteil nötig).
+  - [x] C6: Neues Flag `alarmCancelRequested`, gesetzt über `requestAlarmCancelIfActive()` in S1,
+    Sound-Vorschau-Stopp und Funktionswahl-Menü, bevor deren `player.stop()` einen laufenden
+    Alarmversuch treffen könnte. `verifyPlayStarted()` liefert dann `PLAY_CANCELLED` statt
+    `PLAY_CRASHED` – `triggerAlarm()` bricht sauber ab (Tages-Sperre trotzdem via
+    `lockAlarmDayGuard()` gesetzt) statt neu zu starten oder `alarmSilentFallback` zu aktivieren.
+  - [x] C7: `onClock()` (T3/T4) und `checkboxSound()` ändern `vol`/`sound*_assigned`, Anzeige und
+    `markSafeChange()` jetzt erst nach erfolgreichem `playerMutex`-Take; Fehlschlag als `[FEHLER]`
+    geloggt statt stillschweigend ignoriert.
+  - [x] D2: `html.reserve()` von 8192 auf 12288 angehoben (Audit-Minimalvorschlag statt
+    vollständigem Umbau auf `sendContent()`-Streaming); `/log`-Handler reserviert jetzt ebenfalls
+    (`out.reserve(6144)`, vorher gar nicht).
+  - [-] E4: **Zurückgestellt auf Nutzerwunsch** – auf die Bestätigungsabfrage für T3
+    (WLAN-Zugangsdaten löschen) wird bewusst verzichtet.
+  **Noch nicht getestet:** klemmendes Touch-Pad simulieren (Finger dauerhaft auflegen, 30 s warten,
+  Web-Log auf `[WARNUNG]` prüfen); Alarm bei vol=0 auslösen und Lautstärke am Lautsprecher prüfen;
+  S1/Vorschau-Stopp exakt im Verifikationsfenster (schwer gezielt reproduzierbar, am ehesten durch
+  wiederholte Alarme mit sofortigem S1-Druck); `/`- und `/log`-Seite nach längerer Laufzeit mit
+  vollem Ringpuffer aufrufen.
 - [ ] **11. Zweizeiler aus „Ungeprüft geblieben"** – sobald ohnehin an `setup()` gearbeitet wird:
   - [ ] Rückgabewerte von `esp_task_wdt_init()`/`reconfigure()`/`esp_task_wdt_add(NULL)` auswerten,
     bevor „[TWDT] Hardware Watchdog aktiv" geloggt wird
