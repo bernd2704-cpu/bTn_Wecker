@@ -9,3 +9,6 @@
 | `DFPlayer-BUSY.md`                    | BUSY-Signal DFPlayer Mini → GPIO34, Pegelprüfung         |
 
 Weitere Schaltplan-Dateien (z.B. KiCad, Eagle, PDF) hier ablegen.
+
+Bauteillisten (BOM) zu den Treibern/Filtern: `Hardware/Stückliste/Stückliste.md`
+(z.B. Abschnitt 3 „Motor-Treiber", Abschnitt 4 „DFPlayer-BUSY-Filter").
