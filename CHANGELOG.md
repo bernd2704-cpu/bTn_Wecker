@@ -387,4 +387,12 @@ Audit-Reaktionsplan Schritt 4 (C5 + D1).
 | 20v07 | Bugfix | `setup()`: `readNVR()` läuft jetzt unabhängig vom `state`-Flag (statt nur im `varState==true`-Zweig) – die `getX()`-Fallbacks liefern beim allerersten Boot ohnehin die Compile-Defaults zurück, ein bedingter Aufruf war unnötig und verdeckte zusätzlich den Fall „`data.begin()` schlägt fehl, `state` bleibt beim Default `false`". |
 | 20v07 | Refactoring | `webLogMutex`-Initialisierung in `setup()` vor das NVR-Laden gezogen, damit ein `data.begin()`-Fehlschlag dort sofort als `[FEHLER]` ins Web-Log geschrieben werden kann statt lautlos verworfen zu werden. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v07
+## Version 20v08
+
+Audit-Reaktionsplan Schritt 5, B1 sekundär.
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v08 | Stabilität | `WDG_TIMEOUT_MS` 30000→10000, `WDG_CHECK_MS` 5000→1000 (SysConf). Bei den bisherigen Werten gewinnt der Hardware-TWDT (15 s) bei jedem Freeze immer zuerst – der Software-Watchdog kam nie zum Zug (Audit-Befund B1). Abweichend vom Audit-Vorschlag (6000/1000) wurde der Wert anhand einer eigenen Worst-Case-Rechnung gewählt: `verifyPlayStarted()` kann bei einem dauerhaft nicht antwortenden DFPlayer bis zu ~5,5–6 s blockieren (3× `VERIFY_PLAY_RETRIES`, je `VERIFY_PLAY_DELAY_MS` + Mutex-Take + `readStateDrained()`-Gnadenfrist bei UART-Rauschen, deckt sich mit der im Audit selbst hergeleiteten Summe). Bei 6000 wäre die Marge dazu praktisch null gewesen – ein nur ungewöhnlich langsamer, aber regulärer Alarmversuch hätte den Watchdog fälschlich als Freeze werten können. Mit 10000/1000 liegt die Erkennung spätestens bei ~11 s: rund 5 s Marge über dem berechneten Worst-Case, weiterhin rund 4 s Marge unter den 15 s des TWDT. Begründung als Kommentar direkt bei den Konstanten in SysConf dokumentiert. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v08

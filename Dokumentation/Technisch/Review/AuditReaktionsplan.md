@@ -93,10 +93,22 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   vor das NVR-Laden gezogen, damit ein `data.begin()`-Fehlschlag dort sofort geloggt werden kann.
   **Noch nicht getestet:** `data.begin()`-Fehlschlag lässt sich ohne beschädigten NVS/Flash-Fehler
   kaum real provozieren – Codepfad nur durch Lesen verifiziert, nicht auf Hardware ausgelöst.
-- [ ] **5. B1 sekundär** – `WDG_TIMEOUT_MS` auf 6000, `WDG_CHECK_MS` auf 1000 (SysConf). Erst
-  nach Schritt 3, damit sich am Feldverhalten zeigt, ob der neue Schwellwert Fehlalarme erzeugt.
-  Vorher realen Worst-Case von `verifyPlayStarted()` + `readStateDrained()`-Gnadenfrist
-  nachrechnen (Marge zum 6-7-s-Fenster ist knapp, siehe Review-Notiz).
+- [x] **5. B1 sekundär** – Umgesetzt in **20v08** (`Wecker_20v08.ino`/`SysConf_20v08.h`), abweichend
+  vom Audit-Vorschlag. Wie von der Review-Notiz verlangt wurde der reale Worst-Case vorher
+  nachgerechnet statt der Schätzwert übernommen: `verifyPlayStarted()` kann bei einem dauerhaft
+  nicht antwortenden DFPlayer bis zu ~5,5–6 s blockieren (3× `VERIFY_PLAY_RETRIES`, je
+  `VERIFY_PLAY_DELAY_MS` + Mutex-Take bis 200 ms + `readStateDrained()`-Gnadenfrist bei UART-
+  Rauschen) – deckt sich mit der im Audit selbst hergeleiteten Summe ("Nicht bestätigt"-Abschnitt).
+  Bei den vorgeschlagenen 6000/1000 wäre die Marge dazu praktisch null gewesen: ein nur
+  ungewöhnlich langsamer, aber regulärer Alarmversuch hätte den Watchdog fälschlich als Freeze
+  werten können – genau das „Fehlalarme erzeugen", vor dem die Notiz warnt. Stattdessen
+  `WDG_TIMEOUT_MS`=10000/`WDG_CHECK_MS`=1000 gesetzt: Erkennung spätestens nach ~11 s, ca. 5 s
+  Marge über dem berechneten Worst-Case, weiterhin ca. 4 s Marge unter den 15 s des TWDT (Software-
+  Watchdog gewinnt jetzt wieder zuerst). Rechnung als Kommentar direkt bei den Konstanten in
+  SysConf dokumentiert.
+  **Noch nicht getestet:** Feldverhalten mit den neuen Schwellwerten (wie ursprünglich vom Audit
+  vorgesehen) – insbesondere ob 10 s/1 s im Alltag Fehlalarme erzeugt oder echte Freezes zuverlässig
+  erkennt, lässt sich nur auf der realen Hardware über längere Zeit beobachten.
 - [ ] **6. C3** – `st == 0` (Modul lebt, gestoppt) von `st == -1` (keine Antwort) trennen; nur
   `-1` rechtfertigt Neustart. Bei wiederholtem `st == 0` Alarm trotzdem als laufend behandeln
   (Motor+Licht an). **Zusammen mit A3 verifizieren** – sonst läuft ein Wecker ohne Ton bis zum
