@@ -132,9 +132,15 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   **Noch nicht getestet:** realer Alarm mit absichtlich fehlender Sounddatei (auf Datei-Nummer
   zeigen, die nicht auf der SD-Karte existiert) – prüfen, dass Motor/Licht bis `ALARM_MAX_RUN_MS`
   laufen und S1 den Alarm zuverlässig stoppt.
-- [ ] **7. C4** – `readFileCountsInFolder(1)` statt `readFileCounts() - 1`, kein 99-Fallback bei
-  Timeout (`mp3Count` bei 0 lassen). Beseitigt eine Ursache von C3. Neuer Bibliotheksaufruf →
-  nach C3, einzeln testen.
+- [x] **7. C4** – Umgesetzt in **20v10** (`Wecker_20v10.ino`/`SysConf_20v10.h`).
+  `player.readFileCountsInFolder(1)` (0x4E) statt `player.readFileCounts()` (0x48) `- 1` – liefert
+  die Dateizahl direkt für Ordner 01, kein Rechnen/Raten mehr über die Gesamtzahl aller Ordner.
+  Bei Timeout bleibt `mp3Count` auf 0 statt auf den geratenen Fallback 99 – C5 (20v07) sperrt die
+  Sound-Auswahl dann korrekt. UI-Auswahl war bereits vorher implizit gesperrt, solange
+  `mp3Count == 0` (9v13-Fallback in den Touch-Handlern), keine Änderung dort nötig.
+  **Noch nicht getestet:** neuer Bibliotheksaufruf (0x4E) auf realer Hardware – wie vom Reaktionsplan
+  vorgesehen einzeln testen (mp3Count-Anzeige nach Boot mit bekannter SD-Karten-Dateizahl in
+  Ordner 01 vergleichen).
 - [ ] **8. C2** – `drainSerial2Pre()` auf Fortschrittsprüfung statt Rückgabewert umstellen,
   `readStateDrained()` vor jedem `player.readState()` zusätzlich drainen. **Zuletzt und
   ausdrücklich isoliert** – dieser Bereich hat in 12v09–12v14 dreimal Regressionen erzeugt.

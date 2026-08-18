@@ -406,4 +406,13 @@ Audit-Reaktionsplan Schritt 6 (C3), zusammen mit A3 verifiziert.
 | 20v09 | Bugfix | S1-Handler (`inputTask`) entscheidet jetzt zusätzlich anhand von `alarmState`, nicht mehr nur anhand des Playerstatus, ob gestoppt oder Kuckuck ausgelöst wird (`if (alarmState == ALARM_RUNNING \|\| st > 0)`). Ohne diese Ergänzung hätte S1 einen `alarmSilentFallback`-Alarm (playerStatus==0, aber Motor/Licht laufen) nicht gestoppt, sondern versehentlich den Kuckuck ausgelöst. |
 | 20v09 | Funktion | `readStateDrained()` wertet `DFPlayerError`-Frames vor dem Verwerfen aus und schreibt den Fehlercode ins Web-Log, statt sie wie jeden anderen Nicht-Feedback-Frame kommentarlos zu verwerfen – macht „Datei fehlt" von „Modul abgestürzt" im Log erstmals unterscheidbar. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v09
+## Version 20v10
+
+Audit-Reaktionsplan Schritt 7 (C4).
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v10 | Bugfix | `setup()`: `player.readFileCountsInFolder(1)` (0x4E) statt `player.readFileCounts()` (0x48) - `-1`. Bisher wurde die Gesamtdateizahl über alle Ordner abgefragt und `mp3Count = c - 1` gerechnet, in der Annahme, genau eine Datei liege außerhalb von Ordner 01 (der Startsound in Ordner 02) – zusätzliche Dateien in Ordner 02 oder vom Betriebssystem beim Kopieren angelegte Extra-Dateien machten diese Zahl falsch und erlaubten die Auswahl einer nicht existierenden Alarmdatei (Zubringer zu C3s Reboot-Kaskade). Die ordnerbezogene Abfrage liefert die Anzahl direkt für Ordner 01, kein Rechnen/Raten mehr nötig. |
+| 20v10 | Bugfix | Bei Timeout der Bereitschaftsprüfung bleibt `mp3Count` jetzt auf 0 statt auf den geratenen Fallback 99 gesetzt zu werden – C5 (20v07) sperrt die Sound-Auswahl dann korrekt, statt eine falsche, nicht verifizierte Dateizahl vorzugaukeln. `[FEHLER]`-Log statt der bisherigen informativen `[DFPlayer]`-Meldung. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v10
