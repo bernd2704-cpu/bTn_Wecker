@@ -83,9 +83,16 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   der Review-Notiz beschriebenen verspäteten Zweitalarm.
   **Noch nicht getestet:** gezielter Reset zwischen `playFolder()` und erstem Poll (z.B. `EN`-Taster
   während `ALARM_POLL_MS`-Fenster), Kontrolle dass `setup()` den Alarm danach korrekt nachholt.
-- [ ] **4. C5 + D1** – Clamp von `sound1_assigned`/`sound2_assigned` nur bei `mp3Count > 0`;
-  NVS-Rückgabewerte (`data.begin()`, `putBool`/`putInt`) prüfen, bei Fehlschlag `safeChange`
-  erneut setzen + `[FEHLER]`-Log. Zwei kleine isolierte Änderungen, kein Regressionsrisiko.
+- [x] **4. C5 + D1** – Umgesetzt in **20v07** (`Wecker_20v07.ino`/`SysConf_20v07.h`). Clamp von
+  `sound1_assigned`/`sound2_assigned` läuft nur noch bei `mp3Count > 0`, sonst `[FEHLER]`-Log statt
+  stillem Überschreiben mit 1 (C5). `data.begin()`-Rückgabewert an allen drei Stellen geprüft:
+  `setup()` (NVR-Laden), `nvrTask()`, `bumpResetCount()` (D1). `nvrTask()` ruft bei Fehlschlag
+  `markSafeChange()` statt den Commit stillschweigend zu verwerfen – nächster Versuch nach
+  `NVR_COMMIT_DELAY_MS`. `readNVR()` läuft jetzt unabhängig vom `state`-Flag (die `getX()`-
+  Fallbacks liefern beim ersten Boot ohnehin die Compile-Defaults). `webLogMutex`-Initialisierung
+  vor das NVR-Laden gezogen, damit ein `data.begin()`-Fehlschlag dort sofort geloggt werden kann.
+  **Noch nicht getestet:** `data.begin()`-Fehlschlag lässt sich ohne beschädigten NVS/Flash-Fehler
+  kaum real provozieren – Codepfad nur durch Lesen verifiziert, nicht auf Hardware ausgelöst.
 - [ ] **5. B1 sekundär** – `WDG_TIMEOUT_MS` auf 6000, `WDG_CHECK_MS` auf 1000 (SysConf). Erst
   nach Schritt 3, damit sich am Feldverhalten zeigt, ob der neue Schwellwert Fehlalarme erzeugt.
   Vorher realen Worst-Case von `verifyPlayStarted()` + `readStateDrained()`-Gnadenfrist

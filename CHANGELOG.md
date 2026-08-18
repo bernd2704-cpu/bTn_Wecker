@@ -376,4 +376,15 @@ Audit-Reaktionsplan Schritt 3 (B2).
 | 20v06 | Stabilität | `runAlarmMachine()`/`ALARM_RUNNING` löscht den Merker an zwei Stellen: sobald der erste Poll `playerStatus > 0` bestätigt (frühestmöglich), und zusätzlich beim Alarmende (`mp3Finished`/`runTimeExceeded`) als Sicherheitsnetz für einen sehr kurzen Sound, der schon vor dem ersten Poll beendet war. |
 | 20v06 | Refactoring | Der Fehlerpfad in `triggerAlarm()` (`ESP.restart()` nach gescheitertem `verifyPlayStarted()`) aktualisiert nur noch `rtcRetryCount` – die übrigen Felder sind bereits durch den frühen Schreibpunkt gesetzt. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v06
+## Version 20v07
+
+Audit-Reaktionsplan Schritt 4 (C5 + D1).
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v07 | Bugfix | `setup()`: Clamp von `sound1_assigned`/`sound2_assigned` läuft nur noch bei bekannter `mp3Count` (C5). Bei `mp3Count==0` (nach fehlgeschlagenem `player.begin()`) war die Clamp-Bedingung bisher immer wahr – `readNVR()` begrenzt die Zuordnung nur nach unten auf 1, nie nach oben – und überschrieb beide Sound-Zuordnungen mit 1. Verstellt der Nutzer danach irgendetwas, persistiert `markSafeChange()` diesen falschen Wert unwiederbringlich in NVS. Bei unbekannter Dateizahl jetzt `[FEHLER]`-Log statt stillem Überschreiben. |
+| 20v07 | Bugfix | `data.begin()`-Rückgabewert wird jetzt an allen drei Stellen geprüft (D1): `setup()` (NVR-Laden), `nvrTask()` (periodischer Commit), `bumpResetCount()`. Schlägt das Öffnen fehl, liefen `putBool`/`putInt`-Aufrufe bisher als No-Op ins Leere – eine soeben geänderte Einstellung ging beim nächsten Stromausfall ersatzlos verloren, ohne Hinweis im Log. `nvrTask()` setzt bei Fehlschlag über `markSafeChange()` erneut `safeChange`, wodurch der Commit nach `NVR_COMMIT_DELAY_MS` automatisch wiederholt wird, statt endgültig verworfen zu werden. |
+| 20v07 | Bugfix | `setup()`: `readNVR()` läuft jetzt unabhängig vom `state`-Flag (statt nur im `varState==true`-Zweig) – die `getX()`-Fallbacks liefern beim allerersten Boot ohnehin die Compile-Defaults zurück, ein bedingter Aufruf war unnötig und verdeckte zusätzlich den Fall „`data.begin()` schlägt fehl, `state` bleibt beim Default `false`". |
+| 20v07 | Refactoring | `webLogMutex`-Initialisierung in `setup()` vor das NVR-Laden gezogen, damit ein `data.begin()`-Fehlschlag dort sofort als `[FEHLER]` ins Web-Log geschrieben werden kann statt lautlos verworfen zu werden. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v07
