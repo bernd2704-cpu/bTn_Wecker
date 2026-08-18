@@ -358,4 +358,12 @@ Audit-Reaktionsplan (`Dokumentation/Technisch/Review/AuditReaktionsplan.md`) Sch
 | 20v04 | Bugfix | `runCuckooMachine()`: Sperre von reiner Minute (`lastCuckooMin`) auf Tag+Stunde (`lastCuckooDay`/`lastCuckooHour`) umgestellt (A6) – verhindert einen doppelten Kuckuck bei der Oktober-Zeitumstellung, wenn die Ortszeit 02:00–02:59 zweimal durchläuft. Manueller Einmal-Kuckuck über S1 setzt dieselbe Sperre über einen eigenen `localtime_r()`-Schnappschuss. |
 | 20v04 | Refactoring | `triggerAlarm()` setzt `lastA1Day`/`lastA2Day` über einen eigenen Zeitstempel statt des `min`-Parameters. Fehlgeschlagener `playerMutex`-Take beim Alarmversuch (A2) heilt sich dadurch im nächsten 500-ms-Tick automatisch aus, solange das Nachholfenster nicht abgelaufen ist – kein Codepfad mehr nötig, der den Fehlschlag gesondert behandelt. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v04
+## Version 20v05
+
+Audit-Reaktionsplan Schritt 2, Restarbeit A3 (C1 bereits seit 20v02 erledigt, siehe dort).
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v05 | Stabilität | Neue Konstante `ALARM_MAX_RUN_MS` (15 min, SysConf) und eigener Zeitstempel `alarmRunStart` (A3): harte Obergrenze für `ALARM_RUNNING` als Rückfallebene, falls der DFPlayer-BUSY-Pin selbst dauerhaft LOW hängt (Modul-Fehlfunktion, Leitungsfehler) und `dfPlayerIdleDebounced()` dadurch nie "idle" meldet – ohne diesen Deckel bliebe das Gerät in diesem Fall für immer entwaffnet (Motor/Licht dauerhaft an, kein weiterer Alarm möglich). Anders als `t_start6` (Poll-Timer, wird bei jedem Poll zurückgesetzt) bleibt `alarmRunStart` bis zum Alarmende unverändert. Bei Auslösung durch die Obergrenze (nicht durch reguläres Alarmende) schreibt `runAlarmMachine()` einen `[FEHLER]`-Eintrag mit Laufzeit und letztem `playerStatus` ins Web-Log. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v05

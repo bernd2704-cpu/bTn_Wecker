@@ -60,14 +60,17 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   erfolgreichem Start – macht A2 wie vorgesehen selbstheilend, ohne zusätzlichen Codepfad.
   Alte Version als `Software/Firmware_Versionshistorie/Wecker_20v03/` archiviert.
   **Noch nicht getestet:** Systemzeit-Sprung-Test (NTP-Attrappe), realer Alarm, DST-Übergänge.
-- [~] **2. A3** – Maximallaufzeit für `ALARM_RUNNING` (`ALARM_MAX_RUN_MS`, eigener Zeitstempel
-  `alarmRunStart`). Zusammen mit **C1** (S1 wirkt bei `ALARM_RUNNING` unabhängig vom Playerstatus,
-  inkl. drittem Zweig „Status unbekannt bei `ALARM_IDLE`" laut Review-Notiz). Reine Anwendungslogik,
-  keine Bibliotheksberührung.
+- [x] **2. A3** – Umgesetzt in **20v05** (`Wecker_20v05.ino`/`SysConf_20v05.h`). Neue Konstante
+  `ALARM_MAX_RUN_MS` (15 min, SysConf) und eigener Zeitstempel `alarmRunStart` (im Gegensatz zu
+  `t_start6`, das als Poll-Timer bei jedem Poll zurückgesetzt wird) begrenzen `ALARM_RUNNING` hart.
+  Deckt den Restfall aus der A3-Notiz ab: BUSY-Pin hängt selbst dauerhaft LOW,
+  `dfPlayerIdleDebounced()` meldet nie „idle". Bei Auslösung durch die Obergrenze (nicht durch
+  reguläres Alarmende) schreibt `runAlarmMachine()` einen `[FEHLER]`-Eintrag mit Laufzeit und
+  letztem `playerStatus` ins Web-Log.
   **[x] C1 seit 20v02 erledigt** (`dfPlayerBusy()` statt blindem `st=0` im S1-Handler, Z. 1752-1755).
-  **A3 seit 20v01/20v03 teilweise entschärft** (`dfPlayerIdleDebounced()` beendet `ALARM_RUNNING`
-  auch bei totem UART, Z. 1474-1475) – der harte `ALARM_MAX_RUN_MS`-Deckel als Rückfallebene gegen
-  dauerhaft LOW hängendes BUSY-Signal ist trotzdem noch offen, siehe Zwischenstand oben.
+  Damit sind sowohl C1 als auch A3 vollständig abgedeckt.
+  **Noch nicht getestet:** realer Alarm mit simuliertem BUSY-Hänger (Pin dauerhaft LOW erzwingen),
+  Web-Log-Eintrag im Fehlerfall.
 - [ ] **3. B2** – RTC-Merker (`rtcRetryMagic` u.a.) vor dem riskanten Abschnitt in `triggerAlarm()`
   setzen, erst nach erstem erfolgreichem Poll (`playerStatus > 0`) bzw. finalem Abbruch löschen.
   **Nicht vor Schritt 1** – ohne Nachholfenster kann ein spät im Alarm liegender Reboot sonst einen
