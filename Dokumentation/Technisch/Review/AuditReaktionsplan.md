@@ -206,6 +206,27 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
 Damit ist die Umsetzungsreihenfolge des Audit-Reaktionsplans (Schritte 1–11) vollständig
 abgearbeitet. Offen bleiben nur noch die nie gegengeprüften Punkte unter „Offene Prüfpunkte" unten.
 
+## Vor dem produktiven Einsatz: Hardware-Test erforderlich
+
+Ein Großteil der Änderungen aus den Schritten 1–11 (Firmware 13v00 → 20v13) ist bisher **nur
+gelesen, nie auf echter Hardware getestet** – siehe die „Noch nicht getestet"-Hinweise bei jedem
+einzelnen Schritt oben. Besonders die sicherheitskritischen Pfade aus Schritt 1 (A1/A5,
+Alarmfälligkeit), Schritt 3 (B2, Crash-Recovery), Schritt 6 (C3, stummer Alarm) und Schritt 8 (C2,
+zuletzt und ausdrücklich isoliert wegen dreifacher Regressionshistorie 12v09–12v14) verändern das
+Alarmverhalten selbst.
+
+**Vor dem Einsatz als Wecker mindestens folgendes durchspielen:**
+
+1. Kompletter Testdurchlauf aus Schritt 8: Kaltstart, Startsound, Sound-Vorschau beider Alarme,
+   Lautstärkeänderung, echter Alarm, S1-Stopp, Alarm mit gezogener SD-Karte – jeweils mit offenem
+   Web-Log, Blick auf „Serial2 Restbytes".
+2. Alarm mit absichtlich fehlender Sounddatei auslösen (Schritt 6) – sicherheitskritischster Pfad:
+   prüfen, dass Motor/Licht angehen und S1 den Alarm zuverlässig stoppt.
+3. Systemzeit-Sprung-Test (Schritt 1, z.B. NTP-Server-Attrappe) sowie ein regulärer, echter Alarm.
+
+Bei Auffälligkeiten steht der Git-Tag `vor-C2-20v10` als Rollback-Punkt unmittelbar vor dem
+riskantesten Einzelschritt (C2) bereit.
+
 ## Bewusst nicht umgesetzt
 
 - **DFPlayer-Library-Patch** (`sendStack()`/`available()`): Audit hat die vermutete Ursache
