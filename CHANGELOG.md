@@ -346,4 +346,16 @@ Ab hier neue Basis Hardware 2v0 (DFPlayer-BUSY-Signal, GPIO34) / Firmware 20v00.
 |---|---|---|
 | 20v03 | Stabilität | QA-Review (Code-Review-Agent) identifizierte `dfPlayerBusy()` als ungefilterten Einzel-`digitalRead()` ohne Software-Debounce, anders als Touch-Pads/Taster. Für die einzige unwiderrufliche Entscheidungsstelle (`ALARM_RUNNING`: Motor/Licht aus, State-Reset bei jedem Poll) neue Funktion `dfPlayerIdleDebounced()` – 3 Abtastungen im Abstand von 5 ms müssen übereinstimmend "idle" melden, sonst gilt der Alarm als weiterhin laufend. Ergänzt den bereits vorhandenen Hardware-RC-Filter (100µs Zeitkonstante, siehe `Hardware/Schaltplan/DFPlayer-BUSY.md`) um Software-seitige Absicherung gegen Störimpulse, die den Filter überdauern. `verifyPlayStarted()` und S1-Handling bleiben bei einfachem `dfPlayerBusy()` (geringere Konsequenz eines Fehlreads: Retry-Schleife bzw. einmaliger Tastendruck). |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v03
+## Version 20v04
+
+Audit-Reaktionsplan (`Dokumentation/Technisch/Review/AuditReaktionsplan.md`) Schritt 1: A1 + A5 gemeinsam umgesetzt, erledigt dabei A4 und A6 mit.
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v04 | Stabilität | Neue Funktion `timeValid()` (A5-Fix): `alarmTask` wertet Alarm- und Kuckuck-State-Machine nur noch bei gültiger Systemzeit (`time(nullptr) > 1700000000UL`) aus – verhindert Fehlalarme auf der ungestellten 1970-Uhr (Stromausfall ohne WLAN-Wiederverbindung). |
+| 20v04 | Bugfix | `runAlarmMachine()`: Alarmfälligkeit von `sec==0`-Flanke auf tagesbezogene, pegelbasierte Prüfung (`alarmDue()`) mit Nachholfenster `ALARM_CATCHUP_MIN` (60 min, SysConf) umgestellt (A1). Fängt Zeitsprünge nach Stromausfall (NTP-Hardsync), Reboots im Alarmfenster und die März-Zeitumstellung ab, die zuvor den Alarm des Tages ersatzlos gelöscht haben. `lastA1Min`/`lastA2Min` durch `lastA1Day`/`lastA2Day` (tm_yday) ersetzt; die Sperre wird nach erfolgreichem Alarmstart bewusst bis Tagesende gehalten (auch nach manuellem Stopp über S1) statt wie bisher sofort wieder aufgehoben – vermeidet ein sofortiges Neuauslösen durch die pegelbasierte Prüfung. |
+| 20v04 | Bugfix | `runAlarmMachine()`: Fälligkeitsprüfung läuft jetzt bei jedem 500-ms-Tick, nicht mehr nur exklusiv im `case ALARM_IDLE` zur exakten Sekunde – Alarm 2 wird dadurch nicht mehr übersprungen, wenn er während eines laufenden Alarm 1 fällig wird (A4), da die Prüfung beim Rückkehren nach `ALARM_IDLE` automatisch nachzieht. |
+| 20v04 | Bugfix | `runCuckooMachine()`: Sperre von reiner Minute (`lastCuckooMin`) auf Tag+Stunde (`lastCuckooDay`/`lastCuckooHour`) umgestellt (A6) – verhindert einen doppelten Kuckuck bei der Oktober-Zeitumstellung, wenn die Ortszeit 02:00–02:59 zweimal durchläuft. Manueller Einmal-Kuckuck über S1 setzt dieselbe Sperre über einen eigenen `localtime_r()`-Schnappschuss. |
+| 20v04 | Refactoring | `triggerAlarm()` setzt `lastA1Day`/`lastA2Day` über einen eigenen Zeitstempel statt des `min`-Parameters. Fehlgeschlagener `playerMutex`-Take beim Alarmversuch (A2) heilt sich dadurch im nächsten 500-ms-Tick automatisch aus, solange das Nachholfenster nicht abgelaufen ist – kein Codepfad mehr nötig, der den Fehlschlag gesondert behandelt. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v04

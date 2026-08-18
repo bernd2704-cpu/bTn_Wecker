@@ -44,13 +44,22 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
 
 ## Umsetzungsreihenfolge
 
-- [ ] **1. A5 + A1 gemeinsam** – `timeValid()`-Gate + tagesbezogene, pegelbasierte Alarmfälligkeit
-  statt `sec == 0`-Flanke. Höchste Wirkung, kein Kontakt zur DFPlayer-Logik. Gate muss zuerst
-  da sein (sonst löst die Pegelprüfung auf der 1970-Uhr sofort nach Boot aus). Erledigt A1, A4,
-  A5, A6 in einem Zug, macht A2 selbstheilend. `ALARM_CATCHUP_MIN` laut Review-Notiz auf ≥60
-  setzen oder DST-Vorwärtslücke separat behandeln; `lastA1Min`/`lastA2Min`-Nutzung in `inputTask`
-  (S1-Handler) und `lastCuckooMin` im selben Zug auf Tages-Logik umstellen (überschneidet sich
-  mit C1, nicht getrennt umsetzen). Test ohne Hardware: Systemzeit per NTP-Attrappe springen lassen.
+- [x] **1. A5 + A1 gemeinsam** – Umgesetzt in **20v04** (`Wecker_20v04.ino`/`SysConf_20v04.h`).
+  `timeValid()`-Gate vor jeder Alarm-/Kuckuck-Auswertung in `alarmTask` (A5); `alarmDue()` ersetzt
+  die `sec == 0`-Flanke durch eine tagesbezogene, pegelbasierte Prüfung mit Nachholfenster
+  `ALARM_CATCHUP_MIN = 60` (SysConf) – wie in der Review-Notiz gefordert auf 60 statt der
+  ursprünglich vorgeschlagenen 15 gesetzt, deckt damit auch die März-DST-Lücke ab (A1). Die
+  Fälligkeitsprüfung läuft weiterhin nur in `case ALARM_IDLE`, holt A2 aber automatisch nach, sobald
+  `ALARM_RUNNING` endet, da die Tages-Sperre (nicht die Sekunde) das Kriterium ist (A4). Die
+  Oktober-Doppelauslösung ist durch `lastCuckooDay`/`lastCuckooHour` statt `lastCuckooMin`
+  ausgeschlossen (A6). `lastA1Min`/`lastA2Min` → `lastA1Day`/`lastA2Day`, ebenso in `inputTask`
+  (S1-Handler) umgestellt – dort wurde die bisherige Sperren-Rücksetzung nach manuellem Stopp
+  **entfernt** (offene Semantikfrage aus der Review-Notiz entschieden: Tages-Sperre bleibt nach
+  manuellem Stopp bestehen, sonst würde die pegelbasierte Prüfung im nächsten 500-ms-Tick sofort
+  wieder auslösen). `triggerAlarm()` setzt die Tages-Sperre über einen eigenen Zeitstempel erst nach
+  erfolgreichem Start – macht A2 wie vorgesehen selbstheilend, ohne zusätzlichen Codepfad.
+  Alte Version als `Software/Firmware_Versionshistorie/Wecker_20v03/` archiviert.
+  **Noch nicht getestet:** Systemzeit-Sprung-Test (NTP-Attrappe), realer Alarm, DST-Übergänge.
 - [~] **2. A3** – Maximallaufzeit für `ALARM_RUNNING` (`ALARM_MAX_RUN_MS`, eigener Zeitstempel
   `alarmRunStart`). Zusammen mit **C1** (S1 wirkt bei `ALARM_RUNNING` unabhängig vom Playerstatus,
   inkl. drittem Zweig „Status unbekannt bei `ALARM_IDLE`" laut Review-Notiz). Reine Anwendungslogik,

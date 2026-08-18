@@ -13,8 +13,8 @@ DFPlayer Mini GND als Sternpunkt-Topologie.
 
 ## Aktuelle Version
 
-Hardware 2v0 (mit DFPlayer-BUSY-Signal, GPIO34), Firmware 20v03,
-Konfiguration SysConf_20v03.h
+Hardware 2v0 (mit DFPlayer-BUSY-Signal, GPIO34), Firmware 20v04,
+Konfiguration SysConf_20v04.h
 
 Vorheriger eingefrorener Stand: Hardware 1v0 (ohne BUSY-Signal) / Firmware 13v00,
 siehe `Software/Firmware_Versionshistorie/`.
@@ -67,6 +67,6 @@ bTn_Wecker/
 │   └── Stückliste/
 └── Software/
     ├── Bibliotheken/
-    ├── Firmware_aktuell/          ← Wecker_20v03.ino, SysConf_20v03.h, WEB.h
-    └── Firmware_Versionshistorie/ ← ältere Stände (12vNN, 13v00, 20v00–20v02)
+    ├── Firmware_aktuell/          ← Wecker_20v04.ino, SysConf_20v04.h, WEB.h
+    └── Firmware_Versionshistorie/ ← ältere Stände (12vNN, 13v00, 20v00–20v03)
 ```
