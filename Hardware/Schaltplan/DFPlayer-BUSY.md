@@ -5,8 +5,12 @@
 > das BUSY-Signal nicht verdrahtet.
 
 ```
-DFPlayer Mini                    ESP32 DEV Kit C V4
-BUSY (Pin 16) ──────────────────── GPIO34
+DFPlayer Mini                                    ESP32 DEV Kit C V4
+BUSY (Pin 16) ──── [1kΩ] ────┬──────────────────── GPIO34
+                              │
+                           [100nF]
+                              │
+                             GND
 ```
 
 ## Pegel
@@ -34,7 +38,31 @@ Input-only (kein internes Pull-up/-down, kein `INPUT_PULLUP` möglich).
 Unkritisch, da BUSY aktiv getrieben wird (kein Open-Drain):
 LOW = Wiedergabe läuft, HIGH = Pause/Idle.
 
+## RC-Filter (1kΩ + 100nF)
+
+Firmware liest `dfPlayerBusy()` (GPIO34) an mehreren Stellen als einzelnen,
+ungefilterten `digitalRead()` ohne Software-Debounce (anders als Touch-Pads
+oder Taster). Ein Hardware-RC-Filter schließt diese Lücke:
+
+- **R = 1 kΩ** (Reihe): konsistent mit Touch-Beschaltung und AZ-Delivery-
+  Empfehlung für Serial-Leitungen; Spannungsabfall im stationären Zustand
+  vernachlässigbar, da GPIO34-Eingangsleckstrom im nA-Bereich liegt.
+- **C = 100 nF** (nach GND, GPIO-seitig): τ = R·C = 100 µs,
+  Grenzfrequenz f_c ≈ 1,6 kHz – dämpft kurze EMI-Spitzen/Schaltflanken
+  (u.a. vom 20kHz-Motor-PWM an E2, siehe `Motor-Treiber.md`) deutlich.
+
+BUSY wechselt nur beim Start/Ende einer Wiedergabe (Sekundenbereich), nicht
+taktend. Die Filter-Zeitkonstante ist damit >1000× schneller als das
+schnellste Poll-Intervall der Firmware (200 ms im S1-Handling) – keine
+spürbare Verzögerung für die Statusabfrage.
+
+Ladestrom beim Umschalten: ΔV/R ≈ 3,3V / 1kΩ ≈ 3,3 mA – unkritisch für den
+aktiv getriebenen DFPlayer-Ausgang (kein Open-Drain).
+
 ## Funktion
 
 BUSY dient als Statusabfrage des DFPlayer (Wiedergabe läuft ja/nein),
 unabhängig von der seriellen Kommunikation über Serial2 (RX=16, TX=17).
+Ab Firmware 20v01/20v02 fließt der Status zusätzlich in Alarm-Polling,
+Start-Verifikation (`verifyPlayStarted()`) und S1-Handling ein – siehe
+`CHANGELOG.md`.
