@@ -415,4 +415,15 @@ Audit-Reaktionsplan Schritt 7 (C4).
 | 20v10 | Bugfix | `setup()`: `player.readFileCountsInFolder(1)` (0x4E) statt `player.readFileCounts()` (0x48) - `-1`. Bisher wurde die Gesamtdateizahl über alle Ordner abgefragt und `mp3Count = c - 1` gerechnet, in der Annahme, genau eine Datei liege außerhalb von Ordner 01 (der Startsound in Ordner 02) – zusätzliche Dateien in Ordner 02 oder vom Betriebssystem beim Kopieren angelegte Extra-Dateien machten diese Zahl falsch und erlaubten die Auswahl einer nicht existierenden Alarmdatei (Zubringer zu C3s Reboot-Kaskade). Die ordnerbezogene Abfrage liefert die Anzahl direkt für Ordner 01, kein Rechnen/Raten mehr nötig. |
 | 20v10 | Bugfix | Bei Timeout der Bereitschaftsprüfung bleibt `mp3Count` jetzt auf 0 statt auf den geratenen Fallback 99 gesetzt zu werden – C5 (20v07) sperrt die Sound-Auswahl dann korrekt, statt eine falsche, nicht verifizierte Dateizahl vorzugaukeln. `[FEHLER]`-Log statt der bisherigen informativen `[DFPlayer]`-Meldung. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v10
+## Version 20v11
+
+Audit-Reaktionsplan Schritt 8 (C2) – zuletzt und ausdrücklich isoliert (dieser Bereich hat in
+12v09–12v14 dreimal Regressionen erzeugt). Rollback-Punkt vor dieser Änderung als Git-Tag
+`vor-C2-20v10` festgehalten.
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v11 | Bugfix | `drainSerial2Pre()`/`readStateDrained()` auf gemeinsame fortschrittsbasierte Drain-Schleife (`drainSerial2Progress()`) umgestellt. Bisher brach `drainSerial2Pre()` am Rückgabewert von `player.available()` ab – der auch nach einem vollständig konsumierten 0x41-ACK-Frame `false` liefert (`parseStack()` der Bibliothek behandelt den ACK intern, ohne `_isAvailable` zu setzen). Bei Pufferinhalt `[ACK][Feedback]` brach der Drain dadurch nach dem ACK ab und ließ den Feedback-Frame stehen; ein späterer `readStateDrained()`-Aufruf konnte diesen Altframe als Antwort auf eine ganz andere, neue Abfrage werten (Motor/Licht liefen, obwohl kein Ton spielte, ohne Fehlerlog). Die neue Schleife macht Fortschritt am Rohpuffer selbst fest (`Serial2.available()` vor/nach dem Read vergleichen) statt am Parser-Rückgabewert. |
+| 20v11 | Bugfix | `readStateDrained()` ruft `drainSerial2Progress()` jetzt zusätzlich VOR der eigenen `player.readState()`-Abfrage auf – verhindert, dass ein bereits vor diesem Aufruf im Puffer liegender Altframe als Antwort auf die gerade gesendete Abfrage gewertet wird. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v11

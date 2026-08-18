@@ -141,13 +141,22 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   **Noch nicht getestet:** neuer Bibliotheksaufruf (0x4E) auf realer Hardware – wie vom Reaktionsplan
   vorgesehen einzeln testen (mp3Count-Anzeige nach Boot mit bekannter SD-Karten-Dateizahl in
   Ordner 01 vergleichen).
-- [ ] **8. C2** – `drainSerial2Pre()` auf Fortschrittsprüfung statt Rückgabewert umstellen,
-  `readStateDrained()` vor jedem `player.readState()` zusätzlich drainen. **Zuletzt und
-  ausdrücklich isoliert** – dieser Bereich hat in 12v09–12v14 dreimal Regressionen erzeugt.
-  Vorher Schritte 1–3 als stabilen, rückbaubaren Stand festhalten (Tag/Branch). Testprotokoll:
-  Kaltstart, Startsound, Sound-Vorschau beider Alarme, Lautstärkeänderung, echter Alarm,
-  S1-Stopp, Alarm mit gezogener SD-Karte – jeweils mit offenem Web-Log, Blick auf
-  „Serial2 Restbytes".
+- [x] **8. C2** – Umgesetzt in **20v11** (`Wecker_20v11.ino`/`SysConf_20v11.h`), zuletzt und
+  ausdrücklich isoliert wie gefordert. Vor der Änderung Rollback-Punkt als Git-Tag `vor-C2-20v10`
+  auf dem Stand nach Schritt 7 gesetzt (statt der ursprünglich vorgesehenen „Schritte 1–3" – zum
+  Zeitpunkt der Umsetzung waren bereits alle Schritte 1–7 erledigt, der Tag markiert den
+  tatsächlich unmittelbar vorherigen stabilen Stand). Gemeinsame fortschrittsbasierte Drain-
+  Schleife `drainSerial2Progress()` ersetzt sowohl den Rückgabewert-Abbruch in `drainSerial2Pre()`
+  als auch das Fehlen eines Vorab-Drains in `readStateDrained()` (jetzt VOR der eigenen
+  `player.readState()`-Abfrage aufgerufen). Endlosschleife laut Review-Notiz ausgeschlossen: der
+  äußere Schleifenkopf verlangt bereits `Serial2.available() >= DFPLAYER_RECEIVED_LENGTH`,
+  `SERIAL2_DRAIN_MAX_BYTES` bleibt zusätzlich als harte Grenze.
+  **Noch nicht getestet – das im Audit vorgesehene Testprotokoll steht komplett aus:** Kaltstart,
+  Startsound, Sound-Vorschau beider Alarme, Lautstärkeänderung, echter Alarm, S1-Stopp, Alarm mit
+  gezogener SD-Karte – jeweils mit offenem Web-Log, Blick auf „Serial2 Restbytes". Dieser Bereich
+  hat bereits dreimal (12v09–12v14) Regressionen erzeugt – vor dem Einsatz als Wecker unbedingt
+  auf echter Hardware durchspielen; bei Auffälligkeiten steht `git checkout vor-C2-20v10` als
+  Rückfallebene bereit.
 - [ ] **9. E5** – Rail am Motor+ mit Multimeter messen (Duty 100 %), danach **eine** Quelle
   korrigieren (SysConf-Kommentar oder Hardware-Notiz auf 3,3 V, `MOTOR_PWM_DUTY`/
   `MOTOR_PWM_KICK_THRESHOLD` ggf. anpassen). Nebenbei Diodentyp-Widerspruch `1N4148`/`1N4448`
