@@ -75,7 +75,12 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   (Motor+Licht an). **Zusammen mit A3 verifizieren** – sonst läuft ein Wecker ohne Ton bis zum
   A3-Timeout, statt zeitnah in einen erkennbaren Fehlerzustand zu wechseln. Getrennt committen.
   BUSY-Zusatzkriterium in `verifyPlayStarted()` (seit 20v02, Z. 1354) deckt diesen Fall nicht ab –
-  bei echtem `st==0` (Datei fehlt) meldet BUSY ebenfalls „nicht busy", Reboot-Kaskade bleibt.
+  bei echtem `st==0` (Datei fehlt) meldet BUSY ebenfalls „nicht busy", Reboot-Kaskade bleibt. BUSY
+  ist binär (spielt/spielt nicht) und liefert keine Fehlerursache – daher zusätzlich zur
+  `st==0`/`st==-1`-Trennung: `readStateDrained()` den Frame-Typ vor dem Verwerfen auswerten und
+  `DFPlayerError` (0x40) mit Fehlercode ins Web-Log schreiben (statt wie bisher stillschweigend
+  verworfen, siehe Ursachengruppe-C-Intro im Audit). Erst diese UART-Error-Frame-Auswertung macht
+  „Datei fehlt" von „Modul abgestürzt" im Log unterscheidbar – BUSY kann das nicht leisten.
 - [ ] **7. C4** – `readFileCountsInFolder(1)` statt `readFileCounts() - 1`, kein 99-Fallback bei
   Timeout (`mp3Count` bei 0 lassen). Beseitigt eine Ursache von C3. Neuer Bibliotheksaufruf →
   nach C3, einzeln testen.
