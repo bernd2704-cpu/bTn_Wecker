@@ -366,4 +366,14 @@ Audit-Reaktionsplan Schritt 2, Restarbeit A3 (C1 bereits seit 20v02 erledigt, si
 |---|---|---|
 | 20v05 | Stabilität | Neue Konstante `ALARM_MAX_RUN_MS` (15 min, SysConf) und eigener Zeitstempel `alarmRunStart` (A3): harte Obergrenze für `ALARM_RUNNING` als Rückfallebene, falls der DFPlayer-BUSY-Pin selbst dauerhaft LOW hängt (Modul-Fehlfunktion, Leitungsfehler) und `dfPlayerIdleDebounced()` dadurch nie "idle" meldet – ohne diesen Deckel bliebe das Gerät in diesem Fall für immer entwaffnet (Motor/Licht dauerhaft an, kein weiterer Alarm möglich). Anders als `t_start6` (Poll-Timer, wird bei jedem Poll zurückgesetzt) bleibt `alarmRunStart` bis zum Alarmende unverändert. Bei Auslösung durch die Obergrenze (nicht durch reguläres Alarmende) schreibt `runAlarmMachine()` einen `[FEHLER]`-Eintrag mit Laufzeit und letztem `playerStatus` ins Web-Log. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v05
+## Version 20v06
+
+Audit-Reaktionsplan Schritt 3 (B2).
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v06 | Stabilität | `triggerAlarm()` schreibt den RTC-Retry-Merker (`rtcRetryMagic` u.a.) jetzt direkt nach dem `playerMutex`-Take, VOR `playFolder()`/`verifyPlayStarted()` – bisher wurde er nur im expliziten Fehlerpfad (bestätigter `ESP.restart()`) gesetzt. Ein Freeze/Reset irgendwo zwischen `playFolder()` und der ersten bestätigten Wiedergabe in `ALARM_RUNNING` (inkl. des `ALARM_POLL_MS`-Fensters vor dem ersten Poll) verlor den Alarm bisher ersatzlos, weil kein RTC-Merker existierte. Sicher erst durch den Tages-Guard aus A1 (20v04): ein später Reboot löst höchstens einen bereits gelaufenen Alarm erneut aus, nie einen verspäteten Zweitalarm (B2). |
+| 20v06 | Stabilität | `runAlarmMachine()`/`ALARM_RUNNING` löscht den Merker an zwei Stellen: sobald der erste Poll `playerStatus > 0` bestätigt (frühestmöglich), und zusätzlich beim Alarmende (`mp3Finished`/`runTimeExceeded`) als Sicherheitsnetz für einen sehr kurzen Sound, der schon vor dem ersten Poll beendet war. |
+| 20v06 | Refactoring | Der Fehlerpfad in `triggerAlarm()` (`ESP.restart()` nach gescheitertem `verifyPlayStarted()`) aktualisiert nur noch `rtcRetryCount` – die übrigen Felder sind bereits durch den frühen Schreibpunkt gesetzt. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v06

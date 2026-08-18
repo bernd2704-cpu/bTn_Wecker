@@ -71,10 +71,18 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
   Damit sind sowohl C1 als auch A3 vollständig abgedeckt.
   **Noch nicht getestet:** realer Alarm mit simuliertem BUSY-Hänger (Pin dauerhaft LOW erzwingen),
   Web-Log-Eintrag im Fehlerfall.
-- [ ] **3. B2** – RTC-Merker (`rtcRetryMagic` u.a.) vor dem riskanten Abschnitt in `triggerAlarm()`
-  setzen, erst nach erstem erfolgreichem Poll (`playerStatus > 0`) bzw. finalem Abbruch löschen.
-  **Nicht vor Schritt 1** – ohne Nachholfenster kann ein spät im Alarm liegender Reboot sonst einen
-  verspäteten Zweitalarm auslösen (siehe Review-Notiz zu B2).
+- [x] **3. B2** – Umgesetzt in **20v06** (`Wecker_20v06.ino`/`SysConf_20v06.h`). `triggerAlarm()`
+  setzt den RTC-Merker jetzt direkt nach dem `playerMutex`-Take, vor `playFolder()`/
+  `verifyPlayStarted()`, statt erst im bestätigten Fehlerpfad. `runAlarmMachine()` löscht ihn an
+  zwei Stellen: sobald der erste Poll `playerStatus > 0` bestätigt (frühestmöglich), zusätzlich
+  beim Alarmende (`mp3Finished`/`runTimeExceeded`) als Sicherheitsnetz für einen sehr kurzen Sound,
+  der schon vor dem ersten Poll beendet war – ohne diese zweite Stelle bliebe der Merker sonst über
+  das Alarmende hinaus gesetzt. Der watchdogTask-Freeze-Fallback (12v12) bleibt unverändert
+  bestehen, ist jetzt aber redundant (Sicherheitsnetz für den Fall eines TWDT-Panics vor der
+  30-s-Schwelle). Nach Schritt 1 (A1) umgesetzt wie gefordert – der Tages-Guard verhindert den in
+  der Review-Notiz beschriebenen verspäteten Zweitalarm.
+  **Noch nicht getestet:** gezielter Reset zwischen `playFolder()` und erstem Poll (z.B. `EN`-Taster
+  während `ALARM_POLL_MS`-Fenster), Kontrolle dass `setup()` den Alarm danach korrekt nachholt.
 - [ ] **4. C5 + D1** – Clamp von `sound1_assigned`/`sound2_assigned` nur bei `mp3Count > 0`;
   NVS-Rückgabewerte (`data.begin()`, `putBool`/`putInt`) prüfen, bei Fehlschlag `safeChange`
   erneut setzen + `[FEHLER]`-Log. Zwei kleine isolierte Änderungen, kein Regressionsrisiko.
