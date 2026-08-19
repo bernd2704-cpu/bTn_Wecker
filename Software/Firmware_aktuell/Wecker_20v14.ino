@@ -60,8 +60,19 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v13.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_20v14.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
+
+// 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
+// Arduino-IDE Funktionsprototypen automatisch an den Dateianfang einfügt (vor der eigentlichen
+// Definition weiter unten) – ohne diese frühe Deklaration schlägt der Prototyp mit
+// "does not name a type" fehl.
+// PLAY_NO_SOUND: DFPlayer-Modul lebt nachweislich, aber ohne hörbaren Start → Alarm dennoch als
+// laufend behandeln (Motor/Licht), statt neu zu starten.
+// PLAY_CANCELLED (C6-Fix, Audit 2026-08-13): Nutzer hat während der Verifikation bewusst gestoppt
+// (S1, Sound-Vorschau, Funktionswahl-Menü, siehe requestAlarmCancelIfActive()). Kein Absturz,
+// kein Neustart nötig; triggerAlarm() bricht sauber ab.
+enum PlayVerifyResult : uint8_t { PLAY_OK, PLAY_NO_SOUND, PLAY_CRASHED, PLAY_CANCELLED };
 
 const char PGMInfo[] = "bTn_Wecker_" FW_VERSION;                                          // PROGMEM-fähig; kein String-Heap-Fragment
 
@@ -1475,15 +1486,6 @@ static void motorStop() {
 // Ton, Motor und Licht (siehe triggerAlarm(), ALARM_MAX_RESTARTS). Jetzt
 // getrennt: nur wenn NIE eine Antwort (st!=-1) ankam, gilt der DFPlayer als
 // abgestürzt und rechtfertigt den Neustart. Kam mindestens einmal st==0 an,
-// lebt das Modul nachweislich – PLAY_NO_SOUND signalisiert dem Aufrufer,
-// den Alarm trotzdem als laufend zu behandeln (Motor/Licht), statt neu zu
-// starten.
-// 20v12 (C6-Fix, Audit 2026-08-13): PLAY_CANCELLED – Nutzer hat während der
-// Verifikation bewusst gestoppt (S1, Sound-Vorschau, Funktionswahl-Menü,
-// siehe requestAlarmCancelIfActive()). Kein Absturz, kein Neustart nötig;
-// triggerAlarm() bricht sauber ab.
-enum PlayVerifyResult : uint8_t { PLAY_OK, PLAY_NO_SOUND, PLAY_CRASHED, PLAY_CANCELLED };
-
 static PlayVerifyResult verifyPlayStarted(const char* label, uint8_t fileNo) {
   int16_t st = -1;
   bool gotResponse = false;                                                             // mindestens einmal st != -1 gelesen → Modul lebt (st==0)
@@ -2983,7 +2985,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v13.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v14.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

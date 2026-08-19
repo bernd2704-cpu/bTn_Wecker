@@ -453,4 +453,10 @@ Damit ist die im Audit-Reaktionsplan vorgesehene Umsetzungsreihenfolge (Schritte
 abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Punkte (siehe
 `AuditReaktionsplan.md`, Abschnitt „Offene Prüfpunkte").
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v13
+## Version 20v14
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v14 | Bugfix | Compile-Fehler `'PlayVerifyResult' does not name a type` behoben: Die Arduino-IDE fügt automatisch generierte Funktionsprototypen an den Dateianfang ein, noch vor der bisherigen `enum PlayVerifyResult`-Definition bei `verifyPlayStarted()` weiter unten in der Datei. Enum-Definition direkt nach die Includes verschoben, damit sie vor dem generierten Prototyp sichtbar ist. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v14
