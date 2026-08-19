@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v14.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_20v15.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -667,7 +667,7 @@ void checkboxSound() {
       } else {
         display.drawRect(67, 37, 10, 10);
         display.display();                                                               // Checkbox anzeigen bevor Player gestoppt
-        requestAlarmCancelIfActive();
+        requestAlarmCancelIfActive(false);                                               // 20v15: Menü-Navigation zählt nur bei bereits hörbarem Alarm als Abbruch
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
           drainSerial2Pre("stop (Sound1 aus)");
           player.stop();
@@ -693,7 +693,7 @@ void checkboxSound() {
       } else {
         display.drawRect(67, 54, 10, 10);
         display.display();                                                               // Checkbox anzeigen bevor Player gestoppt
-        requestAlarmCancelIfActive();
+        requestAlarmCancelIfActive(false);                                               // 20v15: Menü-Navigation zählt nur bei bereits hörbarem Alarm als Abbruch
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
           drainSerial2Pre("stop (Sound2 aus)");
           player.stop();
@@ -777,7 +777,7 @@ void menu(uint8_t page) {   // uint8_t: Koordinatenbereich 0–7 entspricht UiSt
       checkboxSound();
       break;
     case 5:
-      requestAlarmCancelIfActive();                                                     // 20v12 (C6-Fix): siehe checkboxSound()
+      requestAlarmCancelIfActive(false);                                                // 20v15: Menü-Navigation zählt nur bei bereits hörbarem Alarm als Abbruch (siehe checkboxSound())
       if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                   // 50 ms < 100 ms displayMutex-Timeout
         drainSerial2Pre("stop (Funktionswahl)");
         player.stop();
@@ -1420,12 +1420,23 @@ static volatile uint8_t alarmTriggerFailCount = 0;
 // 20v12 (C6-Fix, Audit 2026-08-13): vor jedem player.stop(), das einen
 // laufenden Alarmversuch treffen könnte, aufzurufen (S1, Sound-Vorschau,
 // Funktionswahl-Menü). Signalisiert verifyPlayStarted() einen bewussten
-// Nutzerabbruch statt eines DFPlayer-Fehlers – nur wenn tatsächlich ein
-// Alarm läuft oder gerade gestartet wird, damit ein Stopp der reinen
-// Sound-Vorschau nicht versehentlich einen völlig unbeteiligten,
-// zeitgleich anlaufenden Alarm abbricht.
-static inline void requestAlarmCancelIfActive() {
-  if (alarmTriggerInFlight || alarmState == ALARM_RUNNING) {
+// Nutzerabbruch statt eines DFPlayer-Fehlers.
+// 20v15 (Bugfix): includeStartup unterscheidet S1 (echter Stopp-Taster –
+// gilt auch während der ~1,5s-Verifikation als bewusster Abbruch) von der
+// reinen Menü-Navigation (Sound-Vorschau aus, Funktionswahl-Einstieg).
+// Bisher gaben beide Fälle denselben Ausschlag: alarmTriggerInFlight ist
+// bereits gesetzt, sobald triggerAlarm() playFolder() abgesetzt hat, aber
+// BEVOR der Ton hörbar wird – navigierte der Nutzer in diesem ~1,5s-Fenster
+// zufällig nur im Sound-Vorschau-/Funktionswahl-Menü (ohne jeden Bezug zum
+// Alarm), stoppte deren player.stop() den gerade erst anlaufenden Alarm
+// mit und verifyPlayStarted() wertete das als gewollten Abbruch – der
+// Alarm blieb dadurch lautlos aus, obwohl der Nutzer ihn nie beabsichtigt
+// stoppen wollte (beobachtet 19.08.2026, Alarm 2 während Sound-Vorschau-
+// Navigation). Menü-Navigation zählt daher nur noch als Abbruch, wenn der
+// Alarm bereits bestätigt hörbar läuft (ALARM_RUNNING), nicht schon während
+// der bloßen Anlaufverifikation.
+static inline void requestAlarmCancelIfActive(bool includeStartup) {
+  if (alarmState == ALARM_RUNNING || (includeStartup && alarmTriggerInFlight)) {
     alarmCancelRequested = true;
   }
 }
@@ -1543,6 +1554,19 @@ static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t 
     alarmTriggerMin       = min;
     alarmTriggerFailCount = failCount;
     alarmTriggerInFlight  = true;
+
+    // 20v15 (Bugfix): alarmCancelRequested defensiv zurücksetzen, BEVOR
+    // playFolder() für diesen Versuch gesendet wird. requestAlarmCancelIfActive()
+    // setzt das Flag u.a. bei S1-Stopp eines bereits ALARM_RUNNING-Alarms – das
+    // war der einzige Konsument außerhalb von verifyPlayStarted(), setzte das
+    // Flag aber nie zurück. Ohne diesen Reset hätte ein solcher stehen-
+    // gebliebener Altwert den nächsten, völlig unbeteiligten Alarmversuch beim
+    // allerersten verifyPlayStarted()-Poll fälschlich als PLAY_CANCELLED
+    // beendet (Alarm bliebe lautlos aus, obwohl niemand ihn abgebrochen hat).
+    // Unkritisch bzgl. Nebenläufigkeit: alarmTriggerInFlight ist für DIESEN
+    // Versuch erst seit der Zeile oben true, ein echter, diesen Versuch
+    // betreffender Abbruch kann also erst NACH diesem Reset eintreffen.
+    alarmCancelRequested  = false;
 
     // 20v06 (B2-Fix, Audit 2026-08-13): RTC-Merker JETZT schreiben statt erst
     // im expliziten Fehlerpfad unten – ein Freeze/Reset irgendwo zwischen
@@ -2045,7 +2069,7 @@ static void inputTask(void *pvParam) {
           // gestoppten Player als Fehlschlag und startete entweder neu oder
           // aktivierte alarmSilentFallback (Motor/Licht kurz danach wieder
           // an, obwohl S1 gerade gestoppt hat).
-          requestAlarmCancelIfActive();
+          requestAlarmCancelIfActive(true);                                             // 20v15: S1 ist der dedizierte Stopp-Taster – gilt auch waehrend der Anlaufverifikation als bewusster Abbruch
           if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
             drainSerial2Pre("stop (S1)");
             player.stop();
@@ -2985,7 +3009,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v14.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v15.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

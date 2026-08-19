@@ -459,4 +459,11 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v14 | Bugfix | Compile-Fehler `'PlayVerifyResult' does not name a type` behoben: Die Arduino-IDE fügt automatisch generierte Funktionsprototypen an den Dateianfang ein, noch vor der bisherigen `enum PlayVerifyResult`-Definition bei `verifyPlayStarted()` weiter unten in der Datei. Enum-Definition direkt nach die Includes verschoben, damit sie vor dem generierten Prototyp sichtbar ist. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v14
+## Version 20v15
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v15 | Bugfix | `requestAlarmCancelIfActive()` bekommt Parameter `includeStartup`: Sound-Vorschau-Stopp (aus) und der Einstieg ins Funktionswahl-Menü lösen den Alarmabbruch jetzt nur noch aus, wenn der Alarm bereits bestätigt hörbar läuft (`ALARM_RUNNING`), nicht mehr schon während der reinen ~1,5s-Anlaufverifikation (`alarmTriggerInFlight`). Bisher konnte reine Menü-Navigation ohne jeden Bezug zum Alarm einen zeitgleich gerade erst startenden Alarm lautlos abbrechen, weil deren `player.stop()` über `requestAlarmCancelIfActive()` denselben Ausschlag lieferte wie ein bewusster Stopp – beobachtet 19.08.2026: Alarm 2 blieb während Sound-Vorschau-Navigation komplett aus (kein Ton, kein Motor, kein Licht), im Log nur "Wiedergabe waehrend Verifikation manuell gestoppt". S1 (dedizierter Stopp-Taster) behält das bisherige Verhalten (`includeStartup=true`) und darf weiterhin auch während der Anlaufverifikation abbrechen. |
+| 20v15 | Bugfix | `triggerAlarm()` setzt `alarmCancelRequested` jetzt defensiv auf `false`, bevor der neue Versuch `playFolder()` sendet. Ein S1-Stopp eines bereits `ALARM_RUNNING`-Alarms setzte das Flag über `requestAlarmCancelIfActive()`, gab es danach aber nie wieder frei – einziger Konsument war `verifyPlayStarted()`. Der stehen gebliebene Altwert hätte den nächsten, damit völlig unbeteiligten Alarmversuch beim allerersten Verifikations-Poll fälschlich als `PLAY_CANCELLED` beendet. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v15

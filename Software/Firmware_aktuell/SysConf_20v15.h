@@ -64,7 +64,7 @@
 //        unbedingt nach Timeout.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v14"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "20v15"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
