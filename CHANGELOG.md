@@ -480,4 +480,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 | 20v17 | Bugfix | Compile-Fix: `lastA1Day`/`lastA2Day` wurden in `writeNVR()`/`readNVR()` (Zeile ~840) verwendet, aber erst weiter unten im Code (Zeile 1370) deklariert – C++ verlangt die Deklaration vor der ersten Verwendung. Deklaration vor `writeNVR()` gezogen. |
 | 20v17 | Bugfix | Tages-Sperre blockte nach dem Ändern der Alarmzeit im Menü (`onAlarm1()`/`onAlarm2()`, T3/T4) den Alarm für den Rest des Tages: `alarmDue()` prüft nur `yday == lastDay`, unabhängig von der eingestellten Uhrzeit. Hatte der Alarm an diesem Tag schon einmal ausgelöst (z.B. als Nachhol-Alarm direkt nach Boot), löste er unter der neuen Zeit gar nicht mehr aus – ohne Web-Log-Eintrag, da `triggerAlarm()` nie aufgerufen wurde. Fix: T3/T4 in `onAlarm1()`/`onAlarm2()` setzen `lastA1Day`/`lastA2Day` bei jeder Stunden-/Minutenänderung auf `0xFFFF` zurück. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v17
+## Version 20v18
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v18 | Bugfix | Web-Log: Vor der Überschrift „Verbindung – letzter WiFi Reconnect / NTP Sync" fehlte die Leerzeile zum darüberliegenden Log-Block. Ursache: `#log,#dflog` in der CSS-Regel für Padding/Umbruch, aber nur `#dflog{margin-bottom:16px}` – `#log` hatte keinen Abstand nach unten. Fix: `margin-bottom:16px` auch auf `#log` angewendet. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v18

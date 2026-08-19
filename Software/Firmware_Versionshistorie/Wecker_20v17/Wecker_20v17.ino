@@ -2561,7 +2561,7 @@ static void webLogTask(void *pvParam) {
       "white-space:pre;overflow-x:auto;font-size:19px;color:#b0d0b0}"
       "#log,#dflog{background:#0d0d1a;border:1px solid #333;border-radius:6px;padding:12px;"
       "white-space:pre;overflow-x:auto;max-height:60vh;overflow-y:auto;font-size:19px}"
-      "#dflog{margin-bottom:16px}"
+      "#log,#dflog{margin-bottom:16px}"
       ".ok{color:#6BCB77}.err{color:#FF6B6B}.warn{color:#FFD93D}"
       ".sec-title{font-size:1rem;color:#78909c;margin:16px 0 4px}"
       "</style></head><body>"
