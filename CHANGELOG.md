@@ -486,4 +486,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v18 | Bugfix | Web-Log: Vor der Überschrift „Verbindung – letzter WiFi Reconnect / NTP Sync" fehlte die Leerzeile zum darüberliegenden Log-Block. Ursache: `#log,#dflog` in der CSS-Regel für Padding/Umbruch, aber nur `#dflog{margin-bottom:16px}` – `#log` hatte keinen Abstand nach unten. Fix: `margin-bottom:16px` auch auf `#log` angewendet. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v18
+## Version 20v19
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v19 | Qualität | `TOUCH_REPEAT_RATE_MS` aus SysConf entfernt: ungenutztes Duplikat von `TOUCH_REPEAT_MS` (identischer Wert 250 ms, identischer Zweck), nirgends im Code referenziert. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v19
