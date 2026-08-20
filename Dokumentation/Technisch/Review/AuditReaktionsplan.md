@@ -248,3 +248,10 @@ Aus Kapazitätsgründen nicht gegengeprüft, bei Gelegenheit einordnen:
 - UI-State-Machine (`uiDispatch`, `menu()`) nur dort gelesen, wo sie Player-/NVR-Zustand berührt
 - Touch-Kalibrierung nicht auf Fehlauslösung durch Netzbrummen geprüft
 - Heap-Fragmentierung über Wochen Laufzeit (WebServer/lwIP) nicht gemessen
+- Motor-Kickstart (`MOTOR_PWM_KICK_DUTY = 255`, `motorStart()`, Wecker_20v19.ino:1503-1508) legt für
+  `MOTOR_PWM_KICK_MS` (150 ms) die volle 5V-Schienenspannung an den 3V-Getriebemotor an (Duty 100 %
+  bei 20 kHz = durchgehend 5V, keine PWM-Mittelung). Kein Datenblatt für den verbauten Motor
+  (Garosa-Getriebemotor 6mm 3V, Stückliste) mit einer zulässigen Kurzzeit-/Spitzenspannung geprüft –
+  nur `Vnenn=3V, Istall=200mA` dokumentiert (`Motor-LED-Treiber_Bauteilnotizen.md`). Verstößt gegen
+  die Projektregel „alle Grenzwerte explizit gegen Datenblatt prüfen". Siehe offene Prüffrage +
+  möglicher Fix in `Motor-LED-Treiber_Bauteilnotizen.md`.

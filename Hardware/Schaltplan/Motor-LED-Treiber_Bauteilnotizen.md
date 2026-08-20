@@ -43,6 +43,27 @@ ledcAttach(E2, 20000, 8);   // 20kHz, 8-Bit (über Hörschwelle → kein Surren)
 ledcWrite(E2, 153);          // 60% Duty → ~3V Mittelwert
 ```
 
+### Offene Prüffrage: Kickstart-Überspannung (Stand 2026-08-20)
+
+`motorStart()` (Wecker_20v19.ino:1503-1508) legt bei Sollwert unter
+`MOTOR_PWM_KICK_THRESHOLD` für `MOTOR_PWM_KICK_MS` (150 ms) Duty 255
+(`MOTOR_PWM_KICK_DUTY`) an – bei 20 kHz PWM bedeutet Duty 255/255 durchgehend
+5V, nicht auf die Motor-Nennspannung 3V begrenzt (Faktor ~1,67× Nennspannung).
+
+**Ungeklärt:** Kein Datenblatt für den verbauten Garosa-Getriebemotor 6mm 3V
+(Stückliste, ASIN B085NG5ZCY) mit einer zulässigen Kurzzeit-/Spitzenspannung
+geprüft – nur `Vnenn=3V, Istall=200mA` liegt vor. Bleibt das Rad beim
+Kickstart blockiert (mechanisch verklemmt), steigt der Strom überschlägig
+proportional zur Spannung auf ca. 330mA (unkritisch für den MOSFET,
+Id max. 5A, aber potenziell relevant für Wicklung/Bürsten bei wiederholter
+Auslösung – der Kickstart läuft unbedingt bei jedem Alarmstart, ohne
+Rückmeldung ob der Motor tatsächlich angelaufen ist).
+
+**Möglicher Fix, falls sich die Überspannung nicht als unbedenklich
+bestätigt:** `MOTOR_PWM_KICK_DUTY` in SysConf von 255 auf einen niedrigeren
+Wert (z.B. ~200 ≙ ca. 4V) reduzieren – Kompromiss zwischen Anlaufsicherheit
+und Spannungsmarge zur Nennspannung.
+
 ---
 
 ## Hinweise zur Integration
