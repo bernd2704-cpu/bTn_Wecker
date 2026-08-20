@@ -116,6 +116,8 @@ Nach der WiFi-Verbindung ist ein Diagnose-Server erreichbar. Die IP-Adresse wird
 
 **Tipp:**  Der Web-Log ist nur verfügbar, wenn der Wecker mit dem WLAN verbunden ist. Die Adresse lautet z.B. `http://192.168.1.42:8080`.
 
+**Hinweis „Lautstaerke+/- fehlgeschlagen (Mutex belegt)":**  Während ein Alarm läuft, fragt der Wecker den DFPlayer-Status alle 5 Sekunden kurz ab und belegt dafür kurzzeitig den internen Player-Zugriff. Trifft ein Tastendruck auf T3/T4 (Lautstärke +/–) genau in dieses Fenster, wird dieser eine Druck verworfen und im Log als Fehler vermerkt – Anzeige und Lautstärke bleiben für diesen Druck bewusst unverändert, damit nie ein falscher Wert angezeigt oder gespeichert wird. Bei mehrfachem/gehaltenem Tippen (Touch-Repeat) wirken die übrigen Drücke im selben Moment normal, sodass die Lautstärke trotz einzelner Fehlermeldung sichtbar ansteigt. Kein Fehlverhalten – kein Handlungsbedarf.
+
 ## 9. WiFi-Konfiguration
 
 **Erstkonfiguration:**  Beim ersten Start (oder nach Werksreset) öffnet der Wecker automatisch einen WLAN-Accesspoint mit der SSID `bTn-Wecker`. Mit Smartphone oder PC verbinden, Browser öffnen und `192.168.4.1` aufrufen. SSID und Passwort eingeben und speichern – der Wecker startet neu und verbindet sich.
