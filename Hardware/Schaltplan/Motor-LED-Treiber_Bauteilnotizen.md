@@ -31,38 +31,32 @@ und [LED-Treiber.md](LED-Treiber.md).
 ---
 
 ## Kanal 2: DC-Motor – GPIO26 (E2, Wasserrad)
-- Versorgung: 5V, Vnenn = 3V, Istall = 200mA
+- Versorgung: 5V über LDO MCP1700T-3302E/TO auf 3,3V geregelt, Vnenn = 3V, Istall = 200mA
 - Vorwiderstand: keiner (Strom ist lastabhängig → PWM statt Widerstand)
-- Freilaufdiode: 1N4148, Kathode zu 5V, Anode zu Drain (schnelle Diode, <4ns)
+- Freilaufdiode: 1N4448, Kathode zu 3,3V-Rail, Anode zu Drain (schnelle Diode, <4ns)
 - Entstörkondensator: 100nF Keramik direkt an den Motoranschlüssen
 
 ### PWM
 ```cpp
 #define E2  26
 ledcAttach(E2, 20000, 8);   // 20kHz, 8-Bit (über Hörschwelle → kein Surren)
-ledcWrite(E2, 153);          // 60% Duty → ~3V Mittelwert
+ledcWrite(E2, 153);          // 60% Duty → ~2V Mittelwert (aus geregelten 3,3V)
 ```
 
-### Offene Prüffrage: Kickstart-Überspannung (Stand 2026-08-20)
+### Gelöst: Kickstart-Überspannung (Stand 2026-08-21, Hardware-Änderung)
 
-`motorStart()` (Wecker_20v19.ino:1503-1508) legt bei Sollwert unter
+Bisherige Prüffrage (Stand 2026-08-20): `motorStart()` legt bei Sollwert unter
 `MOTOR_PWM_KICK_THRESHOLD` für `MOTOR_PWM_KICK_MS` (150 ms) Duty 255
-(`MOTOR_PWM_KICK_DUTY`) an – bei 20 kHz PWM bedeutet Duty 255/255 durchgehend
-5V, nicht auf die Motor-Nennspannung 3V begrenzt (Faktor ~1,67× Nennspannung).
+(`MOTOR_PWM_KICK_DUTY`) an. Solange der Motor direkt an 5V lag, bedeutete
+Duty 255 durchgehend 5V statt der Nennspannung 3V (Faktor ~1,67×) – ungeklärt,
+da kein Datenblatt für den verbauten Garosa-Getriebemotor 6mm 3V (ASIN
+B085NG5ZCY) mit zulässiger Kurzzeit-/Spitzenspannung vorlag.
 
-**Ungeklärt:** Kein Datenblatt für den verbauten Garosa-Getriebemotor 6mm 3V
-(Stückliste, ASIN B085NG5ZCY) mit einer zulässigen Kurzzeit-/Spitzenspannung
-geprüft – nur `Vnenn=3V, Istall=200mA` liegt vor. Bleibt das Rad beim
-Kickstart blockiert (mechanisch verklemmt), steigt der Strom überschlägig
-proportional zur Spannung auf ca. 330mA (unkritisch für den MOSFET,
-Id max. 5A, aber potenziell relevant für Wicklung/Bürsten bei wiederholter
-Auslösung – der Kickstart läuft unbedingt bei jedem Alarmstart, ohne
-Rückmeldung ob der Motor tatsächlich angelaufen ist).
-
-**Möglicher Fix, falls sich die Überspannung nicht als unbedenklich
-bestätigt:** `MOTOR_PWM_KICK_DUTY` in SysConf von 255 auf einen niedrigeren
-Wert (z.B. ~200 ≙ ca. 4V) reduzieren – Kompromiss zwischen Anlaufsicherheit
-und Spannungsmarge zur Nennspannung.
+**Fix:** LDO MCP1700T-3302E/TO regelt die Rail vor dem MOSFET jetzt fest auf
+3,3V. PWM schaltet diese geregelte Spannung statt der rohen 5V – Duty 255
+bedeutet damit nur noch ~3,3V (Faktor ~1,1× Nennspannung), auch beim
+Kickstart-Vollgasimpuls. Der volle PWM-Regelumfang 0..255 ist damit ohne
+Begrenzung nutzbar, keine gesonderte Kickstart-Deckelung mehr nötig.
 
 ---
 

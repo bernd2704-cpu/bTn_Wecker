@@ -8,14 +8,15 @@ Taster S1=GPIO32/S2=GPIO33/S3=GPIO0, Ausgänge E1=GPIO25/E2=GPIO26/E3=GPIO27
 
 **Touch-Beschaltung:** je 1kΩ Reihenwiderstand + 4,7nF nach GND (GPIO-seitig), ca. 30cm twisted pair
 
-**Ausgangsschaltung E2/E3:** IRLML6344TRPBF MOSFET, Gate 330Ω, Freilaufdiode 1N4148, PWM 20kHz,
-Motor direkt an 5V (kein Spannungsregler).
+**Ausgangsschaltung E2/E3:** IRLML6344TRPBF MOSFET, Gate 330Ω, Freilaufdiode 1N4448, PWM 20kHz,
+Motor-Rail über LDO MCP1700T-3302E/TO auf 3,3V geregelt (kein Direktanschluss an 5V mehr) –
+voller PWM-Regelumfang 0..255 ohne Überspannungsrisiko nutzbar.
 DFPlayer Mini GND als Sternpunkt-Topologie.
 
 ## Aktuelle Version
 
-Hardware 2v0 (mit DFPlayer-BUSY-Signal, GPIO34), Firmware 20v19,
-Konfiguration SysConf_20v19.h
+Hardware 2v0 (mit DFPlayer-BUSY-Signal, GPIO34, Motor über MCP1700T-3302E/TO geregelt),
+Firmware 20v20, Konfiguration SysConf_20v20.h
 
 Vorheriger eingefrorener Stand: Hardware 1v0 (ohne BUSY-Signal) / Firmware 13v00,
 siehe `Software/Firmware_Versionshistorie/`.

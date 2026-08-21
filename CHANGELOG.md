@@ -492,4 +492,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v19 | Qualität | `TOUCH_REPEAT_RATE_MS` aus SysConf entfernt: ungenutztes Duplikat von `TOUCH_REPEAT_MS` (identischer Wert 250 ms, identischer Zweck), nirgends im Code referenziert. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v19
+## Version 20v20
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v20 | Funktion | Hardware-Änderung Motor-Treiber: LDO `MCP1700T-3302E/TO` regelt die Rail vor dem MOSFET jetzt fest auf 3,3V statt den Motor direkt an 5V zu betreiben. PWM schaltet damit die geregelte Spannung – Duty 255 bedeutet nur noch ~3,3V statt vormals 5V. Löst die bei 20v19 offene Prüffrage zur Kickstart-Überspannung (`MOTOR_PWM_KICK_DUTY`=255 lag bisher ungebremst auf 5V, ~1,67× Motor-Nennspannung 3V): voller PWM-Regelumfang 0..255 ist jetzt ohne Begrenzung und ohne Überspannungsrisiko nutzbar. Freilaufdiode korrigiert auf `1N4448` (realer Bauteilwert statt bisher dokumentiertem `1N4148`). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v20
