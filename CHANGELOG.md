@@ -498,4 +498,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v20 | Funktion | Hardware-Änderung Motor-Treiber: LDO `MCP1700T-3302E/TO` regelt die Rail vor dem MOSFET jetzt fest auf 3,3V statt den Motor direkt an 5V zu betreiben. PWM schaltet damit die geregelte Spannung – Duty 255 bedeutet nur noch ~3,3V statt vormals 5V. Löst die bei 20v19 offene Prüffrage zur Kickstart-Überspannung (`MOTOR_PWM_KICK_DUTY`=255 lag bisher ungebremst auf 5V, ~1,67× Motor-Nennspannung 3V): voller PWM-Regelumfang 0..255 ist jetzt ohne Begrenzung und ohne Überspannungsrisiko nutzbar. Freilaufdiode korrigiert auf `1N4448` (realer Bauteilwert statt bisher dokumentiertem `1N4148`). |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v20
+## Version 20v21
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v21 | Funktion | Alarm-Fälligkeit an Zeitumstellungstagen korrigiert (Auftrag 21.08.2026): Der Wecker soll einen festen zeitlichen Abstand zu einem nachfolgenden Termin einhalten – dieser Abstand blieb bei einer Weckzeit zwischen 02:00:00–02:59:59 bisher nicht gewahrt. Frühjahr (letzter Sonntag März, Uhr springt 01:59:59→03:00:00 CEST, die Stunde existiert nicht): Weckzeit wird jetzt um 1h vorgezogen statt wie bisher bis zu 59 Min. zu spät (erst beim Erreichen von 03:00) auszulösen. Herbst (letzter Sonntag Oktober, Uhr springt 02:59:59 CEST→02:00:00 CET, die Stunde kommt zweimal vor): Alarm löst jetzt erst beim zweiten (Normalzeit-)Durchlauf aus statt wie bisher beim ersten (Sommerzeit-)Durchlauf, wodurch die Ruhezeit bis zu 60 Min. zu kurz war. Neue Funktion `updateDstDayFlags()` erkennt beide Umstellungstage TZ-generisch über `mktime()`/`tm_isdst`; `alarmDue()` erhält zusätzlich `isdstNow` zur Unterscheidung der beiden Herbst-Durchläufe. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v21

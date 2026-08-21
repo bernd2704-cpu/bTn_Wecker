@@ -16,7 +16,7 @@ DFPlayer Mini GND als Sternpunkt-Topologie.
 ## Aktuelle Version
 
 Hardware 2v0 (mit DFPlayer-BUSY-Signal, GPIO34, Motor über MCP1700T-3302E/TO geregelt),
-Firmware 20v20, Konfiguration SysConf_20v20.h
+Firmware 20v21, Konfiguration SysConf_20v21.h
 
 Vorheriger eingefrorener Stand: Hardware 1v0 (ohne BUSY-Signal) / Firmware 13v00,
 siehe `Software/Firmware_Versionshistorie/`.
