@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v25.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_20v26.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -211,6 +211,13 @@ char    str_s2_play[4];
 // fehl, spielt die Vorschau unbemerkt weiter (Checkbox zeigt bereits "aus").
 // inputTask holt den Stop nach diesem Flag außerhalb von displayMutex nach
 // (Projektregel: kein vTaskDelay/Retry-Warten unter gehaltenem Mutex).
+// 20v26-Fix: Betreten der Seite "Sound wählen" spielte beide Vorschauen sofort
+// ab, obwohl sound1_on/sound2_on korrekt auf false standen und nie playFolder()
+// aufgerufen wurde (gemeldet 25.08.2026) – checkboxSound() sendet in den
+// "aus"-Zweigen unabhängig vom tatsächlichen Player-Zustand ein player.stop().
+// checkboxSound() prüft den Aus-Zweig jetzt zusätzlich per dfPlayerBusy()
+// (direktes BUSY-GPIO, siehe dort) und sendet stop() nur noch, wenn der Player
+// laut Hardware-Signal wirklich beschäftigt ist.
 volatile bool pendingPlayerStopRetry = false;
 uint8_t vol         = 9;
 uint8_t MAX_VOL     = 25;
@@ -671,15 +678,17 @@ void checkboxSound() {
         }
       } else {
         display.drawRect(67, 37, 10, 10);
-        display.display();                                                               // Checkbox anzeigen bevor Player gestoppt
+        display.display();                                                               // Checkbox anzeigen bevor Player ggf. gestoppt
         requestAlarmCancelIfActive(false);                                               // 20v15: Menü-Navigation zählt nur bei bereits hörbarem Alarm als Abbruch
-        if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
-          drainSerial2Pre("stop (Sound1 aus)");
-          player.stop();
-          xSemaphoreGive(playerMutex);
-        } else {
-          webLogf("[FEHLER] Sound1-Vorschau-Stopp fehlgeschlagen (Mutex belegt)");
-          pendingPlayerStopRetry = true;                                                  // 20v25: Stop außerhalb displayMutex nachholen
+        if (dfPlayerBusy()) {                                                             // 20v26-Fix: stop() nur senden wenn tatsächlich etwas läuft – siehe Kommentar oben an sound1_on/sound2_on
+          if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                // 50 ms < 100 ms displayMutex-Timeout
+            drainSerial2Pre("stop (Sound1 aus)");
+            player.stop();
+            xSemaphoreGive(playerMutex);
+          } else {
+            webLogf("[FEHLER] Sound1-Vorschau-Stopp fehlgeschlagen (Mutex belegt)");
+            pendingPlayerStopRetry = true;                                                // 20v25: Stop außerhalb displayMutex nachholen
+          }
         }
       }
       break;
@@ -698,15 +707,17 @@ void checkboxSound() {
         }
       } else {
         display.drawRect(67, 54, 10, 10);
-        display.display();                                                               // Checkbox anzeigen bevor Player gestoppt
+        display.display();                                                               // Checkbox anzeigen bevor Player ggf. gestoppt
         requestAlarmCancelIfActive(false);                                               // 20v15: Menü-Navigation zählt nur bei bereits hörbarem Alarm als Abbruch
-        if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
-          drainSerial2Pre("stop (Sound2 aus)");
-          player.stop();
-          xSemaphoreGive(playerMutex);
-        } else {
-          webLogf("[FEHLER] Sound2-Vorschau-Stopp fehlgeschlagen (Mutex belegt)");
-          pendingPlayerStopRetry = true;                                                  // 20v25: Stop außerhalb displayMutex nachholen
+        if (dfPlayerBusy()) {                                                             // 20v26-Fix: stop() nur senden wenn tatsächlich etwas läuft – siehe Kommentar oben an sound1_on/sound2_on
+          if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                // 50 ms < 100 ms displayMutex-Timeout
+            drainSerial2Pre("stop (Sound2 aus)");
+            player.stop();
+            xSemaphoreGive(playerMutex);
+          } else {
+            webLogf("[FEHLER] Sound2-Vorschau-Stopp fehlgeschlagen (Mutex belegt)");
+            pendingPlayerStopRetry = true;                                                // 20v25: Stop außerhalb displayMutex nachholen
+          }
         }
       }
       break;
@@ -2272,12 +2283,14 @@ static void inputTask(void *pvParam) {
     // verbietet Warten/Retry unter gehaltenem Mutex.
     if (pendingPlayerStopRetry) {
       pendingPlayerStopRetry = false;
-      if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(300)) == pdTRUE) {
-        drainSerial2Pre("stop (Vorschau-Retry)");
-        player.stop();
-        xSemaphoreGive(playerMutex);
-      } else {
-        webLogf("[FEHLER] Vorschau-Stopp-Retry ebenfalls fehlgeschlagen (Mutex belegt)");
+      if (dfPlayerBusy()) {                                                               // 20v26: siehe checkboxSound() – stop() nur wenn wirklich noch etwas läuft
+        if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(300)) == pdTRUE) {
+          drainSerial2Pre("stop (Vorschau-Retry)");
+          player.stop();
+          xSemaphoreGive(playerMutex);
+        } else {
+          webLogf("[FEHLER] Vorschau-Stopp-Retry ebenfalls fehlgeschlagen (Mutex belegt)");
+        }
       }
     }
 
@@ -3144,7 +3157,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v25.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v26.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

@@ -119,7 +119,7 @@
 //        von displayMutex mit größerem Timeout (300 ms) nach.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v25"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "20v26"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.

@@ -528,4 +528,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v25 | Bugfix | Sound-1-Vorschau spielte nach Verlassen und Wiederbetreten der Seite "Sound 1 wählen" weiter (gemeldet 25.08.2026, Log-Beleg: `[FEHLER] Sound1-Vorschau-Stopp fehlgeschlagen (Mutex belegt)`): `checkboxSound()` setzt beim Ausschalten der Vorschau `sound1_on`/`sound2_on` zwar korrekt auf `false` (Checkbox zeigt "aus"), der zugehörige `player.stop()` steht aber unter einem 50-ms-`playerMutex`-Timeout. War der Mutex belegt (z.B. `alarmTask` pollt gerade einen laufenden Alarm, hält den Mutex bis zu 200–500 ms), schlug der Stop-Befehl komplett und folgenlos fehl – der DFPlayer spielte die vorherige Vorschau unbemerkt weiter, obwohl die Anzeige bereits "aus" zeigte. Da `checkboxSound()` unter gehaltenem `displayMutex` läuft, ist ein Warten/Retry an dieser Stelle laut Projektregel (kein `vTaskDelay()` unter gehaltenem Mutex) nicht möglich. Fix: neues Flag `pendingPlayerStopRetry`, gesetzt bei fehlgeschlagenem Take; `inputTask` holt den Stop direkt nach Freigabe von `displayMutex` mit größerem Timeout (300 ms) nach – betrifft Sound 1 und Sound 2 gleichermaßen. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v25
+## Version 20v26
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v26 | Bugfix | Beide Sound-Vorschauen spielten sofort beim allerersten Betreten der Seite "Sound wählen" ab, ohne jeden Tastendruck (gemeldet 25.08.2026, reproduzierbar trotz 20v23-/20v25-Fix): `checkboxSound()` sendet in ihren "aus"-Zweigen (Case 3/4) unbedingt ein `player.stop()`, sobald `sound1_on`/`sound2_on` bereits `false` sind – auch dann, wenn der DFPlayer laut BUSY-Pin (`dfPlayerBusy()`, Hardware 2v0) längst idle ist. Ein `stop()`-Kommando an ein bereits leerlaufendes Modul löste bei diesem DFPlayer-Exemplar offenbar selbst eine ungewollte Wiedergabe aus, statt wirkungslos zu bleiben. Fix: `checkboxSound()` prüft in beiden "aus"-Zweigen zusätzlich `dfPlayerBusy()` und sendet `player.stop()` nur noch, wenn der Player laut Hardware-Signal tatsächlich beschäftigt ist – dieselbe Prüfung ergänzt im `pendingPlayerStopRetry`-Nachhol-Pfad aus 20v25. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v26
