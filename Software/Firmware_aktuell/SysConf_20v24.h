@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_20v23.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 20v23
-// Datei-Version    : 20v23
+// SysConf_20v24.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 20v24
+// Datei-Version    : 20v24
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34)
@@ -108,9 +108,12 @@
 //        beim Betreten von "Sound 1 wählen") – war die Vorschau vom letzten
 //        Besuch der Seite noch aktiv, spielte checkboxSound() beim Neuzeichnen
 //        sofort wieder Sound 2 ab. Siehe menu()/Case 4 im .ino.
+// 20v24: Stack-Größen erhöht (Sicherheitsmarge auf Basis Stack High-Water
+//        Marks): STACK_INPUT 2240→2704, STACK_ALARM 2128→2524,
+//        STACK_DISPLAY 2176→2276.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v23"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "20v24"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -245,13 +248,13 @@ const uint8_t E3 = 27;                                                         /
 // Angepasst auf Basis der Stack High-Water Marks aus stackMonTask.
 // setup() verwendet diese Konstanten direkt – Änderungen hier wirken sofort.
 #define STACK_TOUCH     2880                                                   // touchTask
-#define STACK_ALARM     2128                                                   // alarmTask
+#define STACK_ALARM     2524                                                   // alarmTask
 #define STACK_WIFI      2240                                                   // wifiTask
 #define STACK_NVR       2304                                                   // nvrTask
 #define STACK_STACKMON  2912                                                   // stackMonTask
 #define STACK_WATCHDOG  1344                                                   // watchdogTask
-#define STACK_INPUT     2240                                                   // inputTask
-#define STACK_DISPLAY   2176                                                   // displayTask
+#define STACK_INPUT     2704                                                   // inputTask
+#define STACK_DISPLAY   2276                                                   // displayTask
 #define STACK_WEBLOG    4096                                                   // webLogTask (HTTP-Server benötigt mehr Stack)
 
 // ── Web-Logger ────────────────────────────────────────────────

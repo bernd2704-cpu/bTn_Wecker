@@ -516,4 +516,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v23 | Bugfix | Sound-2-Vorschau spielte beim Betreten der Seite "Sound 2 wählen" sofort ab (gemeldet 25.08.2026): `menu()` setzt beim Betreten von "Sound 1 wählen" (Case 3) `sound1_on`/`sound2_on` explizit auf `false`, bevor `checkboxSound()` das Vorschau-Häkchen zeichnet – beim Betreten von "Sound 2 wählen" (Case 4) fehlte dieses Zurücksetzen für `sound2_on`. War die Vorschau von einem früheren Seitenbesuch noch aktiv (Nutzer hatte sie nicht per T2 ausgeschaltet, bevor er die Seite verließ), stand `sound2_on` beim erneuten Öffnen der Seite noch auf `true`, und `checkboxSound()` startete beim Neuzeichnen sofort wieder `player.playFolder()`. Fix: `sound2_on = false;` in Case 4 vor `checkboxSound()` ergänzt, analog zu Case 3. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v23
+## Version 20v24
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v24 | Stabilität | Stack-Größen erhöht (Sicherheitsmarge auf Basis Stack High-Water Marks aus stackMonTask): `STACK_INPUT` 2240→2704, `STACK_ALARM` 2128→2524, `STACK_DISPLAY` 2176→2276. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v24
