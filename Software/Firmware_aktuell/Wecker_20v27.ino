@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v26.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_20v27.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -856,6 +856,18 @@ void menu(uint8_t page) {   // uint8_t: Koordinatenbereich 0–7 entspricht UiSt
 static uint16_t lastA1Day = 0xFFFF;  // Tages-Sperre Alarm 1 (tm_yday) – file-scope: auch vom manuellen Abbruch lesbar
 static uint16_t lastA2Day = 0xFFFF;
 
+// 20v27-Fix: uiTransition() hob die Tages-Sperre bisher beim Verlassen von
+// UI_ALARM1/UI_ALARM2 IMMER auf, auch wenn der Nutzer die Weckzeit gar nicht
+// verändert hatte (nur die Seite angeschaut, kein T3/T4 gedrückt). Lag die
+// Weckzeit bereits in der Vergangenheit innerhalb des Nachholfensters
+// (ALARM_CATCHUP_MIN), löste alarmDue() den Alarm dadurch erneut aus – auch
+// bei reiner Anzeige ohne jede Absicht, etwas zu ändern (gemeldet 25.08.2026,
+// u.a. über den 20s-Auto-Rücksprung auf UI_CLOCK). Diese Flags merken sich,
+// ob während des aktuellen Seitenbesuchs tatsächlich per T3/T4 editiert
+// wurde; uiTransition() hebt die Sperre nur noch in diesem Fall auf.
+static bool alarm1TimeEdited = false;
+static bool alarm2TimeEdited = false;
+
 void writeNVR() {
   data.putBool("a1_on",       a1_on);
   data.putInt ("a1_hour",     a1_hour);
@@ -1095,8 +1107,18 @@ void runWifiConfigServer() {
 // Seitenwechsel läuft (T0-Zyklus, 20s-Auto-Rückkehr, Mitternachts-Neuzeichnen),
 // daher hier und nicht in uiDispatch().
 void uiTransition(UiState next) {
-  if (uiState == UI_ALARM1 && next != UI_ALARM1) { lastA1Day = 0xFFFF; }
-  if (uiState == UI_ALARM2 && next != UI_ALARM2) { lastA2Day = 0xFFFF; }
+  // 20v27: Sperre nur aufheben, wenn während dieses Seitenbesuchs tatsächlich
+  // per T3/T4 editiert wurde (siehe alarm1TimeEdited/alarm2TimeEdited oben) –
+  // reines Anschauen der Seite darf einen bereits verstrichenen Alarm nicht
+  // erneut scharf schalten.
+  if (uiState == UI_ALARM1 && next != UI_ALARM1 && alarm1TimeEdited) {
+    lastA1Day = 0xFFFF;
+    alarm1TimeEdited = false;
+  }
+  if (uiState == UI_ALARM2 && next != UI_ALARM2 && alarm2TimeEdited) {
+    lastA2Day = 0xFFFF;
+    alarm2TimeEdited = false;
+  }
   uiState    = next;
   pageselect = (uint8_t)next;                                                            // checkboxAlarm/Sound nutzen pageselect
   menu(pageselect);                                                                      // Bildschirm zeichnen (Entry-Aktion)
@@ -1170,6 +1192,9 @@ static UiState onAlarm1(uint8_t evt) {
       // (z.B. 10:00 → 14:30) läuft der Zeiger durch Zwischenwerte, von denen
       // manche im Aufholfenster der aktuellen Uhrzeit liegen und sofort auslösten.
       // Aufhebung jetzt erst beim Seitenverlassen in uiTransition(), siehe dort.
+      // 20v27: alarm1TimeEdited markiert, dass wirklich editiert wurde – nur
+      // dann hebt uiTransition() die Sperre beim Verlassen der Seite auf.
+      alarm1TimeEdited = true;
       snprintf(str_a1, sizeof(str_a1), "%02u:%02u", a1_hour, a1_min);
       cleanTXT(82, 34, 46, 13);
       zeigeZ16C(105, 32, str_a1);
@@ -1179,6 +1204,7 @@ static UiState onAlarm1(uint8_t evt) {
     case EVT_T4:                                                                         // Minute +
       if (a1_min < 59) { a1_min++; } else { a1_min = 0; }
       // 20v22: siehe EVT_T3 oben – Tages-Sperre erst beim Seitenverlassen aufheben
+      alarm1TimeEdited = true;                                                           // 20v27: siehe EVT_T3 oben
       snprintf(str_a1, sizeof(str_a1), "%02u:%02u", a1_hour, a1_min);
       cleanTXT(82, 34, 46, 13);
       zeigeZ16C(105, 32, str_a1);
@@ -1200,6 +1226,7 @@ static UiState onAlarm2(uint8_t evt) {
     case EVT_T3:                                                                         // Stunde +
       if (a2_hour < 23) { a2_hour++; } else { a2_hour = 0; }
       // 20v22: siehe onAlarm1()/EVT_T3 – Tages-Sperre erst beim Seitenverlassen aufheben
+      alarm2TimeEdited = true;                                                           // 20v27: siehe onAlarm1()/EVT_T3
       snprintf(str_a2, sizeof(str_a2), "%02u:%02u", a2_hour, a2_min);
       cleanTXT(82, 51, 46, 13);                                                          // A2-Zeile (Y=49) – war fälschlich 34 (A1-Zeile)
       zeigeZ16C(105, 49, str_a2);
@@ -1209,6 +1236,7 @@ static UiState onAlarm2(uint8_t evt) {
     case EVT_T4:                                                                         // Minute +
       if (a2_min < 59) { a2_min++; } else { a2_min = 0; }
       // 20v22: siehe onAlarm1()/EVT_T3 – Tages-Sperre erst beim Seitenverlassen aufheben
+      alarm2TimeEdited = true;                                                           // 20v27: siehe onAlarm1()/EVT_T3
       snprintf(str_a2, sizeof(str_a2), "%02u:%02u", a2_hour, a2_min);
       cleanTXT(82, 51, 46, 13);
       zeigeZ16C(105, 49, str_a2);
@@ -3157,7 +3185,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v26.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v27.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

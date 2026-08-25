@@ -534,4 +534,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v26 | Bugfix | Beide Sound-Vorschauen spielten sofort beim allerersten Betreten der Seite "Sound wählen" ab, ohne jeden Tastendruck (gemeldet 25.08.2026, reproduzierbar trotz 20v23-/20v25-Fix): `checkboxSound()` sendet in ihren "aus"-Zweigen (Case 3/4) unbedingt ein `player.stop()`, sobald `sound1_on`/`sound2_on` bereits `false` sind – auch dann, wenn der DFPlayer laut BUSY-Pin (`dfPlayerBusy()`, Hardware 2v0) längst idle ist. Ein `stop()`-Kommando an ein bereits leerlaufendes Modul löste bei diesem DFPlayer-Exemplar offenbar selbst eine ungewollte Wiedergabe aus, statt wirkungslos zu bleiben. Fix: `checkboxSound()` prüft in beiden "aus"-Zweigen zusätzlich `dfPlayerBusy()` und sendet `player.stop()` nur noch, wenn der Player laut Hardware-Signal tatsächlich beschäftigt ist – dieselbe Prüfung ergänzt im `pendingPlayerStopRetry`-Nachhol-Pfad aus 20v25. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v26
+## Version 20v27
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v27 | Bugfix | Eigentliche Ursache der zuvor unter 20v26 vermuteten Sound-Wiedergabe beim Seitenaufruf gefunden (gemeldet 25.08.2026 mit exakten Reproduktionsschritten): Es spielte gar keine Vorschau, sondern der ECHTE Alarm 1/2 löste erneut aus. `uiTransition()` hob die Tages-Sperre (`lastA1Day`/`lastA2Day`) seit 20v22 beim Verlassen von "Alarm 1/2 einstellen" bedingungslos auf – auch wenn die Seite nur angeschaut und die Weckzeit gar nicht verändert wurde. Lag die gesetzte Weckzeit bereits in der Vergangenheit innerhalb des Nachholfensters (`ALARM_CATCHUP_MIN`), stufte `alarmDue()` den Alarm nach dem bloßen Seitenbesuch als erneut fällig ein – reproduzierbar sowohl über den 20s-Auto-Rücksprung auf die Uhrzeit-Seite als auch beim direkten Weiterblättern zur Sound-Seite. Fix: neue Flags `alarm1TimeEdited`/`alarm2TimeEdited`, gesetzt nur in `onAlarm1()`/`onAlarm2()` bei tatsächlichem T3-/T4-Tastendruck (Stunde/Minute ändern); `uiTransition()` hebt die Tages-Sperre beim Seitenverlassen jetzt nur noch auf, wenn eines dieser Flags gesetzt ist. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v27
