@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_20v22.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 20v22
-// Datei-Version    : 20v22
+// SysConf_20v23.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 20v23
+// Datei-Version    : 20v23
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34)
@@ -103,9 +103,14 @@
 //        und den Alarm ungewollt auslösten. Aufhebung jetzt erst in
 //        uiTransition() beim tatsächlichen Seitenwechsel. Siehe onAlarm1()/
 //        onAlarm2()/uiTransition() im .ino.
+// 20v23: Bugfix Sound-Vorschau: Beim Betreten der Seite "Sound 2 wählen"
+//        wurde sound2_on nicht zurückgesetzt (anders als sound1_on/sound2_on
+//        beim Betreten von "Sound 1 wählen") – war die Vorschau vom letzten
+//        Besuch der Seite noch aktiv, spielte checkboxSound() beim Neuzeichnen
+//        sofort wieder Sound 2 ab. Siehe menu()/Case 4 im .ino.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v22"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "20v23"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.

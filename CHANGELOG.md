@@ -510,4 +510,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v22 | Bugfix | Weckzeit-Verstellung löste Alarm sofort aus (gemeldet 25.08.2026): `onAlarm1()`/`onAlarm2()` hoben die Tages-Sperre (`lastA1Day`/`lastA2Day`) bisher bei JEDEM Stunde+/Minute+-Tastendruck auf, nicht erst beim Bestätigen der neuen Zeit. Beim Durchscrollen einer neuen Weckzeit (z.B. 10:00 → 14:30, bereits ausgelöster Alarm 1) lief der angezeigte Wert dabei durch Zwischenstände, von denen manche im Aufholfenster der aktuellen Uhrzeit lagen – der 500-ms-Haupt-Loop erkannte diese Zwischenwerte fälschlich als fällig und löste den Alarm mitten im Verstellen aus. Die Tages-Sperre wird jetzt erst in `uiTransition()` beim tatsächlichen Verlassen der Alarm-Seite aufgehoben – die neue Weckzeit wird dadurch erst bei ihrem tatsächlichen Eintreffen ausgelöst, nicht mehr rückwirkend während der Eingabe. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v22
+## Version 20v23
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v23 | Bugfix | Sound-2-Vorschau spielte beim Betreten der Seite "Sound 2 wählen" sofort ab (gemeldet 25.08.2026): `menu()` setzt beim Betreten von "Sound 1 wählen" (Case 3) `sound1_on`/`sound2_on` explizit auf `false`, bevor `checkboxSound()` das Vorschau-Häkchen zeichnet – beim Betreten von "Sound 2 wählen" (Case 4) fehlte dieses Zurücksetzen für `sound2_on`. War die Vorschau von einem früheren Seitenbesuch noch aktiv (Nutzer hatte sie nicht per T2 ausgeschaltet, bevor er die Seite verließ), stand `sound2_on` beim erneuten Öffnen der Seite noch auf `true`, und `checkboxSound()` startete beim Neuzeichnen sofort wieder `player.playFolder()`. Fix: `sound2_on = false;` in Case 4 vor `checkboxSound()` ergänzt, analog zu Case 3. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v23

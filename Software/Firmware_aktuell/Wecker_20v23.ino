@@ -1,5 +1,5 @@
 // bTn Wecker mit OLED-Anzeige und MP3-Player
-// Basis: bTn_Wecker_9v18 – FreeRTOS + State Machine + WiFi-Konfigurator
+// Basis: bTn_Wecker_20v00 – FreeRTOS + State Machine + WiFi-Konfigurator
 // Boardverwalter: esp32 3.3.11 von Espressif Systems
 //
 // ─── State Machines ──────────────────────────────────────────
@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v22.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_20v23.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -774,6 +774,7 @@ void menu(uint8_t page) {   // uint8_t: Koordinatenbereich 0–7 entspricht UiSt
       zeigeZ16C(5,  49, "\x3E");
       zeigeZ16C(15, 49, "\x3E");
       zeigeZ16C(105,49, str_s2);
+      sound2_on = false;                                                                 // 20v23-Fix: sonst startet checkboxSound() beim Betreten der Seite sofort Sound 2, falls die Vorschau vom letzten Besuch noch aktiv war (Case 3 setzt sound1_on/sound2_on schon zurück, Case 4 tat das für sound2_on nicht)
       checkboxSound();
       break;
     case 5:
@@ -3120,7 +3121,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v22.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v23.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };
