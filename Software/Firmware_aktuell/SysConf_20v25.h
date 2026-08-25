@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_20v24.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 20v24
-// Datei-Version    : 20v24
+// SysConf_20v25.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 20v25
+// Datei-Version    : 20v25
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34)
@@ -111,9 +111,15 @@
 // 20v24: Stack-Größen erhöht (Sicherheitsmarge auf Basis Stack High-Water
 //        Marks): STACK_INPUT 2240→2704, STACK_ALARM 2128→2524,
 //        STACK_DISPLAY 2176→2276.
+// 20v25: Bugfix Sound-Vorschau: player.stop() in checkboxSound() (Sound 1/2
+//        Vorschau ausschalten) schlug bei belegtem playerMutex (>50 ms,
+//        z.B. während laufendem Alarm-Poll) folgenlos fehl – Checkbox zeigte
+//        "aus", DFPlayer spielte aber unbemerkt weiter. Neues Flag
+//        pendingPlayerStopRetry: inputTask holt den Stop danach außerhalb
+//        von displayMutex mit größerem Timeout (300 ms) nach.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v24"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "20v25"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.

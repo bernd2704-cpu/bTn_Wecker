@@ -60,7 +60,7 @@
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v24.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_20v25.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -207,6 +207,11 @@ uint8_t sound2_selected      = 1;
 char    str_s2[4];
 uint8_t sound2_assigned = 1;
 char    str_s2_play[4];
+// 20v25-Fix: schlägt player.stop() in checkboxSound() wegen belegtem playerMutex
+// fehl, spielt die Vorschau unbemerkt weiter (Checkbox zeigt bereits "aus").
+// inputTask holt den Stop nach diesem Flag außerhalb von displayMutex nach
+// (Projektregel: kein vTaskDelay/Retry-Warten unter gehaltenem Mutex).
+volatile bool pendingPlayerStopRetry = false;
 uint8_t vol         = 9;
 uint8_t MAX_VOL     = 25;
 char    str_vol[3];
@@ -674,6 +679,7 @@ void checkboxSound() {
           xSemaphoreGive(playerMutex);
         } else {
           webLogf("[FEHLER] Sound1-Vorschau-Stopp fehlgeschlagen (Mutex belegt)");
+          pendingPlayerStopRetry = true;                                                  // 20v25: Stop außerhalb displayMutex nachholen
         }
       }
       break;
@@ -700,6 +706,7 @@ void checkboxSound() {
           xSemaphoreGive(playerMutex);
         } else {
           webLogf("[FEHLER] Sound2-Vorschau-Stopp fehlgeschlagen (Mutex belegt)");
+          pendingPlayerStopRetry = true;                                                  // 20v25: Stop außerhalb displayMutex nachholen
         }
       }
       break;
@@ -2258,6 +2265,22 @@ static void inputTask(void *pvParam) {
 
     xSemaphoreGive(displayMutex);
 
+    // ── 20v25-Fix: Sound-Vorschau-Stop nachholen ──────────────
+    // checkboxSound() konnte player.stop() wegen belegtem playerMutex nicht
+    // absetzen (Checkbox zeigt bereits "aus", Vorschau spielt aber weiter).
+    // Retry mit größerem Timeout AUSSERHALB displayMutex – Projektregel
+    // verbietet Warten/Retry unter gehaltenem Mutex.
+    if (pendingPlayerStopRetry) {
+      pendingPlayerStopRetry = false;
+      if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(300)) == pdTRUE) {
+        drainSerial2Pre("stop (Vorschau-Retry)");
+        player.stop();
+        xSemaphoreGive(playerMutex);
+      } else {
+        webLogf("[FEHLER] Vorschau-Stopp-Retry ebenfalls fehlgeschlagen (Mutex belegt)");
+      }
+    }
+
     // ── WiFi-Konfig angefordert (von onInfo/EVT_T3, 11v05) ───
     // Mutex erneut holen – displayTask könnte sonst dazwischenfunken.
     // vTaskDelay liegt bewusst AUSSERHALB des Mutex-Blocks.
@@ -3121,7 +3144,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v24.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v25.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

@@ -522,4 +522,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v24 | Stabilität | Stack-Größen erhöht (Sicherheitsmarge auf Basis Stack High-Water Marks aus stackMonTask): `STACK_INPUT` 2240→2704, `STACK_ALARM` 2128→2524, `STACK_DISPLAY` 2176→2276. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v24
+## Version 20v25
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v25 | Bugfix | Sound-1-Vorschau spielte nach Verlassen und Wiederbetreten der Seite "Sound 1 wählen" weiter (gemeldet 25.08.2026, Log-Beleg: `[FEHLER] Sound1-Vorschau-Stopp fehlgeschlagen (Mutex belegt)`): `checkboxSound()` setzt beim Ausschalten der Vorschau `sound1_on`/`sound2_on` zwar korrekt auf `false` (Checkbox zeigt "aus"), der zugehörige `player.stop()` steht aber unter einem 50-ms-`playerMutex`-Timeout. War der Mutex belegt (z.B. `alarmTask` pollt gerade einen laufenden Alarm, hält den Mutex bis zu 200–500 ms), schlug der Stop-Befehl komplett und folgenlos fehl – der DFPlayer spielte die vorherige Vorschau unbemerkt weiter, obwohl die Anzeige bereits "aus" zeigte. Da `checkboxSound()` unter gehaltenem `displayMutex` läuft, ist ein Warten/Retry an dieser Stelle laut Projektregel (kein `vTaskDelay()` unter gehaltenem Mutex) nicht möglich. Fix: neues Flag `pendingPlayerStopRetry`, gesetzt bei fehlgeschlagenem Take; `inputTask` holt den Stop direkt nach Freigabe von `displayMutex` mit größerem Timeout (300 ms) nach – betrifft Sound 1 und Sound 2 gleichermaßen. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v25
