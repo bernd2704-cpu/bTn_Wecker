@@ -504,4 +504,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v21 | Funktion | Alarm-Fälligkeit an Zeitumstellungstagen korrigiert (Auftrag 21.08.2026): Der Wecker soll einen festen zeitlichen Abstand zu einem nachfolgenden Termin einhalten – dieser Abstand blieb bei einer Weckzeit zwischen 02:00:00–02:59:59 bisher nicht gewahrt. Frühjahr (letzter Sonntag März, Uhr springt 01:59:59→03:00:00 CEST, die Stunde existiert nicht): Weckzeit wird jetzt um 1h vorgezogen statt wie bisher bis zu 59 Min. zu spät (erst beim Erreichen von 03:00) auszulösen. Herbst (letzter Sonntag Oktober, Uhr springt 02:59:59 CEST→02:00:00 CET, die Stunde kommt zweimal vor): Alarm löst jetzt erst beim zweiten (Normalzeit-)Durchlauf aus statt wie bisher beim ersten (Sommerzeit-)Durchlauf, wodurch die Ruhezeit bis zu 60 Min. zu kurz war. Neue Funktion `updateDstDayFlags()` erkennt beide Umstellungstage TZ-generisch über `mktime()`/`tm_isdst`; `alarmDue()` erhält zusätzlich `isdstNow` zur Unterscheidung der beiden Herbst-Durchläufe. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v21
+## Version 20v22
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v22 | Bugfix | Weckzeit-Verstellung löste Alarm sofort aus (gemeldet 25.08.2026): `onAlarm1()`/`onAlarm2()` hoben die Tages-Sperre (`lastA1Day`/`lastA2Day`) bisher bei JEDEM Stunde+/Minute+-Tastendruck auf, nicht erst beim Bestätigen der neuen Zeit. Beim Durchscrollen einer neuen Weckzeit (z.B. 10:00 → 14:30, bereits ausgelöster Alarm 1) lief der angezeigte Wert dabei durch Zwischenstände, von denen manche im Aufholfenster der aktuellen Uhrzeit lagen – der 500-ms-Haupt-Loop erkannte diese Zwischenwerte fälschlich als fällig und löste den Alarm mitten im Verstellen aus. Die Tages-Sperre wird jetzt erst in `uiTransition()` beim tatsächlichen Verlassen der Alarm-Seite aufgehoben – die neue Weckzeit wird dadurch erst bei ihrem tatsächlichen Eintreffen ausgelöst, nicht mehr rückwirkend während der Eingabe. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v22
