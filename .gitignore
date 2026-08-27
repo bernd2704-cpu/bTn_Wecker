@@ -3,3 +3,7 @@
 
 # Hersteller-Datenblätter/Produktfotos – nicht öffentlich verbreiten (Urheberrecht)
 Hardware/Stückliste/
+
+# KiCad Sperrdateien/Backup-Verzeichnis
+*.lck
+.history/
