@@ -4,7 +4,7 @@
 
 ESP32 Dev Kit C V4, SSD1306 OLED 128x64 I2C (0x3C, SDA=21, SCL=22),
 DFPlayer Mini (Serial2, RX=16, TX=17, BUSY=GPIO34), Touch T0=GPIO4/T2=GPIO2/T3=GPIO15/T4=GPIO13,
-Taster S1=GPIO32/S2=GPIO33/S3=GPIO0, Ausgänge E1=GPIO25/E2=GPIO26/E3=GPIO27
+Taster S1=GPIO33/S2=GPIO32/S3=GPIO0, Ausgänge E1=GPIO25/E2=GPIO26/E3=GPIO27
 
 **Touch-Beschaltung:** je 1kΩ Reihenwiderstand + 4,7nF nach GND (GPIO-seitig), ca. 30cm twisted pair
 
@@ -16,7 +16,7 @@ DFPlayer Mini GND als Sternpunkt-Topologie.
 ## Aktuelle Version
 
 Hardware 2v0 (mit DFPlayer-BUSY-Signal, GPIO34, Motor über MCP1700T-3302E/TO geregelt),
-Firmware 20v27, Konfiguration SysConf_20v27.h
+Firmware 20v28, Konfiguration SysConf_20v28.h
 
 Vorheriger eingefrorener Stand: Hardware 1v0 (ohne BUSY-Signal) / Firmware 13v00,
 siehe `Software/Firmware_Versionshistorie/`.
@@ -69,6 +69,6 @@ bTn_Wecker/
 │   └── Stückliste/
 └── Software/
     ├── Bibliotheken/
-    ├── Firmware_aktuell/          ← Wecker_20v27.ino, SysConf_20v27.h, WEB.h
+    ├── Firmware_aktuell/          ← Wecker_20v28.ino, SysConf_20v28.h, WEB.h
     └── Firmware_Versionshistorie/ ← ältere Stände (12vNN, 13v00, 20v00–20v16)
 ```

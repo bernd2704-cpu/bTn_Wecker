@@ -540,4 +540,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v27 | Bugfix | Eigentliche Ursache der zuvor unter 20v26 vermuteten Sound-Wiedergabe beim Seitenaufruf gefunden (gemeldet 25.08.2026 mit exakten Reproduktionsschritten): Es spielte gar keine Vorschau, sondern der ECHTE Alarm 1/2 löste erneut aus. `uiTransition()` hob die Tages-Sperre (`lastA1Day`/`lastA2Day`) seit 20v22 beim Verlassen von "Alarm 1/2 einstellen" bedingungslos auf – auch wenn die Seite nur angeschaut und die Weckzeit gar nicht verändert wurde. Lag die gesetzte Weckzeit bereits in der Vergangenheit innerhalb des Nachholfensters (`ALARM_CATCHUP_MIN`), stufte `alarmDue()` den Alarm nach dem bloßen Seitenbesuch als erneut fällig ein – reproduzierbar sowohl über den 20s-Auto-Rücksprung auf die Uhrzeit-Seite als auch beim direkten Weiterblättern zur Sound-Seite. Fix: neue Flags `alarm1TimeEdited`/`alarm2TimeEdited`, gesetzt nur in `onAlarm1()`/`onAlarm2()` bei tatsächlichem T3-/T4-Tastendruck (Stunde/Minute ändern); `uiTransition()` hebt die Tages-Sperre beim Seitenverlassen jetzt nur noch auf, wenn eines dieser Flags gesetzt ist. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v27
+## Version 20v28
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v28 | Hardware/Firmware | Taster S1/S2 auf der Platine vertauscht (Schaltplan-Update Hardware 2v0): S1 (Alarm aus / Kuckuck einmalig) liegt jetzt auf GPIO33, S2 (Zugschalter Licht + Mühlrad) auf GPIO32. In der Firmware ist nur die Pin-Zuordnung in `SysConf_20v28.h` (`S1`/`S2`-Konstanten) angepasst – die Event-/State-Logik (`isrS1()`/`isrS2()`, `EVT_S1`/`EVT_S2`, inputTask) arbeitet ausschließlich mit den symbolischen Konstanten und ist unverändert. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v28

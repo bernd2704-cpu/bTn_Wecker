@@ -158,8 +158,8 @@ const uint8_t DFPLAYER_BUSY = 34;                                              /
 #define EVT_T2  1                                                              // Touch T2 – GPIO2
 #define EVT_T3  2                                                              // Touch T3 – GPIO15
 #define EVT_T4  3                                                              // Touch T4 – GPIO13
-#define EVT_S1  4                                                              // Taster S1 – GPIO32
-#define EVT_S2  5                                                              // Taster S2 – GPIO33
+#define EVT_S1  4                                                              // Taster S1 – GPIO33 (20v28)
+#define EVT_S2  5                                                              // Taster S2 – GPIO32 (20v28)
 #define EVT_S3  6                                                              // Taster S3 – GPIO0
 
 // ── Setup-Timeouts (ms) ──────────────────────────────────────
@@ -220,8 +220,8 @@ const bool ReadWrite = false;                                                  /
 const bool ReadOnly  = true;                                                   // Preferences: nur Lesen
 
 // ── Taster-Pins ──────────────────────────────────────────────
-const uint8_t S1 = 32;                                                         // GPIO32 – Alarm aus / Kuckuck einmalig
-const uint8_t S2 = 33;                                                         // GPIO33 – Zugschalter Licht + Mühlrad
+const uint8_t S1 = 33;                                                         // 20v28: GPIO33 (vormals GPIO32) – Alarm aus / Kuckuck einmalig
+const uint8_t S2 = 32;                                                         // 20v28: GPIO32 (vormals GPIO33) – Zugschalter Licht + Mühlrad
 const uint8_t S3 = 0;                                                          // GPIO0  – Info-Seite ein/aus
 
 // ── Ausgangs-Pins ────────────────────────────────────────────

@@ -4139,6 +4139,16 @@
 		)
 		(uuid "2e2071ab-3740-423b-b044-a9d5ee5c9a5f")
 	)
+	(text "ge"
+		(exclude_from_sim no)
+		(at 46.736 87.63 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "3729a3bf-143f-41a0-a1e6-91b718a0ef00")
+	)
 	(text "Motor Modul"
 		(exclude_from_sim no)
 		(at 177.8 101.6 0)
@@ -4153,7 +4163,7 @@
 	)
 	(text "Player Modul"
 		(exclude_from_sim no)
-		(at 91.44 23.622 0)
+		(at 52.07 19.304 0)
 		(effects
 			(font
 				(face "KiCad Font")
@@ -4185,6 +4195,26 @@
 		)
 		(uuid "a46077cd-8823-4580-8025-95a4231cba2b")
 	)
+	(text "Treppentaster"
+		(exclude_from_sim no)
+		(at 178.054 103.886 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+		)
+		(uuid "a995493b-17c0-4c58-a968-1bbf6f4dba84")
+	)
+	(text "VISATON"
+		(exclude_from_sim no)
+		(at 41.402 90.678 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "b5729b64-e792-404a-841f-13d94fce0036")
+	)
 	(text "Touch Modul"
 		(exclude_from_sim no)
 		(at 118.11 184.15 0)
@@ -4197,26 +4227,25 @@
 		)
 		(uuid "ba99fd97-cfb1-4b1b-aba7-724fa22e01e7")
 	)
-	(text_box ""
+	(text "gn"
 		(exclude_from_sim no)
-		(at 80.01 181.61 0)
-		(size 49.53 12.7)
-		(margins 1.75 1.75 1.75 1.75)
-		(stroke
-			(width 0.5)
-			(type default)
-		)
-		(fill
-			(type color)
-			(color 255 246 180 1)
-		)
+		(at 46.736 82.55 0)
 		(effects
 			(font
-				(face "KiCad Font")
-				(size 2 2)
+				(size 1.27 1.27)
 			)
 		)
-		(uuid "341ed0bb-7954-49cf-8ed8-a6f40ffb947c")
+		(uuid "cf6b0e94-37ce-49a5-9be3-1dcd7ceaba3e")
+	)
+	(text "Zugschalter"
+		(exclude_from_sim no)
+		(at 161.29 103.632 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+		)
+		(uuid "ebd28380-d41a-43eb-8f00-05e614a35586")
 	)
 	(text_box "Analog Clock"
 		(exclude_from_sim no)
@@ -4259,27 +4288,6 @@
 			)
 		)
 		(uuid "aa492d1d-b383-4e41-90c6-66a82200300c")
-	)
-	(text_box ""
-		(exclude_from_sim no)
-		(at 50.8 20.32 0)
-		(size 52.07 72.39)
-		(margins 1.75 1.75 1.75 1.75)
-		(stroke
-			(width 0.5)
-			(type default)
-		)
-		(fill
-			(type color)
-			(color 255 246 180 1)
-		)
-		(effects
-			(font
-				(face "KiCad Font")
-				(size 2 2)
-			)
-		)
-		(uuid "d44c0aab-d808-4738-9430-ba8c9fda9968")
 	)
 	(text_box "Cuckoo Modul"
 		(exclude_from_sim no)
@@ -5059,7 +5067,7 @@
 	)
 	(wire
 		(pts
-			(xy 53.34 86.36) (xy 48.26 86.36)
+			(xy 53.34 86.36) (xy 44.45 86.36)
 		)
 		(stroke
 			(width 0)
@@ -5079,7 +5087,7 @@
 	)
 	(wire
 		(pts
-			(xy 86.36 53.34) (xy 86.36 69.85)
+			(xy 86.36 54.61) (xy 86.36 69.85)
 		)
 		(stroke
 			(width 0)
@@ -5479,7 +5487,7 @@
 	)
 	(wire
 		(pts
-			(xy 53.34 83.82) (xy 48.26 83.82)
+			(xy 53.34 83.82) (xy 44.45 83.82)
 		)
 		(stroke
 			(width 0)
@@ -5539,7 +5547,7 @@
 	)
 	(wire
 		(pts
-			(xy 143.51 97.79) (xy 143.51 53.34)
+			(xy 143.51 97.79) (xy 143.51 54.61)
 		)
 		(stroke
 			(width 0)
@@ -5549,7 +5557,7 @@
 	)
 	(wire
 		(pts
-			(xy 143.51 53.34) (xy 86.36 53.34)
+			(xy 143.51 54.61) (xy 86.36 54.61)
 		)
 		(stroke
 			(width 0)
@@ -6279,6 +6287,26 @@
 		(dnp no)
 		(polyline
 			(pts
+				(xy 50.8 16.51) (xy 233.68 16.51) (xy 233.68 52.07) (xy 102.87 52.07) (xy 102.87 92.71) (xy 50.8 92.71)
+			)
+			(stroke
+				(width 0)
+				(type dash)
+			)
+			(fill
+				(type color)
+				(color 180 255 143 0.1019607843)
+			)
+			(uuid "0a47d470-2ef1-4aa0-8821-bccfff33702a")
+		)
+	)
+	(rule_area
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(polyline
+			(pts
 				(xy 187.96 99.06) (xy 187.96 118.11) (xy 276.86 118.11) (xy 276.86 143.51) (xy 168.91 143.51) (xy 168.91 99.06)
 			)
 			(stroke
@@ -6286,14 +6314,35 @@
 				(type dash)
 			)
 			(fill
-				(type none)
+				(type color)
+				(color 180 255 143 0.1019607843)
 			)
 			(uuid "2e0b2663-1813-4e31-9751-ee03d9d88d8a")
 		)
 	)
+	(rule_area
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(polyline
+			(pts
+				(xy 80.01 181.61) (xy 129.54 181.61) (xy 129.54 194.31) (xy 80.01 194.31)
+			)
+			(stroke
+				(width 0)
+				(type dash)
+			)
+			(fill
+				(type color)
+				(color 85 255 0 0.1019607843)
+			)
+			(uuid "bd120fcd-d6ff-425d-9360-110becdc51ec")
+		)
+	)
 	(symbol
 		(lib_id "Device:Speaker")
-		(at 43.18 86.36 180)
+		(at 39.37 86.36 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -6303,7 +6352,7 @@
 		(dnp no)
 		(uuid "0b63d93a-c3d8-46eb-9023-1347832ec7ac")
 		(property "Reference" "LS1"
-			(at 43.434 75.692 0)
+			(at 39.624 75.692 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6313,8 +6362,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "Speaker"
-			(at 47.244 78.232 0)
+		(property "Value" "FRWS 4 ND"
+			(at 43.434 78.232 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6325,7 +6374,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 43.18 81.28 0)
+			(at 39.37 81.28 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6336,7 +6385,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 43.434 85.09 0)
+			(at 39.624 85.09 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6347,7 +6396,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 43.18 86.36 0)
+			(at 39.37 86.36 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
