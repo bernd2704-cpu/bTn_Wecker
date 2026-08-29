@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_20v25.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 20v25
-// Datei-Version    : 20v25
+// SysConf_20v28.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 20v28
+// Datei-Version    : 20v28
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34)
@@ -119,7 +119,7 @@
 //        von displayMutex mit größerem Timeout (300 ms) nach.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v27"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "20v28"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
