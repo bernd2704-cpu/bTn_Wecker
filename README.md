@@ -47,10 +47,10 @@ lokal weiterhin vorhanden, im Repository nicht enthalten.
 | SSD1306 OLED      | 128×64 px, I2C (0x3C, SDA=21, SCL=22) |
 | DFPlayer Mini     | MP3-Player, Serial2 (RX=16, TX=17)    |
 | Touch T0–T4       | GPIO4, GPIO2, GPIO15, GPIO13          |
-| Taster S1–S3      | GPIO32, GPIO33, GPIO0                 |
-| Ausgänge E1–E3    | GPIO25 (Kuckuck)                      |
-|                   | GPIO26 (Mühlrad)                      |
-|                   | GPIO27 (Licht)                        |
+| Taster S1–S3      | GPIO33, GPIO32, GPIO0                 |
+| Ausgänge E1–E3    | GPIO27 (Kuckuck)                      |
+|                   | GPIO25 (Mühlrad)                      |
+|                   | GPIO26 (Licht)                        |
 
 ---
 

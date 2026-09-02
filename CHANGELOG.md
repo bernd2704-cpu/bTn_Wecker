@@ -546,4 +546,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v28 | Hardware/Firmware | Taster S1/S2 auf der Platine vertauscht (Schaltplan-Update Hardware 2v0): S1 (Alarm aus / Kuckuck einmalig) liegt jetzt auf GPIO33, S2 (Zugschalter Licht + Mühlrad) auf GPIO32. In der Firmware ist nur die Pin-Zuordnung in `SysConf_20v28.h` (`S1`/`S2`-Konstanten) angepasst – die Event-/State-Logik (`isrS1()`/`isrS2()`, `EVT_S1`/`EVT_S2`, inputTask) arbeitet ausschließlich mit den symbolischen Konstanten und ist unverändert. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v28
+## Version 20v29
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v29 | Hardware/Firmware | Ausgangs-GPIOs E1/E2/E3 auf der Platine umbelegt (Schaltplan-Update Hardware 2v0): Kuckuck (E1) GPIO25→**GPIO27**, DC-Motor/Mühlrad (E2) GPIO26→**GPIO25**, LED-Streifen/Licht (E3) GPIO27→**GPIO26**. In der Firmware ist nur der Zahlenwert der `E1`/`E2`/`E3`-Konstanten in `SysConf_20v29.h` geändert – die gesamte Ansteuerlogik (`digitalWrite(E1/E3, …)`, `ledcAttach(E2, …)`/`ledcWrite(E2, …)`, `motorStart()`/`motorStop()`, `runCuckooMachine()`, S2-Zugschalter, `/motor`-Handler) arbeitet ausschließlich mit den symbolischen Konstanten und ist unverändert. Motor-PWM-Kanal wandert damit von GPIO26 auf GPIO25 (LEDC-fähig, unkritisch). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v29

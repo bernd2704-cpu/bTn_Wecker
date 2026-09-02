@@ -3141,8 +3141,8 @@
 			(on_board yes)
 			(in_pos_files yes)
 			(duplicate_pin_numbers_are_jumpers no)
-			(property "Reference" "U"
-				(at -3.81 3.175 0)
+			(property "Reference" "U4"
+				(at 0 6.35 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(effects
@@ -3151,15 +3151,14 @@
 					)
 				)
 			)
-			(property "Value" "AMS1117-1.5"
-				(at 0 3.175 0)
+			(property "Value" "MCP1702-1502TO"
+				(at 0 3.81 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(justify left)
 				)
 			)
 			(property "Footprint" "Package_TO_SOT_SMD:SOT-223-3_TabPin2"
@@ -3184,11 +3183,10 @@
 					)
 				)
 			)
-			(property "Description" "1A Low Dropout regulator, positive, 1.5V fixed output, SOT-223"
+			(property "Description" ""
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
-				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -3249,10 +3247,10 @@
 						)
 					)
 				)
-				(pin power_out line
-					(at 7.62 0 180)
+				(pin power_in line
+					(at -7.62 0 0)
 					(length 2.54)
-					(name "VO"
+					(name "VI"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3267,10 +3265,10 @@
 						)
 					)
 				)
-				(pin power_in line
-					(at -7.62 0 0)
+				(pin power_out line
+					(at 7.62 0 180)
 					(length 2.54)
-					(name "VI"
+					(name "VO"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -4183,6 +4181,17 @@
 		)
 		(uuid "65d563a8-f6fb-4938-b0a5-d80199279fcb")
 	)
+	(text "ALT:         NEU:\n27 LED       27 Cockoo\n26 Motor     26 LED\n25 Cuckoo    25 Motor"
+		(exclude_from_sim no)
+		(at 158.75 77.724 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left)
+		)
+		(uuid "893704a6-4ac5-45ea-9d5b-f35db7c7e98b")
+	)
 	(text "Motor Modul"
 		(exclude_from_sim no)
 		(at 265.43 120.65 0)
@@ -4236,6 +4245,16 @@
 			)
 		)
 		(uuid "cf6b0e94-37ce-49a5-9be3-1dcd7ceaba3e")
+	)
+	(text "Tantal"
+		(exclude_from_sim no)
+		(at 230.124 32.004 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "d2cf6189-8223-4263-9cc3-e3fb9fc03473")
 	)
 	(text "Zugschalter"
 		(exclude_from_sim no)
@@ -4347,6 +4366,12 @@
 		(uuid "3c565ad1-4fbe-4bcf-bb8e-cf3123044d71")
 	)
 	(junction
+		(at 205.74 82.55)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "47f1892e-75fd-424e-a9f6-9077031072af")
+	)
+	(junction
 		(at 198.12 161.29)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -4371,22 +4396,16 @@
 		(uuid "64d03283-bfc3-47a9-8d30-961045ed405b")
 	)
 	(junction
-		(at 205.74 87.63)
+		(at 198.12 105.41)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "73a9ef3b-b69d-49a1-84b7-d45c20791414")
+		(uuid "706ef6ed-79f0-4868-b7d0-d9f1cd4f1251")
 	)
 	(junction
 		(at 224.79 50.8)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "801742b7-3a5e-4172-8cab-c4ed5f591828")
-	)
-	(junction
-		(at 198.12 105.41)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "86eb51c3-ec75-4046-b0b4-ad2802738f69")
 	)
 	(junction
 		(at 200.66 50.8)
@@ -4576,16 +4595,6 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 50.8) (xy 213.36 54.61)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "0141640d-8eb4-445e-b58b-6541625d9846")
-	)
-	(wire
-		(pts
 			(xy 95.25 72.39) (xy 107.95 72.39)
 		)
 		(stroke
@@ -4748,6 +4757,16 @@
 	)
 	(wire
 		(pts
+			(xy 140.97 87.63) (xy 190.5 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2210dd6c-9b21-4e37-a499-427b3579bbdf")
+	)
+	(wire
+		(pts
 			(xy 200.66 25.4) (xy 205.74 25.4)
 		)
 		(stroke
@@ -4838,16 +4857,6 @@
 			(type default)
 		)
 		(uuid "2fced8f7-f2f2-4332-a98b-6cb5a11b56c0")
-	)
-	(wire
-		(pts
-			(xy 140.97 85.09) (xy 190.5 85.09)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "30043793-f62a-470e-9950-1207004aef34")
 	)
 	(wire
 		(pts
@@ -5107,16 +5116,6 @@
 	)
 	(wire
 		(pts
-			(xy 205.74 87.63) (xy 205.74 74.93)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "674608ca-0b9b-4a43-850e-a9a80cba99f7")
-	)
-	(wire
-		(pts
 			(xy 105.41 69.85) (xy 107.95 69.85)
 		)
 		(stroke
@@ -5167,7 +5166,7 @@
 	)
 	(wire
 		(pts
-			(xy 205.74 88.9) (xy 205.74 87.63)
+			(xy 205.74 74.93) (xy 205.74 82.55)
 		)
 		(stroke
 			(width 0)
@@ -5195,16 +5194,6 @@
 			(color 0 0 0 1)
 		)
 		(uuid "6ffadd8e-cabd-459f-9a56-381c6f469226")
-	)
-	(wire
-		(pts
-			(xy 190.5 85.09) (xy 190.5 151.13)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7122b686-2f36-4da0-bb22-a5ab96cfe214")
 	)
 	(wire
 		(pts
@@ -5413,6 +5402,16 @@
 	)
 	(wire
 		(pts
+			(xy 140.97 82.55) (xy 205.74 82.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "90a34de4-ca17-401f-92ab-30519eb81cc0")
+	)
+	(wire
+		(pts
 			(xy 81.28 105.41) (xy 81.28 95.25)
 		)
 		(stroke
@@ -5497,6 +5496,16 @@
 	)
 	(wire
 		(pts
+			(xy 198.12 85.09) (xy 198.12 105.41)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9d2226cb-a253-4219-9085-9010a8e26a2e")
+	)
+	(wire
+		(pts
 			(xy 153.67 114.3) (xy 156.21 114.3)
 		)
 		(stroke
@@ -5534,6 +5543,16 @@
 			(type default)
 		)
 		(uuid "a6a79605-3fa4-4f80-a2e1-bed325312593")
+	)
+	(wire
+		(pts
+			(xy 190.5 87.63) (xy 190.5 151.13)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a7900465-7960-44b1-8caa-8f0e7f5a7687")
 	)
 	(wire
 		(pts
@@ -5743,16 +5762,6 @@
 	)
 	(wire
 		(pts
-			(xy 140.97 87.63) (xy 205.74 87.63)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c51b714c-1230-41a8-b3fc-ad8086266287")
-	)
-	(wire
-		(pts
 			(xy 241.3 36.83) (xy 241.3 50.8)
 		)
 		(stroke
@@ -5886,16 +5895,6 @@
 	)
 	(wire
 		(pts
-			(xy 198.12 82.55) (xy 198.12 105.41)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d8132bf5-f324-48ff-8227-1b1a7f631887")
-	)
-	(wire
-		(pts
 			(xy 213.36 62.23) (xy 213.36 92.71)
 		)
 		(stroke
@@ -5907,6 +5906,16 @@
 	)
 	(wire
 		(pts
+			(xy 205.74 82.55) (xy 205.74 88.9)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "db92c14f-a13c-4f6e-a16e-c3b082e68275")
+	)
+	(wire
+		(pts
 			(xy 213.36 92.71) (xy 213.36 124.46)
 		)
 		(stroke
@@ -5914,16 +5923,6 @@
 			(type default)
 		)
 		(uuid "dcdf2f90-8051-4dfc-a5fc-082ca059912b")
-	)
-	(wire
-		(pts
-			(xy 140.97 82.55) (xy 198.12 82.55)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "df20d7be-c477-4689-90e6-e011f8f6ae67")
 	)
 	(wire
 		(pts
@@ -6037,6 +6036,16 @@
 			(color 255 0 0 1)
 		)
 		(uuid "ec78ab2c-280d-4755-bed2-beb735c6d084")
+	)
+	(wire
+		(pts
+			(xy 140.97 85.09) (xy 198.12 85.09)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ed2f65d1-7287-4738-9950-6eda6a5a765d")
 	)
 	(wire
 		(pts
@@ -6535,7 +6544,7 @@
 				)
 			)
 		)
-		(property "Value" "MCP1700T-1502E/MB"
+		(property "Value" "MCP1702-1502TO"
 			(at 213.36 21.59 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7860,6 +7869,86 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C_Polarized_Small")
+		(at 224.79 35.56 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "62bde620-02cb-4ddd-8681-c704f8d2d456")
+		(property "Reference" "C6"
+			(at 227.33 34.29 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10µF"
+			(at 227.33 36.83 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 224.79 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 224.79 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 224.79 35.56 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a535f66a-7669-447f-a6d3-dbccba4c39af")
+		)
+		(pin "2"
+			(uuid "bdcd1d62-4772-4b34-8536-788351cfcfa9")
+		)
+		(instances
+			(project "Wecker_2v0"
+				(path "/ee0c87d8-bcc2-41db-b2ea-52ca553fb41a"
+					(reference "C6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C_Small")
 		(at 109.22 119.38 0)
 		(unit 1)
@@ -8044,7 +8133,7 @@
 			)
 		)
 		(property "Value" "22nF"
-			(at 203.2 36.8363 0)
+			(at 203.2 36.83 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10243,86 +10332,6 @@
 			(project "Wecker_2v0"
 				(path "/ee0c87d8-bcc2-41db-b2ea-52ca553fb41a"
 					(reference "C8")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Small")
-		(at 224.79 35.56 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "cade59e0-ad99-4d8e-b1a5-2ef8183c7ebf")
-		(property "Reference" "C6"
-			(at 227.33 34.29 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "22nF"
-			(at 227.33 36.8363 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" ""
-			(at 224.79 35.56 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 224.79 35.56 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 224.79 35.56 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "8462e909-e5ff-48bd-ad0f-aaabe094f5a7")
-		)
-		(pin "2"
-			(uuid "07030345-d885-4f67-88c5-3f49a3e592ab")
-		)
-		(instances
-			(project "Wecker_2v0"
-				(path "/ee0c87d8-bcc2-41db-b2ea-52ca553fb41a"
-					(reference "C6")
 					(unit 1)
 				)
 			)

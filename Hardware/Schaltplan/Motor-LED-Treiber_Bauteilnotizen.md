@@ -21,7 +21,7 @@ und [LED-Treiber.md](LED-Treiber.md).
 
 ---
 
-## Kanal 1: LED-Streifen – GPIO27 (E3, Licht)
+## Kanal 1: LED-Streifen – GPIO26 (E3, Licht)
 - Versorgung: 5V, Vf = 2,8V, If = 48mA
 - Vorwiderstand: 47Ω / 0,25W in Serie (High-Side, zwischen 5V und LED+)
 - Spannungsaufteilung: 2,2V am Widerstand, 2,8V an LED
@@ -30,7 +30,7 @@ und [LED-Treiber.md](LED-Treiber.md).
 
 ---
 
-## Kanal 2: DC-Motor – GPIO26 (E2, Wasserrad)
+## Kanal 2: DC-Motor – GPIO25 (E2, Wasserrad)
 - Versorgung: 5V über LDO MCP1700T-3302E/TO auf 3,3V geregelt, Vnenn = 3V, Istall = 200mA
 - Vorwiderstand: keiner (Strom ist lastabhängig → PWM statt Widerstand)
 - Freilaufdiode: 1N4448, Kathode zu 3,3V-Rail, Anode zu Drain (schnelle Diode, <4ns)
@@ -38,7 +38,7 @@ und [LED-Treiber.md](LED-Treiber.md).
 
 ### PWM
 ```cpp
-#define E2  26
+#define E2  25
 ledcAttach(E2, 20000, 8);   // 20kHz, 8-Bit (über Hörschwelle → kein Surren)
 ledcWrite(E2, 153);          // 60% Duty → ~2V Mittelwert (aus geregelten 3,3V)
 ```
@@ -61,7 +61,8 @@ Begrenzung nutzbar, keine gesonderte Kickstart-Deckelung mehr nötig.
 ---
 
 ## Hinweise zur Integration
-- GPIOs E2 (26) und E3 (27) sind in SysConf_*.h definiert (siehe `Software/Firmware_aktuell/`)
+- GPIOs E2 (25) und E3 (26) sind in SysConf_*.h definiert (siehe `Software/Firmware_aktuell/`)
+  (Belegung seit Firmware 20v29 / Schaltplan Hardware 2v0; vorher E2=26, E3=27)
 - Stack-Größen und Task-Zuordnung gemäß bestehender SysConf-Konventionen
 - Kein vTaskDelay() unter gehaltenem Mutex
 - PWM-Initialisierung in setup() vor Task-Start

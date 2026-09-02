@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_20v28.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 20v28
-// Datei-Version    : 20v28
+// SysConf_20v29.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 20v29
+// Datei-Version    : 20v29
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34)
@@ -117,9 +117,23 @@
 //        "aus", DFPlayer spielte aber unbemerkt weiter. Neues Flag
 //        pendingPlayerStopRetry: inputTask holt den Stop danach außerhalb
 //        von displayMutex mit größerem Timeout (300 ms) nach.
+// 20v26: Bugfix Sound-Vorschau – checkboxSound() sendet player.stop() im
+//        "aus"-Zweig nur noch bei dfPlayerBusy() (BUSY-Pin), nicht mehr blind.
+// 20v27: Bugfix – uiTransition() hebt die Alarm-Tages-Sperre beim Verlassen
+//        der Alarm-Seite nur noch auf, wenn die Weckzeit tatsächlich per
+//        T3/T4 verändert wurde (neue Flags alarm1TimeEdited/alarm2TimeEdited).
+// 20v28: Hardware-Änderung – Taster S1/S2 auf der Platine vertauscht: S1 auf
+//        GPIO33, S2 auf GPIO32. Firmware: nur S1/S2-Konstanten angepasst.
+// 20v29: Hardware-Änderung Ausgänge – GPIO-Belegung E1/E2/E3 getauscht
+//        (Schaltplan-Update Hardware 2v0): Kuckuck (E1) GPIO25→GPIO27,
+//        DC-Motor (E2) GPIO26→GPIO25, LED-Streifen (E3) GPIO27→GPIO26.
+//        Firmware: nur die Pin-Werte der E1/E2/E3-Konstanten geändert – die
+//        Ansteuerlogik (digitalWrite/ledcAttach/ledcWrite, motorStart/
+//        motorStop, runCuckooMachine) nutzt ausschließlich die symbolischen
+//        Konstanten und ist unverändert.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v28"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "20v29"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -225,11 +239,11 @@ const uint8_t S2 = 32;                                                         /
 const uint8_t S3 = 0;                                                          // GPIO0  – Info-Seite ein/aus
 
 // ── Ausgangs-Pins ────────────────────────────────────────────
-const uint8_t E1 = 25;                                                         // GPIO25 – Kuckuck (digital, MOSFET)
-const uint8_t E2 = 26;                                                         // GPIO26 – Mühlrad / DC-Motor 3 V (PWM via LEDC, MOSFET + Freilaufdiode 1N4448, Rail über MCP1700T-3302E/TO auf 3,3V geregelt)
-const uint8_t E3 = 27;                                                         // GPIO27 – LED-Streifen Licht (digital, MOSFET + 47 Ω Vorwiderstand High-Side)
+const uint8_t E1 = 27;                                                         // 20v29: GPIO27 (vormals GPIO25) – Kuckuck (digital, MOSFET)
+const uint8_t E2 = 25;                                                         // 20v29: GPIO25 (vormals GPIO26) – Mühlrad / DC-Motor 3 V (PWM via LEDC, MOSFET + Freilaufdiode 1N4448, Rail über MCP1700T-3302E/TO auf 3,3V geregelt)
+const uint8_t E3 = 26;                                                         // 20v29: GPIO26 (vormals GPIO27) – LED-Streifen Licht (digital, MOSFET + 47 Ω Vorwiderstand High-Side)
 
-// ── Motor-PWM (E2 / GPIO26) ───────────────────────────────────
+// ── Motor-PWM (E2 / GPIO25) ───────────────────────────────────
 // 12v00: DC-Motor 3 V an 5 V-Versorgung → PWM mit 60 % Duty ≙ ~3 V Mittelwert.
 // 20 kHz liegt über der Hörschwelle → kein Surren; 8-Bit-Auflösung reicht.
 // 12v03: MOTOR_PWM_DUTY ist nur noch der Default-Sollwert beim ersten Boot –

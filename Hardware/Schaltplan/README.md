@@ -2,9 +2,9 @@
 
 | Datei                                 | Inhalt                                                   |
 |---------------------------------------|----------------------------------------------------------|
-| `Kuckuck-Treiber.md`                  | Ansteuerung Kuckuck (E1, GPIO25)                         |
-| `LED-Treiber.md`                      | Ansteuerung LED-Streifen (E3, GPIO27)                    |
-| `Motor-Treiber.md`                    | Ansteuerung DC-Motor (E2, GPIO26)                        |
+| `Kuckuck-Treiber.md`                  | Ansteuerung Kuckuck (E1, GPIO27)                         |
+| `LED-Treiber.md`                      | Ansteuerung LED-Streifen (E3, GPIO26)                    |
+| `Motor-Treiber.md`                    | Ansteuerung DC-Motor (E2, GPIO25)                        |
 | `Motor-LED-Treiber_Bauteilnotizen.md` | Bauteilauswahl/Dimensionierung zu Motor- und LED-Treiber |
 | `DFPlayer-BUSY.md`                    | BUSY-Signal DFPlayer Mini → GPIO34, Pegelprüfung         |
 
