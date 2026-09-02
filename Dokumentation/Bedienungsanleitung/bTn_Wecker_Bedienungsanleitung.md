@@ -1,6 +1,6 @@
 # bTn Wecker – Bedienungsanleitung
 
-*Firmware 20v21 · ESP32 / FreeRTOS · Hardware 2v0*
+*Firmware 20v29 · ESP32 / FreeRTOS · Hardware 2v0*
 
 ## 1. Übersicht
 
@@ -49,16 +49,16 @@ T0 wechselt die Seiten 0–6 zyklisch. S3 öffnet jederzeit die Info-Seite (Seit
 
 Der Wecker löst zur eingestellten Zeit aus, wenn der Alarm aktiviert ist (Checkbox auf Seite 1 oder 2). Die MP3-Datei wird aus Ordner 01 der SD-Karte abgespielt.
 
-| Taste / Element   | Funktion                                                                                                                                                                                    |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vorrang           | Alarm 1 hat Vorrang, wenn beide Alarme auf die gleiche Zeit eingestellt sind                                                                                                                |
-| Stoppen           | S1 drücken – stoppt den Sound und alle Ausgänge (E2, E3)                                                                                                                                    |
-| Licht bei Alarm   | E3 (Licht) wird beim Alarm-Start eingeschaltet, wenn Checkbox auf Seite 5 aktiv                                                                                                             |
-| Mühlrad bei Alarm | E2 (Mühlrad) wird beim Alarm-Start eingeschaltet, wenn Checkbox auf Seite 5 aktiv                                                                                                           |
-| Mindestlautstärke | Ist die eingestellte Lautstärke sehr niedrig, spielt der Alarm trotzdem mit einer festen Mindestlautstärke – die gespeicherte Einstellung selbst bleibt dabei unverändert                   |
-| Wiederholung      | Derselbe Alarm kann am selben Kalendertag nicht erneut auslösen (Tages-Sperre). Wird die Alarmzeit auf der Einstellseite verändert, wird die Sperre für diesen Tag sofort wieder aufgehoben |
-| Nachholfenster    | Verpasst der Wecker den genauen Auslösezeitpunkt (z.B. durch einen kurzen Stromausfall), löst der Alarm innerhalb der folgenden Stunde nachträglich noch aus, statt ersatzlos zu entfallen  |
-| Display-Wake      | OLED wird beim Alarm-Start automatisch eingeschaltet, falls es zuvor nach 5 Minuten Ruhezeit abgeschaltet wurde                                                                             |
+| Taste / Element   | Funktion                                                                                                                                                                                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vorrang           | Alarm 1 hat Vorrang, wenn beide Alarme auf die gleiche Zeit eingestellt sind                                                                                                                                                                                                                            |
+| Stoppen           | S1 drücken – stoppt den Sound und alle Ausgänge (E2, E3)                                                                                                                                                                                                                                                |
+| Licht bei Alarm   | E3 (Licht) wird beim Alarm-Start eingeschaltet, wenn Checkbox auf Seite 5 aktiv                                                                                                                                                                                                                         |
+| Mühlrad bei Alarm | E2 (Mühlrad) wird beim Alarm-Start eingeschaltet, wenn Checkbox auf Seite 5 aktiv                                                                                                                                                                                                                       |
+| Mindestlautstärke | Ist die eingestellte Lautstärke sehr niedrig, spielt der Alarm trotzdem mit einer festen Mindestlautstärke – die gespeicherte Einstellung selbst bleibt dabei unverändert                                                                                                                               |
+| Wiederholung      | Derselbe Alarm kann am selben Kalendertag nicht erneut auslösen (Tages-Sperre). Nur wenn die Weckzeit auf der Einstellseite tatsächlich mit T3/T4 verändert wurde, wird die Sperre beim Verlassen der Seite für diesen Tag aufgehoben – ein bloßer Seitenbesuch ohne Änderung lässt die Sperre bestehen |
+| Nachholfenster    | Verpasst der Wecker den genauen Auslösezeitpunkt (z.B. durch einen kurzen Stromausfall), löst der Alarm innerhalb der folgenden Stunde nachträglich noch aus, statt ersatzlos zu entfallen                                                                                                              |
+| Display-Wake      | OLED wird beim Alarm-Start automatisch eingeschaltet, falls es zuvor nach 5 Minuten Ruhezeit abgeschaltet wurde                                                                                                                                                                                         |
 
 ### Weckzeit bei Zeitumstellung (02:00–02:59 Uhr)
 
@@ -99,7 +99,7 @@ Die Info-Seite zeigt Systemdaten und bietet Zugang zu Konfigurations- und Reset-
 
 | Zeile                        | Inhalt                                                                        |
 | ---------------------------- | ----------------------------------------------------------------------------- |
-| 1 – Kopfzeile                | Firmware-Kennung (z.B. `bTn_Wecker_20v21`)                                    |
+| 1 – Kopfzeile                | Firmware-Kennung (z.B. `bTn_Wecker_20v29`)                                    |
 | 2 – IP:8080                  | Adresse des Web-Log-Servers – im Browser öffnen für Diagnoseinformationen     |
 | 3 – MP3 *nnn*   RESET *nnnn* | Anzahl gefundener MP3-Dateien  ·  Neustart-Zähler (4-stellig)                 |
 | 4 – Taste +  WiFi Reset      | Hinweis: T3 drücken löscht die WLAN-Zugangsdaten und startet den Konfigurator |
@@ -152,4 +152,4 @@ Info-Seite (S3) öffnen → T4 drücken. Alle gespeicherten Einstellungen (Alarm
 
 ---
 
-*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 20v21*
+*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 20v29*

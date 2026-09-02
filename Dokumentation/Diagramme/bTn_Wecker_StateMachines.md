@@ -1,6 +1,11 @@
 # bTn Wecker – State Machines
 
-*Firmware 20v21 · Mermaid-Diagramme (aus `bTn_Wecker_StateMachines.pptx`)*
+*Firmware 20v29 · Mermaid-Diagramme (aus `bTn_Wecker_StateMachines.pptx`)*
+
+> **Pin-Hinweis:** Taster S1=GPIO33, S2=GPIO32 (seit 20v28 getauscht), S3=GPIO0.
+> Ausgänge E1=GPIO27 (Kuckuck), E2=GPIO25 (Mühlrad-Motor), E3=GPIO26 (Licht) – seit
+> 20v29 umbelegt. Beide Tauschaktionen betreffen nur die Pin-Konstanten in
+> `SysConf_*.h`, keine der hier gezeigten State-Machines.
 
 ---
 
@@ -25,6 +30,7 @@ stateDiagram-v2
 **Bedingungen**
 
 - **IDLE → triggerAlarm:** `alarmDue(a1_on, a1_hour, a1_min, hour, min, yday, lastA1Day, isdstNow)` (20v21) – pegel-/tagesbasiert statt Minuten-Flanke: `yday != lastA1Day` (Tages-Sperre, ersetzt die frühere Minuten-Sperre `lastA1Min`) UND Differenz Ist-/Soll-Zeit innerhalb `ALARM_CATCHUP_MIN` (60 min, Nachholfenster für Zeitsprünge/Reboots/Zeitumstellung); Alarm 2 analog.
+- **Tages-Sperre aufheben (20v22/20v27):** `lastA1Day`/`lastA2Day` = `0xFFFF` wird NICHT mehr bei jedem `h+`/`min+`-Tastendruck in `onAlarm1()`/`onAlarm2()` gesetzt, sondern erst in `uiTransition()` beim Verlassen von `UI_ALARM1`/`UI_ALARM2` – und auch dann nur, wenn `alarm1TimeEdited`/`alarm2TimeEdited` gesetzt ist (Weckzeit wurde per T3/T4 tatsächlich verändert). Verhindert (a) vorzeitiges Auslösen auf Zwischenständen beim Durchscrollen einer neuen Weckzeit und (b) erneutes Auslösen, wenn die Alarm-Seite nur angeschaut wird.
 - **DST-Sonderfall (20v21, nur Weckzeiten mit Stunde 02):** `updateDstDayFlags()` erkennt beide Umstellungstage TZ-generisch über `mktime()`/`tm_isdst` (Vergleich Stunde 1 vs. Stunde 4). Frühjahr (`dstSpringForwardToday`): effektive Stunde wird in `alarmDue()` um 1h vorgezogen (`effH = h-1`), da die Wanduhrzeit 02:00–02:59 an diesem Tag nicht existiert. Herbst (`dstFallBackToday`): der erste (CEST-)Durchlauf der doppelten Stunde 02 wird per `isdstNow==1` ignoriert, erst der zweite (CET-)Durchlauf löst aus. Zweck: der reale zeitliche Abstand Weckzeit→Termin bleibt unabhängig von der Zeitumstellung erhalten.
 - **Alarm 1 Vorrang:** Alarm 2 wird nur per `else if` geprüft → Alarm 1 hat Vorrang bei gleicher Zeit.
 - **triggerAlarm() → ALARM_RUNNING:** `drainSerial2Pre()` räumt den Serial2-Puffer über die Bibliothek ab (12v14/12v19), setzt Lautstärke mit Untergrenze `ALARM_MIN_VOL` (10, 20v12 – schützt gegen ein durch klemmendes Touch-Pad auf 0 heruntergezähltes `vol`, ohne die gespeicherte Einstellung zu verändern), dann `playFolder()` + `verifyPlayStarted()` (bis zu `VERIFY_PLAY_RETRIES`=3 Versuche à `VERIFY_PLAY_DELAY_MS`=500 ms). `PLAY_OK` und `PLAY_NO_SOUND` (Modul lebt, Datei startet nicht hörbar – `alarmSilentFallback`) laufen beide in denselben Erfolgspfad: Motor/Licht ein, `wakeDisplay()` (10v03), `alarmState = ALARM_RUNNING`, Tages-Sperre wird über `lockAlarmDayGuard()` erst NACH bestätigtem Start gesetzt.
@@ -125,16 +131,16 @@ stateDiagram-v2
 
 **Seiten-Zuordnung**
 
-| State     | Seite | T2/T3/T4-Funktion                                                                |
-| --------- | ----- | -------------------------------------------------------------------------------- |
-| UI_CLOCK  | 0     | onClock – Vol±                                                                   |
-| UI_ALARM1 | 1     | onAlarm1 – Ein/Aus, h+, min+ (setzt Tages-Sperre bei Zeitänderung zurück, 20v21) |
-| UI_ALARM2 | 2     | onAlarm2 – analog Alarm 1                                                        |
-| UI_SOUND1 | 3     | onSound1 – Vorschau, Datei±                                                      |
-| UI_SOUND2 | 4     | onSound2 – analog Sound 1                                                        |
-| UI_FUNCS  | 5     | onFuncs – Kuckuck/Licht/Mühlrad                                                  |
-| UI_CUCKOO | 6     | onCuckooTime – von/bis                                                           |
-| UI_INFO   | –     | onInfo – WiFi-Konfigurator / Werksreset                                          |
+| State     | Seite | T2/T3/T4-Funktion                                                                                                                          |
+| --------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| UI_CLOCK  | 0     | onClock – Vol±                                                                                                                             |
+| UI_ALARM1 | 1     | onAlarm1 – Ein/Aus, h+, min+ (Tages-Sperre wird nur bei echter Zeitänderung per T3/T4 und erst beim Seitenwechsel aufgehoben, 20v22/20v27) |
+| UI_ALARM2 | 2     | onAlarm2 – analog Alarm 1                                                                                                                  |
+| UI_SOUND1 | 3     | onSound1 – Vorschau, Datei±                                                                                                                |
+| UI_SOUND2 | 4     | onSound2 – analog Sound 1                                                                                                                  |
+| UI_FUNCS  | 5     | onFuncs – Kuckuck/Licht/Mühlrad                                                                                                            |
+| UI_CUCKOO | 6     | onCuckooTime – von/bis                                                                                                                     |
+| UI_INFO   | –     | onInfo – WiFi-Konfigurator / Werksreset                                                                                                    |
 
 **Globale Übergänge**
 
@@ -144,4 +150,4 @@ stateDiagram-v2
 
 ---
 
-*bTn Wecker · State Machines · Firmware 20v21*
+*bTn Wecker · State Machines · Firmware 20v29*
