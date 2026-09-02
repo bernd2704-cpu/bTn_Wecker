@@ -30,7 +30,7 @@ bTn_Wecker_Projekt/
     ├── Bedienungsanleitung/  Kurzanleitung für den Endnutzer
     ├── Technisch/            Funktionsreferenz
     │   └── Review/           Audit-/Review-Notizen, Arbeitsanweisungen
-    └── Diagramme/            State-Machine-Diagramme (PPTX + DOCX)
+    └── Diagramme/            State-Machine-Diagramme (Mermaid, .md = maßgeblich; DOC/ = veraltete PPTX/DOCX-Vorlage)
 ```
 
 **Hinweis:** `Hardware/Stückliste/` enthält Hersteller-Datenblätter und Produktfotos
