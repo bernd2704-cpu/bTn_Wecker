@@ -1,6 +1,11 @@
 # bTn Wecker – State Machines
 
-*Firmware 20v29 · Mermaid-Diagramme (aus `bTn_Wecker_StateMachines.pptx`)*
+*Firmware 20v29 · Mermaid-Diagramme*
+
+> ⚠ **Maßgeblich ist diese Datei.** Die ursprüngliche Vorlage
+> `DOC/bTn_Wecker_StateMachines.pptx` (Stand 2026-04-20) ist seit vielen
+> Firmware-Ständen nicht mehr nachgeführt und nur noch historisch – Änderungen
+> hier NICHT in die pptx zurückspiegeln.
 
 > **Pin-Hinweis:** Taster S1=GPIO33, S2=GPIO32 (seit 20v28 getauscht), S3=GPIO0.
 > Ausgänge E1=GPIO27 (Kuckuck), E2=GPIO25 (Mühlrad-Motor), E3=GPIO26 (Licht) – seit
