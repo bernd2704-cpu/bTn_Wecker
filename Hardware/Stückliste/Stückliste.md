@@ -17,7 +17,6 @@
 | DFPlayer Mini                  | DFRobot              | DFR0299                        | AZ-Delivery          |     2,10 € |
 | Micro SD-Card 32GB             | Lexar                | LMSESXX032G-B2AEU              | Amazon               |    14,00 € |
 | Lautsprecher                   | Visatone             | FRWS 4 ND Breitband 8 Ohm      | Voelkner             |    16,89 € |
-| LDO Spannungsregler 1,5V       | Microchip            | MCP1702-1502TO                 | reichelt             |     0,99 € |
 
 ## 3. Motor-Treiber
 
@@ -69,7 +68,18 @@ als „–".
 | Elko 100 µF (Modul-Stützkondensator)             | –                    | –                              | –                    |          – |
 | Keramik-Kondensator 100 nF (Entstörung)          | –                    | –                              | –                    |          – |
 
-## 6. DFPlayer-BUSY-Filter
+## 6. Analoguhrwerk-Spannungsregler
+
+Spannungsversorgung für das 1,5V-Analoguhrwerk (Schaltplan U4, KiCad
+`Hardware/Schaltplan/KiCad_Wecker_2v0/`). Das Uhrwerk selbst ist mechanisch
+noch nicht in der Stückliste erfasst.
+
+| Bauteil                                          | Hersteller           | Artikel                        | Lieferant            | Preis      |
+| ------------------------------------------------ | -------------------- | ------------------------------ | -------------------- | ---------: |
+| LDO Spannungsregler 1,5V                         | Microchip            | MCP1702-1502TO                 | reichelt             |     0,99 € |
+| Keramik-Kondensator 4,7 µF (Ausgang, X7R)        | –                    | –                              | –                    |          – |
+
+## 7. DFPlayer-BUSY-Filter
 
 RC-Filter für das DFPlayer-BUSY-Signal (Schaltplan
 `Hardware/Schaltplan/DFPlayer-BUSY.md`, GPIO34, ab Hardware 2v0). Einkaufsdaten
