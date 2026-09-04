@@ -9,7 +9,7 @@ Ausgänge E1=GPIO27 (Kuckuck)/E2=GPIO25 (Motor/Mühlrad)/E3=GPIO26 (LED-Licht)
 
 **Touch-Beschaltung:** je 1kΩ Reihenwiderstand + 4,7nF nach GND (GPIO-seitig), ca. 30cm twisted pair
 
-**Ausgangsschaltung E2/E3:** IRLML6344TRPBF MOSFET, Gate 330Ω, Freilaufdiode 1N4448, PWM 20kHz,
+**Ausgangsschaltung E2/E3:** IRLML6344TRPBF MOSFET, Gate 470Ω, Freilaufdiode 1N4448, PWM 20kHz,
 Motor-Rail über LDO MCP1700T-3302E/TO auf 3,3V geregelt (kein Direktanschluss an 5V mehr) –
 voller PWM-Regelumfang 0..255 ohne Überspannungsrisiko nutzbar.
 DFPlayer Mini GND als Sternpunkt-Topologie.

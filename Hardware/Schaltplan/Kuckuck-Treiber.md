@@ -9,7 +9,7 @@
                                    │
                                    │
                            Drain ──┘
-GPIO ──── [330Ω] ────┬──── Gate             IRLML6344
+GPIO ──── [470Ω] ────┬──── Gate             IRLML6344
                      │     Source ─┐
                    [10kΩ]          │
                      │             │

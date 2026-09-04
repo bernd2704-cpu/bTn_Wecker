@@ -16,7 +16,7 @@ und [LED-Treiber.md](LED-Treiber.md).
 - Bauform: SOT-23 (SMD)
 
 ### Beschaltung (gilt für beide Kanäle)
-- Gate:  330Ω Reihenwiderstand zum GPIO
+- Gate:  470Ω Reihenwiderstand zum GPIO
 - Gate:  10kΩ Pull-Down nach GND (verhindert floating beim Boot/Reset)
 
 ---

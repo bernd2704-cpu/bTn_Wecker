@@ -32,7 +32,7 @@ als „–".
 | ------------------------------------------------ | -------------------- | ------------------------------ | -------------------- | ---------: |
 | LDO Spannungsregler 3,3V                         | Microchip            | MCP1700T-3302E/TO              | –                    |          – |
 | MOSFET IRLML6344 (N-Channel Logic-Level, SOT-23) | –                    | –                              | –                    |          – |
-| Widerstand 330 Ω (Gate-Reihe)                    | –                    | –                              | –                    |          – |
+| Widerstand 470 Ω (Gate-Reihe)                    | –                    | –                              | –                    |          – |
 | Widerstand 10 kΩ (Gate-Pull-Down)                | –                    | –                              | –                    |          – |
 | Widerstand 10 Ω (Snubber, mit 10 nF)             | –                    | –                              | –                    |          – |
 | Elko 100 µF (Rail-Stützkondensator)              | –                    | –                              | –                    |          – |
