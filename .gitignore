@@ -2,7 +2,7 @@
 .claude/
 
 # Hersteller-Datenblätter/Produktfotos – nicht öffentlich verbreiten (Urheberrecht)
-Hardware/Stückliste/
+Hardware/Stückliste/DOC_Bauteile/
 
 # KiCad Sperrdateien/Backup-Verzeichnis
 *.lck
