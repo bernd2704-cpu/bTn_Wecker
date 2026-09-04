@@ -4181,9 +4181,9 @@
 		)
 		(uuid "65d563a8-f6fb-4938-b0a5-d80199279fcb")
 	)
-	(text "ALT:         NEU:\n27 LED       27 Cockoo\n26 Motor     26 LED\n25 Cuckoo    25 Motor"
+	(text "Funktion:\n27 Cuckoo ON/OFF\n26 LED ON/OFF\n25 Motor PWM"
 		(exclude_from_sim no)
-		(at 158.75 77.724 0)
+		(at 188.976 76.2 0)
 		(effects
 			(font
 				(size 1 1)
@@ -7013,7 +7013,7 @@
 		(dnp no)
 		(uuid "3c0157e7-53f6-4936-aa76-8ff6bb4115e6")
 		(property "Reference" "C11"
-			(at 232.41 138.43 0)
+			(at 234.188 138.43 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7024,7 +7024,7 @@
 			)
 		)
 		(property "Value" "22nF"
-			(at 232.41 140.97 0)
+			(at 233.934 140.97 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7371,7 +7371,7 @@
 		(dnp no)
 		(uuid "5aa61800-1d14-48e9-b196-5a126ec79842")
 		(property "Reference" "C9"
-			(at 213.36 138.43 0)
+			(at 212.598 138.43 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7382,7 +7382,7 @@
 			)
 		)
 		(property "Value" "10µF"
-			(at 212.09 140.97 0)
+			(at 211.836 140.97 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9083,7 +9083,7 @@
 				)
 			)
 		)
-		(property "Value" "100"
+		(property "Value" "470"
 			(at 229.87 72.39 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9724,7 +9724,7 @@
 				)
 			)
 		)
-		(property "Value" "100"
+		(property "Value" "470"
 			(at 229.87 148.59 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9959,7 +9959,7 @@
 				)
 			)
 		)
-		(property "Value" "100"
+		(property "Value" "470"
 			(at 228.6 102.87 90)
 			(show_name no)
 			(do_not_autoplace no)
