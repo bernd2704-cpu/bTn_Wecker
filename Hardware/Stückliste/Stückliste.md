@@ -71,8 +71,8 @@ als „–".
 ## 6. Analoguhrwerk-Spannungsregler
 
 Spannungsversorgung für das 1,5V-Analoguhrwerk (Schaltplan U4, KiCad
-`Hardware/Schaltplan/KiCad_Wecker_2v0/`). Das Uhrwerk selbst ist mechanisch
-noch nicht in der Stückliste erfasst.
+`Hardware/Schaltplan/KiCad_Wecker_2v0/`). Das Uhrwerk selbst ist Teil des
+ROKR-Kits und steht bereits unter „1. Mechanik" (Cuckoo Clock).
 
 | Bauteil                                          | Hersteller           | Artikel                        | Lieferant            | Preis      |
 | ------------------------------------------------ | -------------------- | ------------------------------ | -------------------- | ---------: |
