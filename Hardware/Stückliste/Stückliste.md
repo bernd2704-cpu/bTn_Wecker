@@ -40,7 +40,36 @@ als „–".
 | Keramik-Kondensator 10 nF (Snubber, mit 10 Ω)    | –                    | –                              | –                    |          – |
 | Diode 1N4448 (Freilaufdiode, schnell)            | –                    | –                              | –                    |          – |
 
-## 4. DFPlayer-BUSY-Filter
+## 4. LED-Treiber
+
+Bauteile des LED-Treibers (Schaltplan `Hardware/Schaltplan/LED-Treiber.md`,
+Ansteuerung GPIO26/E3, Licht). Einkaufsdaten noch offen –
+Hersteller/Artikel/Lieferant/Preis als „–".
+
+| Bauteil                                          | Hersteller           | Artikel                        | Lieferant            | Preis      |
+| ------------------------------------------------ | -------------------- | ------------------------------ | -------------------- | ---------: |
+| MOSFET IRLML6344 (N-Channel Logic-Level, SOT-23) | –                    | –                              | –                    |          – |
+| Widerstand 470 Ω (Gate-Reihe)                    | –                    | –                              | –                    |          – |
+| Widerstand 10 kΩ (Gate-Pull-Down)                | –                    | –                              | –                    |          – |
+| Widerstand 47 Ω / 0,25W (LED-Vorwiderstand)      | –                    | –                              | –                    |          – |
+| LED-Streifen (2,8V / 48mA)                       | –                    | –                              | –                    |          – |
+
+## 5. Kuckuck-Treiber
+
+Bauteile des Kuckuck-Treibers (Schaltplan `Hardware/Schaltplan/Kuckuck-Treiber.md`,
+Ansteuerung GPIO27/E1). Das Kuckuck-Modul selbst steht unter „1. Mechanik"
+(Cuckoo Clock). Einkaufsdaten noch offen – Hersteller/Artikel/Lieferant/Preis
+als „–".
+
+| Bauteil                                          | Hersteller           | Artikel                        | Lieferant            | Preis      |
+| ------------------------------------------------ | -------------------- | ------------------------------ | -------------------- | ---------: |
+| MOSFET IRLML6344 (N-Channel Logic-Level, SOT-23) | –                    | –                              | –                    |          – |
+| Widerstand 470 Ω (Gate-Reihe)                    | –                    | –                              | –                    |          – |
+| Widerstand 10 kΩ (Gate-Pull-Down)                | –                    | –                              | –                    |          – |
+| Elko 100 µF (Modul-Stützkondensator)             | –                    | –                              | –                    |          – |
+| Keramik-Kondensator 100 nF (Entstörung)          | –                    | –                              | –                    |          – |
+
+## 6. DFPlayer-BUSY-Filter
 
 RC-Filter für das DFPlayer-BUSY-Signal (Schaltplan
 `Hardware/Schaltplan/DFPlayer-BUSY.md`, GPIO34, ab Hardware 2v0). Einkaufsdaten
