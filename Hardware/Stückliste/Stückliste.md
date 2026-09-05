@@ -21,7 +21,7 @@
 ## 3. Motor-Treiber
 
 Bauteile des Motor-Treibers (Schaltplan `Hardware/Schaltplan/Motor-Treiber.md`,
-Ansteuerung GPIO26/E2 per PWM). Der DC-Motor selbst steht unter „1. Mechanik"
+Ansteuerung GPIO25/E2 per PWM). Der DC-Motor selbst steht unter „1. Mechanik"
 (Getriebemotor 6mm 3V) und liegt an der über MCP1700T-3302E/TO auf 3,3V
 geregelten Rail (Hardware 2v0, ersetzt die bisherige Direktversorgung mit 5V
 ohne Regler). Einkaufsdaten noch offen – Hersteller/Artikel/Lieferant/Preis
