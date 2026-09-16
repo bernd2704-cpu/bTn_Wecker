@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_20v29.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 20v29
-// Datei-Version    : 20v29
+// SysConf_20v30.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 20v30
+// Datei-Version    : 20v30
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34)
@@ -131,9 +131,12 @@
 //        Ansteuerlogik (digitalWrite/ledcAttach/ledcWrite, motorStart/
 //        motorStop, runCuckooMachine) nutzt ausschließlich die symbolischen
 //        Konstanten und ist unverändert.
+// 20v30: Reset-Ursache (esp_reset_reason()) wird beim Boot geloggt; DFPlayer-
+//        Log entrauscht (SERIAL2_LEFTOVER_LOG_THRESHOLD, Retry-Meldung erst
+//        ab 2. Versuch).
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v29"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "20v30"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -225,6 +228,7 @@ const uint32_t VERIFY_PLAY_DELAY_MS =  500;                                    /
 const uint8_t  VERIFY_PLAY_RETRIES  =    3;                                    // 12v06: Start-Check – Versuche (1 initial + 2 Retries), Reset spätestens nach 1500 ms
 const uint8_t  ALARM_MAX_RESTARTS   =    3;                                    // 12v10: max. ESP.restart()-Versuche je Alarm, danach Abbruch statt Endlos-Neustart (10 → 3)
 const uint16_t SERIAL2_DRAIN_MAX_BYTES = 200;                                  // 12v11: Obergrenze für Puffer-Drain-Schleifen – verhindert Endlosschleife bei dauerhaftem UART-Rauschen (floatende RX-Leitung bei getrenntem/defektem DFPlayer)
+const uint8_t  SERIAL2_LEFTOVER_LOG_THRESHOLD = 20;                            // 20v30: checkSerial2Leftover() loggt erst ab dieser Restbyte-Anzahl – wenige Restbytes sind im Normalbetrieb unauffällig, nur ein deutlich gefüllter Puffer deutet auf UART-Desync hin
 const uint32_t SERIAL2_FEEDBACK_GRACE_MS = 100;                                // 13v00: readStateDrained() – Gnadenfrist nach dem letzten empfangenen Frame, bis eine echte DFPlayerFeedBack-Antwort eintrifft (DFRobotDFPlayerMini::readState() gibt bei JEDER anderen Frame-Art, z.B. unaufgeforderter PlayFinished-Meldung, sofort -1 zurück, ohne weiter zu warten)
 const uint32_t WIFI_RECONNECT_MS    = 3000;                                    // WiFi-Reconnect Wiederholrate
 const uint32_t NVR_COMMIT_DELAY_MS  = 2000;                                    // 11v00: Ruhezeit nach letztem Event vor NVR-Commit (Flash-Wear-Schutz)

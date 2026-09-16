@@ -58,9 +58,10 @@
 #include <driver/touch_pad.h>
 #include <freertos/semphr.h>          // FreeRTOS Semaphore / Mutex API
 #include <esp_task_wdt.h>             // ESP32 Hardware Task Watchdog Timer (TWDT)
+#include <esp_system.h>               // esp_reset_reason() – Ursache des letzten Resets
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v29.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_20v30.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -364,6 +365,12 @@ static inline bool timeValid() { return time(nullptr) > 1700000000UL; }
 // (Poll → Restbytes → gedraint auf 0 → nächster Poll dieselbe Anzahl) bei
 // jedem Zyklus erneut als "neue" Änderung gemeldet, nur weil der Puffer
 // dazwischen kurz leer war.
+// 20v30: Log-Schwelle auf SERIAL2_LEFTOVER_LOG_THRESHOLD (20 Bytes) angehoben –
+// wenige Restbytes sind im Normalbetrieb unauffällig (kurzzeitig unvollständig
+// empfangener Frame) und erzeugten bisher bei jeder Wertänderung eine eigene
+// Zeile im Web-Log. Erst ein deutlich gefüllter Puffer deutet auf echten
+// UART-Desync hin und ist eine Zeile wert. serial2LeftoverCount zählt
+// weiterhin jede Restbyte-Abfrage >0, unabhängig von der Log-Schwelle.
 static uint32_t serial2LeftoverCount      = 0;
 static int      serial2LeftoverLastLogged = -1;                                          // -1 = noch nichts gemeldet
 
@@ -371,7 +378,7 @@ static void checkSerial2Leftover(const char* label) {
   int avail = Serial2.available();
   if (avail > 0) {
     serial2LeftoverCount++;
-    if (avail != serial2LeftoverLastLogged) {
+    if (avail > SERIAL2_LEFTOVER_LOG_THRESHOLD && avail != serial2LeftoverLastLogged) {
       serial2LeftoverLastLogged = avail;
       char ts[20];
       snapTimeStr(ts, sizeof(ts));
@@ -552,9 +559,29 @@ static void updateSnapStack() {
 //  Hilfsfunktionen
 // =============================================================
 
+// 20v30: liefert die Ursache des letzten Resets als Klartext (esp_reset_reason(),
+// ESP-IDF), z.B. zur Unterscheidung Brownout/Watchdog/Panic/Software-Neustart
+// vom normalen Power-on. Reine Übersetzungstabelle, kein Nebeneffekt.
+static const char* resetReasonText() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON:   return "Power-on";
+    case ESP_RST_EXT:       return "externer Reset (EN-Pin)";
+    case ESP_RST_SW:        return "Software-Reset (ESP.restart())";
+    case ESP_RST_PANIC:     return "Panic/Exception";
+    case ESP_RST_INT_WDT:   return "Interrupt-Watchdog";
+    case ESP_RST_TASK_WDT:  return "Task-Watchdog";
+    case ESP_RST_WDT:       return "sonstiger Watchdog";
+    case ESP_RST_BROWNOUT:  return "Brownout (Unterspannung)";
+    case ESP_RST_SDIO:      return "SDIO-Reset";
+    case ESP_RST_DEEPSLEEP: return "Aufwachen aus Deep-Sleep";
+    default:                return "unbekannt";
+  }
+}
+
 void bTn_info() {
   Serial.println("\n----------------------------------------");
   Serial.println(PGMInfo);
+  Serial.printf("Letzter Reset: %s\n", resetReasonText());
 }
 
 bool delayFunction(uint32_t lastTime, uint32_t actualDelay) {
@@ -1673,7 +1700,14 @@ static PlayVerifyResult verifyPlayStarted(const char* label, uint8_t fileNo) {
     // Wahrheit korrekt läuft und nur die serielle Statusantwort ausbleibt.
     if (st > 0 || dfPlayerBusy()) { return PLAY_OK; }
     if (st != -1) { gotResponse = true; }
-    webLogf("[DFPlayer] %s: kein Start-Status nach playFolder (Versuch %d/%d, st=%d, Datei %d)", label, attempt, VERIFY_PLAY_RETRIES, st, fileNo);
+    // 20v30: nur ab dem 2. Versuch loggen – der 1. Fehlversuch ist im
+    // Normalbetrieb üblich (DFPlayer braucht kurz Zeit zum Laden, siehe
+    // Funktionskommentar oben) und war bisher jedes Mal eine eigene Zeile.
+    // Erst wenn eine Bestätigung mehr als einmal nötig ist, ist das den
+    // Log-Eintrag wert.
+    if (attempt > 1) {
+      webLogf("[DFPlayer] %s: kein Start-Status nach playFolder (Versuch %d/%d, st=%d, Datei %d)", label, attempt, VERIFY_PLAY_RETRIES, st, fileNo);
+    }
   }
   if (gotResponse) {
     webLogf("[FEHLER] %s: DFPlayer antwortet (kein Absturz), Datei %d startet aber nicht (st=0)", label, fileNo);
@@ -2900,6 +2934,7 @@ void setup() {
   // (webLog() puffert erst still, solange der Mutex noch nicht existiert).
   webLogMutex = xSemaphoreCreateMutex();
   if (!webLogMutex) rtosPanic("webLogMutex");
+  webLogf("Letzter Reset: %s", resetReasonText());
 
   // ── NVR laden ────────────────────────────────────────────
   // 20v17: readNVR() (weiter unten) stellt hier auch die Alarm-Tages-Sperre
@@ -3185,7 +3220,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v29.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v30.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

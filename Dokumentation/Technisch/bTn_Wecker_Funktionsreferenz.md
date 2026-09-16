@@ -1,12 +1,12 @@
 # bTn Wecker – Funktions- und Task-Referenz
 
-*Firmware 20v29 · ESP32 / FreeRTOS*
+*Firmware 20v30 · ESP32 / FreeRTOS*
 
 ## 1. FreeRTOS Tasks
 
 9 Tasks auf Core 0 und Core 1. Priorität 2 > Priorität 1.
 
-**Pin-Belegung (Hardware 2v0 / Firmware 20v29):** Taster S1=GPIO33, S2=GPIO32, S3=GPIO0
+**Pin-Belegung (Hardware 2v0 / Firmware 20v30):** Taster S1=GPIO33, S2=GPIO32, S3=GPIO0
 (S1/S2 seit 20v28 getauscht). Ausgänge E1=GPIO27 (Kuckuck), E2=GPIO25 (Mühlrad-Motor,
 LEDC-PWM), E3=GPIO26 (Licht) – seit 20v29 umbelegt (vorher E1=25, E2=26, E3=27).
 DFPlayer-BUSY=GPIO34. Die Firmware spricht alle Ein-/Ausgänge ausschließlich über die
@@ -112,8 +112,8 @@ Zwei-Stufen-Debouncing: ISR-Ebene BTN_DEBOUNCE_MS=30ms, Task-Ebene BTN_LOCKOUT_M
 | loop()                     | System    | Löscht Arduino-Loop-Task sofort via vTaskDelete(nullptr).                                                                                                                                                                                                                                                                                                                                                                                                   |
 | rtosPanic(what)            | System    | Fehlerbehandlung: Serial + OLED, 3s warten, ESP.restart().                                                                                                                                                                                                                                                                                                                                                                                                  |
 | delayFunction(t,d)         | System    | true wenn millis()-t >= d. Nicht-blockierende Zeitprüfung für State Machines.                                                                                                                                                                                                                                                                                                                                                                               |
-| bTn_info()                 | System    | Gibt Trennzeile und PGMInfo-Banner (Projekt-/Versionskennung) auf Serial aus. Einmaliger Aufruf am Ende von setup().                                                                                                                                                                                                                                                                                                                                        |
+| bTn_info()                 | System    | Gibt Trennzeile, PGMInfo-Banner (Projekt-/Versionskennung) und seit 20v30 die Ursache des letzten Resets (resetReasonText(), esp_reset_reason()) auf Serial aus. Einmaliger Aufruf am Ende von setup().                                                                                                                                                                                                                                                   |
 
 ---
 
-*bTn Wecker · Funktionsreferenz · Firmware 20v29*
+*bTn Wecker · Funktionsreferenz · Firmware 20v30*

@@ -1,6 +1,6 @@
 # bTn Wecker – State Machines
 
-*Firmware 20v29 · Mermaid-Diagramme*
+*Firmware 20v30 · Mermaid-Diagramme*
 
 > ⚠ **Maßgeblich ist diese Datei.** Die ursprüngliche Vorlage
 > `DOC/bTn_Wecker_StateMachines.pptx` (Stand 2026-04-20) ist seit vielen
@@ -155,4 +155,4 @@ stateDiagram-v2
 
 ---
 
-*bTn Wecker · State Machines · Firmware 20v29*
+*bTn Wecker · State Machines · Firmware 20v30*

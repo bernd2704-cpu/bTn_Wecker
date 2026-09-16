@@ -552,4 +552,11 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v29 | Hardware/Firmware | Ausgangs-GPIOs E1/E2/E3 auf der Platine umbelegt (Schaltplan-Update Hardware 2v0): Kuckuck (E1) GPIO25→**GPIO27**, DC-Motor/Mühlrad (E2) GPIO26→**GPIO25**, LED-Streifen/Licht (E3) GPIO27→**GPIO26**. In der Firmware ist nur der Zahlenwert der `E1`/`E2`/`E3`-Konstanten in `SysConf_20v29.h` geändert – die gesamte Ansteuerlogik (`digitalWrite(E1/E3, …)`, `ledcAttach(E2, …)`/`ledcWrite(E2, …)`, `motorStart()`/`motorStop()`, `runCuckooMachine()`, S2-Zugschalter, `/motor`-Handler) arbeitet ausschließlich mit den symbolischen Konstanten und ist unverändert. Motor-PWM-Kanal wandert damit von GPIO26 auf GPIO25 (LEDC-fähig, unkritisch). |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v29
+## Version 20v30
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v30 | Funktion | Ursache des letzten Resets (`esp_reset_reason()`) wird beim Boot ausgegeben – als `Serial.printf()` in `bTn_info()` und zusätzlich als `webLogf()`-Zeile direkt nach Anlegen von `webLogMutex` in `setup()`, damit sie auch remote im Web-Log sichtbar ist (z.B. zur Unterscheidung Brownout/Watchdog/Panic von normalem Power-on/Software-Reset). |
+| 20v30 | Qualität | DFPlayer-Log entrauscht: `checkSerial2Leftover()` schreibt erst ab `SERIAL2_LEFTOVER_LOG_THRESHOLD` (20 Restbytes) eine Zeile statt bei jeder Wertänderung; die Retry-Meldung in `verifyPlayStarted()` ("kein Start-Status nach playFolder") erscheint erst ab dem 2. Versuch (`attempt > 1`), da ein einzelner Fehlversuch im Normalbetrieb üblich ist. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v30
