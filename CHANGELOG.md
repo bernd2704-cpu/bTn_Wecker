@@ -559,4 +559,11 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 | 20v30 | Funktion | Ursache des letzten Resets (`esp_reset_reason()`) wird beim Boot ausgegeben – als `Serial.printf()` in `bTn_info()` und zusätzlich als `webLogf()`-Zeile direkt nach Anlegen von `webLogMutex` in `setup()`, damit sie auch remote im Web-Log sichtbar ist (z.B. zur Unterscheidung Brownout/Watchdog/Panic von normalem Power-on/Software-Reset). |
 | 20v30 | Qualität | DFPlayer-Log entrauscht: `checkSerial2Leftover()` schreibt erst ab `SERIAL2_LEFTOVER_LOG_THRESHOLD` (20 Restbytes) eine Zeile statt bei jeder Wertänderung; die Retry-Meldung in `verifyPlayStarted()` ("kein Start-Status nach playFolder") erscheint erst ab dem 2. Versuch (`attempt > 1`), da ein einzelner Fehlversuch im Normalbetrieb üblich ist. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v30
+## Version 20v31
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v31 | Qualität | Reihenfolge der Abschnitte auf der Log-Seite (`/`) festgelegt: Allgemeines Log, Verbindung, Touch Baseline, Stack High-Water Marks, DFPlayer, Mühlrad-Motor. Die Ring-Puffer-Auswertung sammelt DFPlayer- und allgemeine Meldungen jetzt in separaten Strings statt direkt in die HTML-Ausgabe zu schreiben, damit die Anzeigereihenfolge unabhängig von der Code-Reihenfolge ist. |
+| 20v31 | Qualität | Reset-Ursache-Zeile in `[RESET] Ursache: …`-Tagformat umbenannt (bisher `Letzter Reset: …`, ohne Tag) und im Allgemeinen Log immer als letzte Zeile angezeigt statt chronologisch an ihrer Boot-Position. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v31

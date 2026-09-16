@@ -61,7 +61,7 @@
 #include <esp_system.h>               // esp_reset_reason() – Ursache des letzten Resets
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v30.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_20v31.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -2740,32 +2740,12 @@ static void webLogTask(void *pvParam) {
       "<h3>IP: " + ip + ":" + String(WEBLOG_PORT) + " &nbsp;|&nbsp; Auto-Refresh: 20 s"
       " &nbsp;|&nbsp; Aktualisiert: <span id='upd'></span></h3>";
 
-    // ── 12v03: Mühlrad-Motor Pulsweiten-Slider ───────────────
-    // GET-Form auf /motor (0..100 %). Auto-Refresh (20 s) lädt den
-    // aktuellen Wert nach; oninput aktualisiert die %-Anzeige live.
-    {
-      int mpct = ((int)motor_duty * 100 + 127) / 255;                 // 0..255 → 0..100 % (gerundet)
-      String mp = String(mpct);
-      html += "<div class='sec-title'>M&uuml;hlrad-Motor &ndash; Pulsweite (Drehzahl)</div>"
-              "<form action='/motor' method='get' class='snap-box' style='color:#b0d0b0'>"
-              "Duty: <output id='dv'>" + mp + "</output> %"
-              " &nbsp;<input type='range' name='duty' min='0' max='100' value='" + mp + "'"
-              " style='vertical-align:middle;width:55%' oninput='dv.value=this.value'>"
-              " &nbsp;<button type='submit'>Setzen</button>"
-              "<div style='color:#78909c;font-size:0.85rem;margin-top:6px'>"
-              "&lt; 35 % &rarr; Kickstart-Anlaufimpuls &middot; Wert wird in NVS gespeichert</div>"
-              "</form>";
-    }
-
-    // ── DFPlayer: eigener Abschnitt mit allen DFPlayer-Meldungen ──
-    {
-      String alarmTs = strlen(snapAlarmTime) > 0 ? String(snapAlarmTime) : String("–");
-      html += "<div class='sec-title'>DFPlayer &ndash; letzter erfolgreicher Alarm: "
-              "<span style='color:#4A9EFF'>" + alarmTs + "</span></div>";
-    }
-    html += "<div id='dflog'>";
-    // ── Ring-Puffer: DFPlayer-Meldungen und allgemeine Meldungen getrennt ──
+    // ── Ring-Puffer: DFPlayer-Meldungen, allgemeine Meldungen und
+    //    Reset-Ursache getrennt sammeln (Ausgabe erfolgt weiter unten in
+    //    fester Reihenfolge, unabhängig von der chronologischen Herkunft) ──
     String generalLog;
+    String dfLog;
+    String resetLine;
     if (webLogMutex && xSemaphoreTake(webLogMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
       uint16_t start = (webLogCount < WEBLOG_LINES)
                      ? 0
@@ -2773,7 +2753,8 @@ static void webLogTask(void *pvParam) {
       for (uint16_t i = 0; i < webLogCount; i++) {
         uint16_t idx = (start + i) % WEBLOG_LINES;
         String line = String(webLogBuf[idx]);
-        bool isDfPlayer = line.indexOf("DFPlayer") >= 0;
+        bool isDfPlayer   = line.indexOf("DFPlayer") >= 0;
+        bool isResetCause = line.indexOf("[RESET]") >= 0 && line.indexOf("Ursache") >= 0;
         // [xxx]-Tag mit Leerzeichen auf feste Breite (WEBLOG_TAG_WIDTH)
         // bringen, damit der Text dahinter immer in derselben Spalte beginnt
         if (line.length() > 0 && line[0] == '[') {
@@ -2796,14 +2777,15 @@ static void webLogTask(void *pvParam) {
           entry += "<span>";
         line.replace("<", "&lt;"); line.replace(">", "&gt;");
         entry += line + "</span>\n";
-        if (isDfPlayer) html += entry;
-        else            generalLog += entry;
+        if (isResetCause)     resetLine += entry;
+        else if (isDfPlayer)  dfLog += entry;
+        else                  generalLog += entry;
       }
       xSemaphoreGive(webLogMutex);
     }
-    html += "</div>";
+    generalLog += resetLine;              // Reset-Ursache immer als letzte Zeile im Allgemeinen Log
 
-    // ── Allgemeines Log ────────────────────────────────────────
+    // ── 1: Allgemeines Log ────────────────────────────────────
     {
       String ntpTs = strlen(snapNtpTime) > 0 ? String(snapNtpTime) : String("–");
       html += "<div class='sec-title'>Allgemeines Log &ndash; letzter Reset: "
@@ -2811,7 +2793,7 @@ static void webLogTask(void *pvParam) {
     }
     html += "<div id='log'>" + generalLog + "</div>";
 
-    // ── Verbindung: letzter Restart (WiFi + NTP analog Info-Seite) ─
+    // ── 2: Verbindung – letzter Restart (WiFi + NTP analog Info-Seite) ─
     {
       String wDate = strlen(datum_WiFi) > 0 ? String(datum_WiFi) : String("–");
       String wTime = strlen(zeit_WiFi)  > 0 ? String(zeit_WiFi)  : String("–");
@@ -2825,7 +2807,7 @@ static void webLogTask(void *pvParam) {
               "</div></div>";
     }
 
-    // ── Snapshot: Touch Baseline + Stack HWM ─────────────────
+    // ── 3+4: Snapshot: Touch Baseline + Stack HWM ─────────────
     if (webLogMutex && xSemaphoreTake(webLogMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
       String touchTime = String(snapTouchTime);
       String touchContent = String(snapTouchBuf);
@@ -2845,6 +2827,31 @@ static void webLogTask(void *pvParam) {
               "<div class='snap-title'>Stack High-Water Marks – letzte Messung: "
               "<span class='ts'>" + stackTime + "</span></div>"
               "<div class='snap-box'>" + stackContent + "</div></div>";
+    }
+
+    // ── 5: DFPlayer: eigener Abschnitt mit allen DFPlayer-Meldungen ──
+    {
+      String alarmTs = strlen(snapAlarmTime) > 0 ? String(snapAlarmTime) : String("–");
+      html += "<div class='sec-title'>DFPlayer &ndash; letzter erfolgreicher Alarm: "
+              "<span style='color:#4A9EFF'>" + alarmTs + "</span></div>";
+    }
+    html += "<div id='dflog'>" + dfLog + "</div>";
+
+    // ── 6: Mühlrad-Motor Pulsweiten-Slider (12v03) ────────────
+    // GET-Form auf /motor (0..100 %). Auto-Refresh (20 s) lädt den
+    // aktuellen Wert nach; oninput aktualisiert die %-Anzeige live.
+    {
+      int mpct = ((int)motor_duty * 100 + 127) / 255;                 // 0..255 → 0..100 % (gerundet)
+      String mp = String(mpct);
+      html += "<div class='sec-title'>M&uuml;hlrad-Motor &ndash; Pulsweite (Drehzahl)</div>"
+              "<form action='/motor' method='get' class='snap-box' style='color:#b0d0b0'>"
+              "Duty: <output id='dv'>" + mp + "</output> %"
+              " &nbsp;<input type='range' name='duty' min='0' max='100' value='" + mp + "'"
+              " style='vertical-align:middle;width:55%' oninput='dv.value=this.value'>"
+              " &nbsp;<button type='submit'>Setzen</button>"
+              "<div style='color:#78909c;font-size:0.85rem;margin-top:6px'>"
+              "&lt; 35 % &rarr; Kickstart-Anlaufimpuls &middot; Wert wird in NVS gespeichert</div>"
+              "</form>";
     }
     html += "<script>document.getElementById('upd').textContent=new Date().toLocaleTimeString();</script></body></html>";
     logServer.send(200, "text/html; charset=UTF-8", html);
@@ -2934,7 +2941,7 @@ void setup() {
   // (webLog() puffert erst still, solange der Mutex noch nicht existiert).
   webLogMutex = xSemaphoreCreateMutex();
   if (!webLogMutex) rtosPanic("webLogMutex");
-  webLogf("Letzter Reset: %s", resetReasonText());
+  webLogf("[RESET] Ursache: %s", resetReasonText());
 
   // ── NVR laden ────────────────────────────────────────────
   // 20v17: readNVR() (weiter unten) stellt hier auch die Alarm-Tages-Sperre
@@ -3220,7 +3227,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v30.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v31.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

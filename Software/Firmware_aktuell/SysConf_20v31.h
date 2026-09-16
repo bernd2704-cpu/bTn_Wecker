@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_20v30.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 20v30
-// Datei-Version    : 20v30
+// SysConf_20v31.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 20v31
+// Datei-Version    : 20v31
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34)
@@ -134,9 +134,12 @@
 // 20v30: Reset-Ursache (esp_reset_reason()) wird beim Boot geloggt; DFPlayer-
 //        Log entrauscht (SERIAL2_LEFTOVER_LOG_THRESHOLD, Retry-Meldung erst
 //        ab 2. Versuch).
+// 20v31: Log-Seite neu geordnet (Allgemeines Log, Verbindung, Touch Baseline,
+//        Stack High-Water, DFPlayer, Mühlrad-Motor); Reset-Ursache als
+//        [RESET]-Zeile ans Ende des Allgemeinen Logs verschoben.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v30"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "20v31"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
