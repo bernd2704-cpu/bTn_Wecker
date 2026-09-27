@@ -566,4 +566,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 | 20v31 | Qualität | Reihenfolge der Abschnitte auf der Log-Seite (`/`) festgelegt: Allgemeines Log, Verbindung, Touch Baseline, Stack High-Water Marks, DFPlayer, Mühlrad-Motor. Die Ring-Puffer-Auswertung sammelt DFPlayer- und allgemeine Meldungen jetzt in separaten Strings statt direkt in die HTML-Ausgabe zu schreiben, damit die Anzeigereihenfolge unabhängig von der Code-Reihenfolge ist. |
 | 20v31 | Qualität | Reset-Ursache-Zeile in `[RESET] Ursache: …`-Tagformat umbenannt (bisher `Letzter Reset: …`, ohne Tag) und im Allgemeinen Log immer als letzte Zeile angezeigt statt chronologisch an ihrer Boot-Position. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v31
+## Version 20v32
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 20v32 | Qualität | Reset-Ursache-Zeile (`[RESET] Ursache: …`) steht im Allgemeinen Log jetzt direkt nach `[RESET] resetCount: …` statt als letzte Zeile ganz am Ende – danach folgen die Meldungen der aktuellen Laufzeit. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 20v32

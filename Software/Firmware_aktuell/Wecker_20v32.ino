@@ -61,7 +61,7 @@
 #include <esp_system.h>               // esp_reset_reason() – Ursache des letzten Resets
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v31.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_20v32.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -2740,9 +2740,10 @@ static void webLogTask(void *pvParam) {
       "<h3>IP: " + ip + ":" + String(WEBLOG_PORT) + " &nbsp;|&nbsp; Auto-Refresh: 20 s"
       " &nbsp;|&nbsp; Aktualisiert: <span id='upd'></span></h3>";
 
-    // ── Ring-Puffer: DFPlayer-Meldungen, allgemeine Meldungen und
-    //    Reset-Ursache getrennt sammeln (Ausgabe erfolgt weiter unten in
-    //    fester Reihenfolge, unabhängig von der chronologischen Herkunft) ──
+    // ── Ring-Puffer: DFPlayer-Meldungen und Reset-Ursache getrennt
+    //    sammeln. 20v32: Reset-Ursache wird beim Durchlauf direkt hinter
+    //    die [RESET] resetCount-Zeile ins Allgemeine Log eingefügt, statt
+    //    chronologisch an ihrer Boot-Position zu stehen. ──
     String generalLog;
     String dfLog;
     String resetLine;
@@ -2755,6 +2756,7 @@ static void webLogTask(void *pvParam) {
         String line = String(webLogBuf[idx]);
         bool isDfPlayer   = line.indexOf("DFPlayer") >= 0;
         bool isResetCause = line.indexOf("[RESET]") >= 0 && line.indexOf("Ursache") >= 0;
+        bool isResetCount = line.indexOf("[RESET]") >= 0 && line.indexOf("resetCount") >= 0;
         // [xxx]-Tag mit Leerzeichen auf feste Breite (WEBLOG_TAG_WIDTH)
         // bringen, damit der Text dahinter immer in derselben Spalte beginnt
         if (line.length() > 0 && line[0] == '[') {
@@ -2777,13 +2779,15 @@ static void webLogTask(void *pvParam) {
           entry += "<span>";
         line.replace("<", "&lt;"); line.replace(">", "&gt;");
         entry += line + "</span>\n";
-        if (isResetCause)     resetLine += entry;
-        else if (isDfPlayer)  dfLog += entry;
-        else                  generalLog += entry;
+        if (isResetCause)      resetLine += entry;
+        else if (isDfPlayer)   dfLog += entry;
+        else {
+          generalLog += entry;
+          if (isResetCount) generalLog += resetLine;   // Reset-Ursache direkt nach resetCount, vor den Laufzeit-Meldungen
+        }
       }
       xSemaphoreGive(webLogMutex);
     }
-    generalLog += resetLine;              // Reset-Ursache immer als letzte Zeile im Allgemeinen Log
 
     // ── 1: Allgemeines Log ────────────────────────────────────
     {
@@ -3227,7 +3231,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v31.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v32.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };
