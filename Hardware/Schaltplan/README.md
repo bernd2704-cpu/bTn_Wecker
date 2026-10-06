@@ -7,6 +7,7 @@
 | `Motor-Treiber.md`                    | Ansteuerung DC-Motor (E2, GPIO25)                        |
 | `Motor-LED-Treiber_Bauteilnotizen.md` | Bauteilauswahl/Dimensionierung zu Motor- und LED-Treiber |
 | `DFPlayer-BUSY.md`                    | BUSY-Signal DFPlayer Mini → GPIO35, Pegelprüfung         |
+| `Pin_GPIO-Liste.md`                   | GPIO-Belegung ESP32 (belegt, frei, nicht nutzbar)        |
 
 Weitere Schaltplan-Dateien (z.B. KiCad, Eagle, PDF) hier ablegen.
 
