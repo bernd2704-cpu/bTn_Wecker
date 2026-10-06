@@ -1,6 +1,6 @@
 # bTn Wecker – Bedienungsanleitung
 
-*Firmware 21v01 · ESP32 / FreeRTOS · Hardware 2v0*
+*Firmware 21v02 · ESP32 / FreeRTOS · Hardware 2v0*
 
 ## 1. Übersicht
 
@@ -99,7 +99,7 @@ Die Info-Seite zeigt Systemdaten und bietet Zugang zu Konfigurations- und Reset-
 
 | Zeile                        | Inhalt                                                                        |
 | ---------------------------- | ----------------------------------------------------------------------------- |
-| 1 – Kopfzeile                | Firmware-Kennung (z.B. `bTn_Wecker_21v01`)                                    |
+| 1 – Kopfzeile                | Firmware-Kennung (z.B. `bTn_Wecker_21v02`)                                    |
 | 2 – IP:8080                  | Adresse des Web-Log-Servers – im Browser öffnen für Diagnoseinformationen     |
 | 3 – MP3 *nnn*   RESET *nnnn* | Anzahl gefundener MP3-Dateien  ·  Neustart-Zähler (4-stellig)                 |
 | 4 – Taste +  WiFi Reset      | Hinweis: T3 drücken löscht die WLAN-Zugangsdaten und startet den Konfigurator |
@@ -121,7 +121,7 @@ Nach der WiFi-Verbindung ist ein Diagnose-Server erreichbar. Die IP-Adresse wird
 
 | Sektion                                        | Inhalt                                                                                                                                                                                                                                                                                                                                                  |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Allg. Log                                      | Ring-Puffer mit den übrigen Systemereignissen (Start, WiFi/NTP-Events, Watchdog, Alarme). Titel lautet „Allgemeines Log – letzter Reset: *&lt;NTP-Zeitstempel&gt;*" (Zeitpunkt des ersten NTP-Syncs nach dem Reset). Die Reset-Ursache (`[RESET] Ursache: …`) erscheint dort ab 21v01 stets als letzte Zeile, unabhängig vom chronologischen Zeitpunkt. |
+| Allg. Log                                      | Ring-Puffer mit den übrigen Systemereignissen (Start, WiFi/NTP-Events, Watchdog, Alarme). Titel lautet „Allgemeines Log – letzter Reset: *&lt;NTP-Zeitstempel&gt;*" (Zeitpunkt des ersten NTP-Syncs nach dem Reset). Die Reset-Ursache (`[RESET] Ursache: …`) erscheint dort ab 21v02 stets als letzte Zeile, unabhängig vom chronologischen Zeitpunkt. |
 | Verbindung – letzter WiFi Reconnect / NTP Sync | Zeigt die Zeitstempel der letzten WiFi-Verbindung und der letzten NTP-Synchronisation (11v02: umbenannt von „Status – Letzter Start" und unter den Ring-Puffer verschoben)                                                                                                                                                                              |
 | Touch-Baseline                                 | Letzter Messwert und Schwellwert aller vier Touch-Pads                                                                                                                                                                                                                                                                                                  |
 | Stack High-Water Marks                         | Speicherauslastung aller 9 Tasks + freier Heap                                                                                                                                                                                                                                                                                                          |
@@ -152,4 +152,4 @@ Info-Seite (S3) öffnen → T4 drücken. Alle gespeicherten Einstellungen (Alarm
 
 ---
 
-*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 21v01*
+*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 21v02*

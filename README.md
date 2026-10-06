@@ -44,7 +44,7 @@ lokal weiterhin vorhanden, im Repository nicht enthalten.
 | Komponente        | Beschreibung                          |
 |-------------------|---------------------------------------|
 | ESP32 DevKit C V4 | Mikrocontroller, Dual-Core, WiFi      |
-| SSD1306 OLED      | 128×64 px, I2C (0x3C, SDA=21, SCL=22) |
+| SSD1306 OLED      | 128×64 px, I2C (0x3C, SDA=21, SCL=19) |
 | DFPlayer Mini     | MP3-Player, Serial2 (RX=16, TX=17)    |
 | Touch T0–T4       | GPIO4, GPIO2, GPIO15, GPIO13          |
 | Taster S1–S3      | GPIO33, GPIO32, GPIO0                 |

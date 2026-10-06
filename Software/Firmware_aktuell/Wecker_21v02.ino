@@ -61,7 +61,7 @@
 #include <esp_system.h>               // esp_reset_reason() – Ursache des letzten Resets
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_21v01.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_21v02.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -150,7 +150,7 @@ static TaskHandle_t hStackMonTask   = nullptr; // 9v14: HWM-Abfrage von außerha
 static TaskHandle_t hWebLogTask     = nullptr; // 9v14: HWM-Abfrage von außerhalb
 
 // ── Hardware ─────────────────────────────────────────────────
-SSD1306Wire         display(0x3C, SDA, SCL, GEOMETRY_128_64);
+SSD1306Wire         display(0x3C, OLED_SDA, OLED_SCL, GEOMETRY_128_64);
 DFRobotDFPlayerMini player;
 Preferences         data;
 
@@ -3231,7 +3231,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_21v01.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_21v02.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

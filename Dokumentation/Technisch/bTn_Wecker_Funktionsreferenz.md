@@ -1,15 +1,15 @@
 # bTn Wecker – Funktions- und Task-Referenz
 
-*Firmware 21v01 · ESP32 / FreeRTOS*
+*Firmware 21v02 · ESP32 / FreeRTOS*
 
 ## 1. FreeRTOS Tasks
 
 9 Tasks auf Core 0 und Core 1. Priorität 2 > Priorität 1.
 
-**Pin-Belegung (Hardware 2v0 / Firmware 21v01):** Taster S1=GPIO33, S2=GPIO32, S3=GPIO0
+**Pin-Belegung (Hardware 2v0 / Firmware 21v02):** Taster S1=GPIO33, S2=GPIO32, S3=GPIO0
 (S1/S2 seit 20v28 getauscht). Ausgänge E1=GPIO27 (Kuckuck), E2=GPIO25 (Mühlrad-Motor,
 LEDC-PWM), E3=GPIO26 (Licht) – seit 20v29 umbelegt (vorher E1=25, E2=26, E3=27).
-DFPlayer-BUSY=GPIO35. Die Firmware spricht alle Ein-/Ausgänge ausschließlich über die
+DFPlayer-BUSY=GPIO35, OLED-I²C SDA=GPIO21 / SCL=GPIO19 (SCL seit 21v02, vorher GPIO22). Die Firmware spricht alle Ein-/Ausgänge ausschließlich über die
 symbolischen Konstanten `S1`–`S3` / `E1`–`E3` an; bei den GPIO-Tauschaktionen 20v28/20v29
 wurden nur diese Konstantenwerte in `SysConf_*.h` geändert, keine Logik.
 
@@ -116,4 +116,4 @@ Zwei-Stufen-Debouncing: ISR-Ebene BTN_DEBOUNCE_MS=30ms, Task-Ebene BTN_LOCKOUT_M
 
 ---
 
-*bTn Wecker · Funktionsreferenz · Firmware 21v01*
+*bTn Wecker · Funktionsreferenz · Firmware 21v02*

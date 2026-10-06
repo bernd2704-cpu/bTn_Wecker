@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_21v01.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 21v01
-// Datei-Version    : 21v01
+// SysConf_21v02.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 21v02
+// Datei-Version    : 21v02
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34, ab 21v01 GPIO35)
@@ -142,9 +142,11 @@
 // 21v01: DFPlayer BUSY-Pin von GPIO34 auf GPIO35 verlegt (GPIO35 liegt im
 //        Header-Bereich des Anschlusses, kein zusätzliches Kabel nötig);
 //        beide Pins sind input-only, Logik unverändert. Hardware bleibt 2v0.
+// 21v02: OLED-SCL von GPIO22 auf GPIO19 verlegt (neue Konstanten OLED_SDA/OLED_SCL
+//        statt Board-Makros SDA/SCL); SDA bleibt GPIO21. Hardware bleibt 2v0.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "21v01"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "21v02"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -164,6 +166,12 @@
 // ── DFPlayer Serial-Pins ─────────────────────────────────────
 #define RXD2 16                                                                // ESP32 GPIO16 → DFPlayer TX
 #define TXD2 17                                                                // ESP32 GPIO17 → DFPlayer RX
+
+// ── OLED I2C-Pins (SSD1306, 0x3C) ─────────────────────────────
+// Ab 21v02 eigene Konstanten statt der Board-Makros SDA/SCL (21/22).
+// I2C läuft über die GPIO-Matrix, SCL darf auf GPIO19 liegen.
+const uint8_t OLED_SDA = 21;                                                   // GPIO21 ↔ OLED SDA
+const uint8_t OLED_SCL = 19;                                                   // GPIO19 → OLED SCL (bis 21v01 GPIO22)
 
 // ── DFPlayer BUSY-Signal (ab Hardware 2v0) ────────────────────
 // LOW = Wiedergabe läuft, HIGH = Pause/Idle (aktiv getrieben, kein Pull-up nötig).

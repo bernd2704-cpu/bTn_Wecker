@@ -578,4 +578,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 21v01 | Funktion | DFPlayer-BUSY-Pin von GPIO34 auf GPIO35 verlegt (`DFPLAYER_BUSY` in `SysConf_21v01.h`): GPIO35 liegt im Header-Bereich des Anschlusses, GPIO34 hätte ein zusätzliches Kabel benötigt. Beide Pins sind input-only (ADC1), die Logik ist unverändert. Hardware bleibt 2v0 (Entwicklungsstatus), Doku und Schaltplan-Notizen angepasst. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v01
+## Version 21v02
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v02 | Funktion | OLED-SCL von GPIO22 auf GPIO19 verlegt: neue Konstanten `OLED_SDA` (21) und `OLED_SCL` (19) in `SysConf_21v02.h` statt der Board-Makros `SDA`/`SCL`; der Konstruktor `SSD1306Wire display(...)` verwendet sie. SDA bleibt GPIO21. Hardware bleibt 2v0 (Entwicklungsstatus), Schaltplan/Layout in KiCad separat nachzuziehen. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v02
