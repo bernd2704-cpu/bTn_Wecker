@@ -9,11 +9,11 @@
                                                        │
                                                        │
                                                Drain ──┘
-GPIO25 ─────── [470Ω] ────┬──── Gate             IRLML6344
-                          │     Source ─┐
-                        [10kΩ]          │
-                          │             │
-                         GND           GND
+GPIO25 ────────────────────── [470Ω] ────┬──── Gate             IRLML6344
+                                         │     Source ─┐
+                                      [10kΩ]           │
+                                        │              │
+                                       GND            GND
 ```
 
 Motor liegt an der über MCP1700T-3302E/TO auf 3,3V geregelten Rail (seit Hardware 2v0,
