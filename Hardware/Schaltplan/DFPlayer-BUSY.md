@@ -6,7 +6,7 @@
 
 ```
 DFPlayer Mini                                    ESP32 DEV Kit C V4
-BUSY (Pin 16) ──── [1kΩ] ────┬──────────────────── GPIO34
+BUSY (Pin 16) ──── [1kΩ] ────┬──────────────────── GPIO35
                               │
                            [100nF]
                               │
@@ -27,26 +27,30 @@ Quelle: `Hardware/Stückliste/DFPlayer Mini/DFPlayer Mini Manual.pdf`,
 Abschnitt „6. Note*“, sowie AZ-Delivery-Handbuch (bestätigt 3,3V-Logik
 auch bei 5V-Versorgung, Serienwiderstand dort nur für RX empfohlen).
 
-Direkter Anschluss an GPIO34 ohne Pegelwandler/Vorwiderstand zulässig:
+Direkter Anschluss an GPIO35 ohne Pegelwandler/Vorwiderstand zulässig:
 
 - VOH min. 2,7V > ESP32 VIH (≈2,45V bei 3,3V-Logik)
 - VOL max. 0,33V < ESP32 VIL (≈0,825V bei 3,3V-Logik)
 
-## GPIO34
+## GPIO35
 
 Input-only (kein internes Pull-up/-down, kein `INPUT_PULLUP` möglich).
 Unkritisch, da BUSY aktiv getrieben wird (kein Open-Drain):
 LOW = Wiedergabe läuft, HIGH = Pause/Idle.
 
+Bis Firmware 20v32 lag BUSY an GPIO34 (ebenfalls input-only). Ab Firmware 21v01 liegt
+BUSY an GPIO35, da dieser Pin im Header-Bereich des Anschlusses liegt und kein
+zusätzliches Kabel nötig ist. Elektrisch gleichwertig (beide ADC1, input-only).
+
 ## RC-Filter (1kΩ + 100nF)
 
-Firmware liest `dfPlayerBusy()` (GPIO34) an mehreren Stellen als einzelnen,
+Firmware liest `dfPlayerBusy()` (GPIO35) an mehreren Stellen als einzelnen,
 ungefilterten `digitalRead()` ohne Software-Debounce (anders als Touch-Pads
 oder Taster). Ein Hardware-RC-Filter schließt diese Lücke:
 
 - **R = 1 kΩ** (Reihe): konsistent mit Touch-Beschaltung und AZ-Delivery-
   Empfehlung für Serial-Leitungen; Spannungsabfall im stationären Zustand
-  vernachlässigbar, da GPIO34-Eingangsleckstrom im nA-Bereich liegt.
+  vernachlässigbar, da GPIO35-Eingangsleckstrom im nA-Bereich liegt.
 - **C = 100 nF** (nach GND, GPIO-seitig): τ = R·C = 100 µs,
   Grenzfrequenz f_c ≈ 1,6 kHz – dämpft kurze EMI-Spitzen/Schaltflanken
   (u.a. vom 20kHz-Motor-PWM an E2, siehe `Motor-Treiber.md`) deutlich.

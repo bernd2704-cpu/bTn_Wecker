@@ -6,7 +6,7 @@
 | `LED-Treiber.md`                      | Ansteuerung LED-Streifen (E3, GPIO26)                    |
 | `Motor-Treiber.md`                    | Ansteuerung DC-Motor (E2, GPIO25)                        |
 | `Motor-LED-Treiber_Bauteilnotizen.md` | Bauteilauswahl/Dimensionierung zu Motor- und LED-Treiber |
-| `DFPlayer-BUSY.md`                    | BUSY-Signal DFPlayer Mini → GPIO34, Pegelprüfung         |
+| `DFPlayer-BUSY.md`                    | BUSY-Signal DFPlayer Mini → GPIO35, Pegelprüfung         |
 
 Weitere Schaltplan-Dateien (z.B. KiCad, Eagle, PDF) hier ablegen.
 

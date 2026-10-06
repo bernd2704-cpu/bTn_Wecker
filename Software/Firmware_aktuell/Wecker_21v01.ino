@@ -61,7 +61,7 @@
 #include <esp_system.h>               // esp_reset_reason() – Ursache des letzten Resets
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_20v32.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_21v01.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -1694,7 +1694,7 @@ static PlayVerifyResult verifyPlayStarted(const char* label, uint8_t fileNo) {
       st = readStateDrained();
       xSemaphoreGive(playerMutex);
     }
-    // 20v02: BUSY-Pin (GPIO34) als Zusatzkriterium – bestätigt "läuft" auch
+    // 20v02: BUSY-Pin (GPIO35) als Zusatzkriterium – bestätigt "läuft" auch
     // dann, wenn readStateDrained() (UART) trotz Gnadenfrist weiter st<=0
     // liefert. Vermeidet einen unnötigen ESP.restart(), wenn der DFPlayer in
     // Wahrheit korrekt läuft und nur die serielle Statusantwort ausbleibt.
@@ -1879,7 +1879,7 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour, uint16_t yda
           rtcRetryMagic = 0;
           alarmSilentFallback = false;                                                   // 20v09 (C3-Fix): doch noch Ton bekommen – Fallback-Sonderfall beendet
         }
-        // 20v00: BUSY-Pin (GPIO34, Hardware ab 2v0) löst den bisherigen
+        // 20v00: BUSY-Pin (GPIO35, Hardware ab 2v0) löst den bisherigen
         // "-1=UART-Timeout → Alarm läuft sicherheitshalber weiter"-Fallback ab.
         // Serial2-Timeouts (st==-1) sind bei diesem DFPlayer-Chip nicht selten
         // (siehe readStateDrained()) und ließen den Alarm bislang im Zweifel
@@ -2226,7 +2226,7 @@ static void inputTask(void *pvParam) {
         uint32_t rs_start = millis();
         while (st == -1) {
           if (millis() - rs_start >= 200) {                                             // Timeout 200 ms → DFPlayer antwortet nicht
-            // 20v02: BUSY-Pin (GPIO34) statt blindem "als idle behandeln" –
+            // 20v02: BUSY-Pin (GPIO35) statt blindem "als idle behandeln" –
             // Hardware-Signal klärt zuverlässig, ob noch Wiedergabe läuft
             // (LOW), statt bei UART-Timeout fälschlich den Kuckuck auszulösen.
             st = dfPlayerBusy() ? 1 : 0;
@@ -3231,7 +3231,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_20v32.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_21v01.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

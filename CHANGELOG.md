@@ -2,7 +2,7 @@
 
 Änderungshistorie
 
-Basis 4v1  →  13v00 (Hardware 1v0, eingefroren)  →  20v03 (Hardware 2v0, DFPlayer-BUSY an GPIO34)
+Basis 4v1  →  13v00 (Hardware 1v0, eingefroren)  →  20v03 (Hardware 2v0, DFPlayer-BUSY an GPIO34, ab 21v01 GPIO35)
 
 ## Kategorien
 
@@ -572,4 +572,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 20v32 | Qualität | Reset-Ursache-Zeile (`[RESET] Ursache: …`) steht im Allgemeinen Log jetzt direkt nach `[RESET] resetCount: …` statt als letzte Zeile ganz am Ende – danach folgen die Meldungen der aktuellen Laufzeit. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 20v32
+## Version 21v01
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v01 | Funktion | DFPlayer-BUSY-Pin von GPIO34 auf GPIO35 verlegt (`DFPLAYER_BUSY` in `SysConf_21v01.h`): GPIO35 liegt im Header-Bereich des Anschlusses, GPIO34 hätte ein zusätzliches Kabel benötigt. Beide Pins sind input-only (ADC1), die Logik ist unverändert. Hardware bleibt 2v0 (Entwicklungsstatus), Doku und Schaltplan-Notizen angepasst. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v01

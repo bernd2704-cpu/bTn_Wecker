@@ -1,10 +1,10 @@
 #pragma once
-// SysConf_20v32.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 20v32
-// Datei-Version    : 20v32
+// SysConf_21v01.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 21v01
+// Datei-Version    : 21v01
 // Boardverwalter   : esp32 3.3.11 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
-// 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34)
+// 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34, ab 21v01 GPIO35)
 // 20v01: dfPlayerBusy() im Alarm-Polling – löst UART-Timeout-Fallback ab
 // 20v02: dfPlayerBusy() auch in verifyPlayStarted() und S1-Handling
 // 20v03: dfPlayerIdleDebounced() (3× Sampling) in ALARM_RUNNING – Absicherung
@@ -139,9 +139,12 @@
 //        [RESET]-Zeile ans Ende des Allgemeinen Logs verschoben.
 // 20v32: Reset-Ursache steht jetzt direkt nach [RESET] resetCount, statt am
 //        Ende des Allgemeinen Logs – danach folgen die Laufzeit-Meldungen.
+// 21v01: DFPlayer BUSY-Pin von GPIO34 auf GPIO35 verlegt (GPIO35 liegt im
+//        Header-Bereich des Anschlusses, kein zusätzliches Kabel nötig);
+//        beide Pins sind input-only, Logik unverändert. Hardware bleibt 2v0.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "20v32"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "21v01"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -164,8 +167,8 @@
 
 // ── DFPlayer BUSY-Signal (ab Hardware 2v0) ────────────────────
 // LOW = Wiedergabe läuft, HIGH = Pause/Idle (aktiv getrieben, kein Pull-up nötig).
-// GPIO34 ist input-only, daher INPUT statt INPUT_PULLUP in pinMode().
-const uint8_t DFPLAYER_BUSY = 34;                                              // GPIO34 ← DFPlayer BUSY (Pin 16)
+// GPIO35 ist input-only, daher INPUT statt INPUT_PULLUP in pinMode().
+const uint8_t DFPLAYER_BUSY = 35;                                              // GPIO35 ← DFPlayer BUSY (Pin 16)
 
 // ── Touch-Sensor ─────────────────────────────────────────────
 #define TOUCH_DROP      150                                                    // Mindest-Absenkung zur Touch-Erkennung (kalibrieren, ca. 50 % des Differenzwerts)

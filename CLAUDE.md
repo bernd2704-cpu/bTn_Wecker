@@ -3,7 +3,7 @@
 ## Hardware
 
 ESP32 Dev Kit C V4, SSD1306 OLED 128x64 I2C (0x3C, SDA=21, SCL=22),
-DFPlayer Mini (Serial2, RX=16, TX=17, BUSY=GPIO34), Touch T0=GPIO4/T2=GPIO2/T3=GPIO15/T4=GPIO13,
+DFPlayer Mini (Serial2, RX=16, TX=17, BUSY=GPIO35), Touch T0=GPIO4/T2=GPIO2/T3=GPIO15/T4=GPIO13,
 Taster S1=GPIO33/S2=GPIO32/S3=GPIO0,
 Ausgänge E1=GPIO27 (Kuckuck)/E2=GPIO25 (Motor/Mühlrad)/E3=GPIO26 (LED-Licht)
 
@@ -16,8 +16,8 @@ DFPlayer Mini GND als Sternpunkt-Topologie.
 
 ## Aktuelle Version
 
-Hardware 2v0 (mit DFPlayer-BUSY-Signal, GPIO34, Motor über MCP1700T-3302E/TO geregelt),
-Firmware 20v31, Konfiguration SysConf_20v31.h
+Hardware 2v0 (mit DFPlayer-BUSY-Signal, GPIO35, Motor über MCP1700T-3302E/TO geregelt),
+Firmware 21v01, Konfiguration SysConf_21v01.h
 
 Vorheriger eingefrorener Stand: Hardware 1v0 (ohne BUSY-Signal) / Firmware 13v00,
 siehe `Software/Firmware_Versionshistorie/`.
@@ -70,6 +70,6 @@ bTn_Wecker/
 │   └── Stückliste/
 └── Software/
     ├── Bibliotheken/
-    ├── Firmware_aktuell/          ← Wecker_20v31.ino, SysConf_20v31.h, WEB.h
+    ├── Firmware_aktuell/          ← Wecker_21v01.ino, SysConf_21v01.h, WEB.h
     └── Firmware_Versionshistorie/ ← ältere Stände (12vNN, 13v00, 20v00–20v16)
 ```

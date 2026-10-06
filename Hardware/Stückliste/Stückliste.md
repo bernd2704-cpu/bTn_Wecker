@@ -82,7 +82,7 @@ ROKR-Kits und steht bereits unter „1. Mechanik" (Cuckoo Clock).
 ## 7. DFPlayer-BUSY-Filter
 
 RC-Filter für das DFPlayer-BUSY-Signal (Schaltplan
-`Hardware/Schaltplan/DFPlayer-BUSY.md`, GPIO34, ab Hardware 2v0). Einkaufsdaten
+`Hardware/Schaltplan/DFPlayer-BUSY.md`, GPIO35, ab Hardware 2v0). Einkaufsdaten
 noch offen – Hersteller/Artikel/Lieferant/Preis als „–".
 
 | Bauteil                                  | Hersteller | Artikel | Lieferant | Preis |

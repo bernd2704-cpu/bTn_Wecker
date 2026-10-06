@@ -1,6 +1,6 @@
 # bTn Wecker – State Machines
 
-*Firmware 20v30 · Mermaid-Diagramme*
+*Firmware 21v01 · Mermaid-Diagramme*
 
 > ⚠ **Maßgeblich ist diese Datei.** Die ursprüngliche Vorlage
 > `DOC/bTn_Wecker_StateMachines.pptx` (Stand 2026-04-20) ist seit vielen
@@ -29,7 +29,7 @@ stateDiagram-v2
     Neustart --> triggerAlarm : setup() liest rtcRetryMagic<br/>(RTC_NOINIT_ATTR übersteht ESP.restart())<br/>→ Alarm erneut auslösen
     ALARM_RUNNING --> ALARM_IDLE : mp3Finished (playerStatus==0 ODER<br/>playerStatus==-1 + dfPlayerIdleDebounced())<br/>ODER runTimeExceeded (ALARM_MAX_RUN_MS, 15 min)
     ALARM_RUNNING --> ALARM_IDLE : S1 – manueller Abbruch
-    ALARM_RUNNING --> ALARM_RUNNING : alle ALARM_POLL_MS (5 s)<br/>readStateDrained() · BUSY-Pin (GPIO34) als Zusatzkriterium
+    ALARM_RUNNING --> ALARM_RUNNING : alle ALARM_POLL_MS (5 s)<br/>readStateDrained() · BUSY-Pin (GPIO35) als Zusatzkriterium
 ```
 
 **Bedingungen**
@@ -155,4 +155,4 @@ stateDiagram-v2
 
 ---
 
-*bTn Wecker · State Machines · Firmware 20v30*
+*bTn Wecker · State Machines · Firmware 21v01*
