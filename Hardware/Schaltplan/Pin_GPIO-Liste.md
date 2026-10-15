@@ -53,7 +53,8 @@ J3 (rechte Leiste) Pin 20–38 von unten nach oben. `nc` = nicht beschaltet.
 
 ## DFPlayer Mini
 
-PIN = Pin-Nummer am DFPlayer Mini (Pin 1 oben links, microSD-Slot an der Unterseite). `nc` = nicht beschaltet.
+PIN = Pin-Nummer am DFPlayer Mini (Draufsicht, Bauteilseite oben, microSD-Slot unten): Pin 1–8 (linke Reihe)
+von oben nach unten, Pin 9–16 (rechte Reihe) von unten nach oben. `nc` = nicht beschaltet.
 ESP32-Pins siehe oben (RXD2 = PIN 27, TXD2 = PIN 28, DFPLAYER_BUSY = PIN 6).
 
 | PIN | DFPlayer | Funktion                  | Verbunden mit                 | Anmerkung                              |
