@@ -1,8 +1,8 @@
 # bTn Wecker – GPIO-Belegung
 
-Stand: Firmware 21v02 · Hardware 2v0 · ESP32 Dev Kit C V4
+Stand: Firmware 21v03 · Hardware 2v0 · ESP32 Dev Kit C V4
 
-Quelle der Belegung: `SysConf_21v02.h` (Pin-Konstanten) und `CLAUDE.md`.
+Quelle der Belegung: `SysConf_21v03.h` (Pin-Konstanten) und `CLAUDE.md`.
 Bei jeder Pin-Änderung diese Liste mitpflegen.
 
 ## Pinbelegung

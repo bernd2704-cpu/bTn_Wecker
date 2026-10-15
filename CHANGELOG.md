@@ -584,4 +584,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 21v02 | Funktion | OLED-SCL von GPIO22 auf GPIO19 verlegt: neue Konstanten `OLED_SDA` (21) und `OLED_SCL` (19) in `SysConf_21v02.h` statt der Board-Makros `SDA`/`SCL`; der Konstruktor `SSD1306Wire display(...)` verwendet sie. SDA bleibt GPIO21. Hardware bleibt 2v0 (Entwicklungsstatus), Schaltplan/Layout in KiCad separat nachzuziehen. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v02
+## Version 21v03
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v03 | Bugfix | Alarm wurde nachträglich ausgelöst, wenn er per T2 wieder eingeschaltet wurde, nachdem seine Weckzeit bei ausgeschaltetem Alarm verstrichen war (innerhalb `ALARM_CATCHUP_MIN`): `alarmDue()` hielt das für einen durch Stromausfall verpassten Alarm. Neu: `lockAlarmIfTimePassed()` setzt beim Einschalten die Tages-Sperre, falls der Alarm sonst sofort fällig wäre. Alarme mit noch bevorstehender Weckzeit und der Nachhol-Pfad nach Stromausfall bleiben unverändert. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v03
