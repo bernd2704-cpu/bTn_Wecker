@@ -53,5 +53,46 @@ J2 (links)                                J3 (rechts)
 | 31  | 19   | OLED_SCL      | OLED SCL                                 | I2C                  |
 | 33  | 21   | OLED_SDA      | OLED SDA                                 | I2C                  |
 
+## DFPlayer Mini – Pinbelegung
+
+Draufsicht (Bauteilseite oben, microSD-Slot an der Unterseite), Pin 1 oben links.
+`*` = vom Wecker belegt, übrige Pins nicht beschaltet.
+
+```
+              .-----------------.
+      VCC * [ 1]           [16] * BUSY
+       RX * [ 2]           [15]   USB-
+       TX * [ 3]           [14]   USB+
+    DAC_R   [ 4]           [13]   ADKEY2
+    DAC_L   [ 5]           [12]   ADKEY1
+    SPK_1 * [ 6]           [11]   IO2
+      GND * [ 7]           [10] * GND
+    SPK_2 * [ 8]           [ 9]   IO1
+              '-----------------'
+```
+
+| PIN | DFPlayer | Funktion                  | Verbunden mit                      |
+| --- | -------- | ------------------------- | ---------------------------------- |
+| 1   | VCC      | Versorgung 3,2 – 5,0 V    | 5V                                 |
+| 2   | RX       | UART-Eingang              | GPIO17 (TXD2, PIN 28)              |
+| 3   | TX       | UART-Ausgang              | GPIO16 (RXD2, PIN 27)              |
+| 4   | DAC_R    | Audio-Ausgang rechts      | nc                                 |
+| 5   | DAC_L    | Audio-Ausgang links       | nc                                 |
+| 6   | SPK_1    | Lautsprecher (+)          | Lautsprecher                       |
+| 7   | GND      | Masse                     | GND (Sternpunkt)                   |
+| 8   | SPK_2    | Lautsprecher (−)          | Lautsprecher                       |
+| 9   | IO1      | Vorheriger Titel / Lauter | nc                                 |
+| 10  | GND      | Masse                     | GND (Sternpunkt)                   |
+| 11  | IO2      | Nächster Titel / Leiser   | nc                                 |
+| 12  | ADKEY1   | AD-Tastenfeld 1           | nc                                 |
+| 13  | ADKEY2   | AD-Tastenfeld 2           | nc                                 |
+| 14  | USB+     | USB DP                    | nc                                 |
+| 15  | USB−     | USB DM                    | nc                                 |
+| 16  | BUSY     | Wiedergabe-Status (LOW)   | GPIO35 (DFPLAYER_BUSY, PIN 6)      |
+
+Hinweis: Die Pinnummern entsprechen dem Datenblatt des DFPlayer Mini; Pin 7 und 10 sind beide GND.
+Die Zuordnung der Verbindungen folgt der Firmware (`SysConf_21v03.h`) – bitte gegen den Schaltplan
+`Wecker_2v0.kicad_sch` prüfen.
+
 Vollständige Liste inkl. nc-Pins, Strapping-Hinweisen und Änderungshistorie:
 [Pin_GPIO-Liste.md](Pin_GPIO-Liste.md). Quelle: `SysConf_21v03.h`.
