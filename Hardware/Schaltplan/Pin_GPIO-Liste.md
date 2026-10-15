@@ -51,6 +51,30 @@ J3 (rechte Leiste) Pin 20–38 von unten nach oben. `nc` = nicht beschaltet.
 | 37  | 23   | –             | nc                                       | –                    | unkritisch                                                         |
 | 38  | –    | –             | GND                                      | Masse                |                                                                    |
 
+## DFPlayer Mini
+
+PIN = Pin-Nummer am DFPlayer Mini (Pin 1 oben links, microSD-Slot an der Unterseite). `nc` = nicht beschaltet.
+ESP32-Pins siehe oben (RXD2 = PIN 27, TXD2 = PIN 28, DFPLAYER_BUSY = PIN 6).
+
+| PIN | DFPlayer | Funktion                  | Verbunden mit                 | Anmerkung                              |
+| --- | -------- | ------------------------- | ----------------------------- | -------------------------------------- |
+| 1   | VCC      | Versorgung 3,2 – 5,0 V    | 5V                            |                                        |
+| 2   | RX       | UART-Eingang              | GPIO17 (TXD2, PIN 28)         | Serial2 TX des ESP32                   |
+| 3   | TX       | UART-Ausgang              | GPIO16 (RXD2, PIN 27)         | Serial2 RX des ESP32                   |
+| 4   | DAC_R    | Audio-Ausgang rechts      | nc                            |                                        |
+| 5   | DAC_L    | Audio-Ausgang links       | nc                            |                                        |
+| 6   | SPK_1    | Lautsprecher (+)          | Lautsprecher                  |                                        |
+| 7   | GND      | Masse                     | GND (Sternpunkt)              | Sternpunkt-Topologie                   |
+| 8   | SPK_2    | Lautsprecher (−)          | Lautsprecher                  |                                        |
+| 9   | IO1      | Vorheriger Titel / Lauter | nc                            |                                        |
+| 10  | GND      | Masse                     | GND (Sternpunkt)              |                                        |
+| 11  | IO2      | Nächster Titel / Leiser   | nc                            |                                        |
+| 12  | ADKEY1   | AD-Tastenfeld 1           | nc                            |                                        |
+| 13  | ADKEY2   | AD-Tastenfeld 2           | nc                            |                                        |
+| 14  | USB+     | USB DP                    | nc                            |                                        |
+| 15  | USB−     | USB DM                    | nc                            |                                        |
+| 16  | BUSY     | Wiedergabe-Status         | GPIO35 (DFPLAYER_BUSY, PIN 6) | LOW = Wiedergabe                       |
+
 ## Hinweise
 
 - GPIO34, 35, 36 und 39 sind nur Eingänge und haben keine internen Pull-ups.
