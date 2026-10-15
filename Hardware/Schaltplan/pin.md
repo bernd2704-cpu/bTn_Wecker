@@ -55,20 +55,23 @@ J2 (links)                                J3 (rechts)
 
 ## DFPlayer Mini – Pinbelegung
 
-Draufsicht (Bauteilseite oben, microSD-Slot an der Unterseite), Pin 1 oben links.
-`*` = vom Wecker belegt, übrige Pins nicht beschaltet.
+Draufsicht (Bauteilseite oben, microSD-Slot unten), Pin 1 oben links.
+`*` = vom Wecker belegt, übrige Pins `nc` (nicht beschaltet).
+PIN = Pin-Nummer am Modul (links 1–8 von oben nach unten, rechts 9–16 von unten nach oben).
 
 ```
-              .-----------------.
-      VCC * [ 1]           [16] * BUSY
-       RX * [ 2]           [15]   USB-
-       TX * [ 3]           [14]   USB+
-    DAC_R   [ 4]           [13]   ADKEY2
-    DAC_L   [ 5]           [12]   ADKEY1
-    SPK_1 * [ 6]           [11]   IO2
-      GND * [ 7]           [10] * GND
-    SPK_2 * [ 8]           [ 9]   IO1
-              '-----------------'
+Pin 1–8 (links)            Pin 9–16 (rechts)
+              .-----------.
+    VCC * [ 1]|           |[16] * BUSY
+     RX * [ 2]|           |[15]   USB-
+     TX * [ 3]|           |[14]   USB+
+    DAC_R [ 4]| DFPlayer  |[13]   ADKEY2
+    DAC_L [ 5]|    Mini   |[12]   ADKEY1
+  SPK_1 * [ 6]|           |[11]   IO2
+    GND * [ 7]|           |[10] * GND
+  SPK_2 * [ 8]|           |[ 9]   IO1
+              |           |
+              '-[microSD]-'
 ```
 
 | PIN | DFPlayer | Funktion                  | Verbunden mit                      |
