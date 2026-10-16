@@ -590,4 +590,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 21v03 | Bugfix | Alarm wurde nachträglich ausgelöst, wenn er per T2 wieder eingeschaltet wurde, nachdem seine Weckzeit bei ausgeschaltetem Alarm verstrichen war (innerhalb `ALARM_CATCHUP_MIN`): `alarmDue()` hielt das für einen durch Stromausfall verpassten Alarm. Neu: `lockAlarmIfTimePassed()` setzt beim Einschalten die Tages-Sperre, falls der Alarm sonst sofort fällig wäre. Alarme mit noch bevorstehender Weckzeit und der Nachhol-Pfad nach Stromausfall bleiben unverändert. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v03
+## Version 21v04
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v04 | Bugfix | Licht (E3) und Motor (E2) konnten nach dem Booten zufällig eingeschaltet sein und blieben es bis zum manuellen Abschalten: E1/E2/E3 wurden erst nach NVR-Laden/WiFi/NTP initialisiert, E3 dabei nur als `OUTPUT` gesetzt, ohne `LOW` zu schreiben. Neu: Alle drei Ausgänge werden ganz am Anfang von `setup()` definiert auf AUS gesetzt. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v04

@@ -1,6 +1,6 @@
 # bTn Wecker – Bedienungsanleitung
 
-*Firmware 21v03 · ESP32 / FreeRTOS · Hardware 2v0*
+*Firmware 21v04 · ESP32 / FreeRTOS · Hardware 2v0*
 
 ## 1. Übersicht
 
@@ -99,7 +99,7 @@ Die Info-Seite zeigt Systemdaten und bietet Zugang zu Konfigurations- und Reset-
 
 | Zeile                        | Inhalt                                                                        |
 | ---------------------------- | ----------------------------------------------------------------------------- |
-| 1 – Kopfzeile                | Firmware-Kennung (z.B. `bTn_Wecker_21v03`)                                    |
+| 1 – Kopfzeile                | Firmware-Kennung (z.B. `bTn_Wecker_21v04`)                                    |
 | 2 – IP:8080                  | Adresse des Web-Log-Servers – im Browser öffnen für Diagnoseinformationen     |
 | 3 – MP3 *nnn*   RESET *nnnn* | Anzahl gefundener MP3-Dateien  ·  Neustart-Zähler (4-stellig)                 |
 | 4 – Taste +  WiFi Reset      | Hinweis: T3 drücken löscht die WLAN-Zugangsdaten und startet den Konfigurator |
@@ -152,4 +152,4 @@ Info-Seite (S3) öffnen → T4 drücken. Alle gespeicherten Einstellungen (Alarm
 
 ---
 
-*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 21v03*
+*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 21v04*
