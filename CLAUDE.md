@@ -24,7 +24,7 @@ siehe `Software/Firmware_Versionshistorie/`.
 
 ## Architektur
 
-FreeRTOS, 9 Tasks auf 2 Cores, Arduino IDE / ESP32 Core 3.3.11
+FreeRTOS, 9 Tasks auf 2 Cores, Arduino IDE / ESP32 Core 3.3.12
 Stack-Größen als STACK_*-Konstanten in SysConf_*.h
 
 ## Verwendete externe Libraries

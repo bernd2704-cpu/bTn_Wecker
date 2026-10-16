@@ -58,7 +58,7 @@ lokal weiterhin vorhanden, im Repository nicht enthalten.
 
 | Bibliothek                | Version   | Quelle             |
 |---------------------------|-----------|--------------------|
-| ESP32 Arduino Core        | 3.3.11    | Espressif          |
+| ESP32 Arduino Core        | 3.3.12    | Espressif          |
 | SSD1306Wire ESP32-ESP8266 | aktuell   | Arduino Library    |
 | DFRobotDFPlayerMini       | aktuell   | Arduino Library    |
 | FreeRTOS                  | (im Core) | Espressif          |

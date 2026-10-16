@@ -2,7 +2,7 @@
 // SysConf_21v04.h – Konfigurationskonstanten für bTn Wecker
 // Firmware-Version : 21v04
 // Datei-Version    : 21v04
-// Boardverwalter   : esp32 3.3.11 von Espressif Systems
+// Boardverwalter   : esp32 3.3.12 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34, ab 21v01 GPIO35)
 // 20v01: dfPlayerBusy() im Alarm-Polling – löst UART-Timeout-Fallback ab
