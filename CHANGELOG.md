@@ -608,4 +608,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 21v06 | Bugfix | Fehler trat trotz 21v05 weiter auf: Nach Power-On, WLAN, NTP und Startton schalteten Licht und Motor gleichzeitig ein. Ursache: Das 3-s-Ignorierfenster begann beim Interrupt-Attach, danach lief aber noch der Startton (`delay(4000)`). Die dabei entstandene S2-Störflanke blieb in der `inputQueue`, wurde nach Task-Start von `inputTask` abgearbeitet (Fenster längst abgelaufen) und als Zugschalter-Betätigung gewertet. Neu: `inputQueue` wird unmittelbar vor dem Task-Start mit `xQueueReset()` geleert, das Ignorierfenster beginnt erst dort. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v06
+## Version 21v07
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v07 | Funktion | Einschaltreihenfolge getauscht: Beim Alarmstart (`triggerAlarm()`) und beim Zugschalter S2 wird jetzt zuerst das Licht (E3) und danach der Motor (`motorStart()`, E2) eingeschaltet (vorher umgekehrt). Ausschaltreihenfolge unverändert. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v07

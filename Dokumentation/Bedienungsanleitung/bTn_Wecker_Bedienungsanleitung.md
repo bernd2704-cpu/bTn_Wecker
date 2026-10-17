@@ -1,6 +1,6 @@
 # bTn Wecker – Bedienungsanleitung
 
-*Firmware 21v06 · ESP32 / FreeRTOS · Hardware 2v0*
+*Firmware 21v07 · ESP32 / FreeRTOS · Hardware 2v0*
 
 ## 1. Übersicht
 
@@ -25,7 +25,7 @@ Der bTn Wecker ist ein ESP32-basierter Wecker mit OLED-Anzeige, MP3-Wiedergabe (
 | T3  (Touch)     | Wert erhöhen: Stunde +, Von-Zeit +, Lautstärke +<br>Hold: Dauerwiederholung                                                                       |
 | T4  (Touch)     | Wert erhöhen: Minute +, Bis-Zeit +<br>Hold: Dauerwiederholung  ·  Seite 0: Lautstärke –                                                           |
 | S1  (Taster)    | Laufenden Alarm oder Sound stoppen<br>wenn kein Alarm: Kuckuck einmalig auslösen                                                                  |
-| S2  (Taster)    | Zugschalter: Licht (E3) und Mühlrad (E2) gleichzeitig Ein/Aus toggeln. Schaltet nach 30 Minuten ohne erneuten Tastendruck automatisch wieder ab   |
+| S2  (Taster)    | Zugschalter: Licht (E3), dann Mühlrad (E2) Ein/Aus toggeln. Schaltet nach 30 Minuten ohne erneuten Tastendruck automatisch wieder ab              |
 | S3  (Taster)    | Info-Seite ein-/ausblenden (von jeder Seite aus erreichbar)<br>Bei ausgeschaltetem Display weckt S3 das Display und öffnet die Info-Seite (11v04) |
 
 **Hold-Funktion:**  Touch-Felder T3 und T4 unterstützen Dauerberührung. Nach 750 ms wechselt das Feld in den Repeat-Modus und sendet alle 250 ms einen weiteren Impuls – nützlich für schnelles Einstellen von Stunden und Minuten. Klemmt ein Touch-Feld dauerhaft (z.B. durch Feuchtigkeit), erzwingt die Firmware nach einigen Sekunden einen Reset des betroffenen Felds, damit z.B. die Lautstärke nicht unbemerkt bis auf 0 heruntergezählt wird.
@@ -99,7 +99,7 @@ Die Info-Seite zeigt Systemdaten und bietet Zugang zu Konfigurations- und Reset-
 
 | Zeile                        | Inhalt                                                                        |
 | ---------------------------- | ----------------------------------------------------------------------------- |
-| 1 – Kopfzeile                | Firmware-Kennung (z.B. `bTn_Wecker_21v06`)                                    |
+| 1 – Kopfzeile                | Firmware-Kennung (z.B. `bTn_Wecker_21v07`)                                    |
 | 2 – IP:8080                  | Adresse des Web-Log-Servers – im Browser öffnen für Diagnoseinformationen     |
 | 3 – MP3 *nnn*   RESET *nnnn* | Anzahl gefundener MP3-Dateien  ·  Neustart-Zähler (4-stellig)                 |
 | 4 – Taste +  WiFi Reset      | Hinweis: T3 drücken löscht die WLAN-Zugangsdaten und startet den Konfigurator |
@@ -152,4 +152,4 @@ Info-Seite (S3) öffnen → T4 drücken. Alle gespeicherten Einstellungen (Alarm
 
 ---
 
-*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 21v06*
+*bTn Wecker  ·  Bedienungsanleitung  ·  Firmware 21v07*

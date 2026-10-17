@@ -1,6 +1,6 @@
 # bTn Wecker – State Machines
 
-*Firmware 21v06 · Mermaid-Diagramme*
+*Firmware 21v07 · Mermaid-Diagramme*
 
 > ⚠ **Maßgeblich ist diese Datei.** Die ursprüngliche Vorlage
 > `DOC/bTn_Wecker_StateMachines.pptx` (Stand 2026-04-20) ist seit vielen
@@ -38,7 +38,7 @@ stateDiagram-v2
 - **Tages-Sperre aufheben (20v22/20v27):** `lastA1Day`/`lastA2Day` = `0xFFFF` wird NICHT mehr bei jedem `h+`/`min+`-Tastendruck in `onAlarm1()`/`onAlarm2()` gesetzt, sondern erst in `uiTransition()` beim Verlassen von `UI_ALARM1`/`UI_ALARM2` – und auch dann nur, wenn `alarm1TimeEdited`/`alarm2TimeEdited` gesetzt ist (Weckzeit wurde per T3/T4 tatsächlich verändert). Verhindert (a) vorzeitiges Auslösen auf Zwischenständen beim Durchscrollen einer neuen Weckzeit und (b) erneutes Auslösen, wenn die Alarm-Seite nur angeschaut wird.
 - **DST-Sonderfall (20v21, nur Weckzeiten mit Stunde 02):** `updateDstDayFlags()` erkennt beide Umstellungstage TZ-generisch über `mktime()`/`tm_isdst` (Vergleich Stunde 1 vs. Stunde 4). Frühjahr (`dstSpringForwardToday`): effektive Stunde wird in `alarmDue()` um 1h vorgezogen (`effH = h-1`), da die Wanduhrzeit 02:00–02:59 an diesem Tag nicht existiert. Herbst (`dstFallBackToday`): der erste (CEST-)Durchlauf der doppelten Stunde 02 wird per `isdstNow==1` ignoriert, erst der zweite (CET-)Durchlauf löst aus. Zweck: der reale zeitliche Abstand Weckzeit→Termin bleibt unabhängig von der Zeitumstellung erhalten.
 - **Alarm 1 Vorrang:** Alarm 2 wird nur per `else if` geprüft → Alarm 1 hat Vorrang bei gleicher Zeit.
-- **triggerAlarm() → ALARM_RUNNING:** `drainSerial2Pre()` räumt den Serial2-Puffer über die Bibliothek ab (12v14/12v19), setzt Lautstärke mit Untergrenze `ALARM_MIN_VOL` (10, 20v12 – schützt gegen ein durch klemmendes Touch-Pad auf 0 heruntergezähltes `vol`, ohne die gespeicherte Einstellung zu verändern), dann `playFolder()` + `verifyPlayStarted()` (bis zu `VERIFY_PLAY_RETRIES`=3 Versuche à `VERIFY_PLAY_DELAY_MS`=500 ms). `PLAY_OK` und `PLAY_NO_SOUND` (Modul lebt, Datei startet nicht hörbar – `alarmSilentFallback`) laufen beide in denselben Erfolgspfad: Motor/Licht ein, `wakeDisplay()` (10v03), `alarmState = ALARM_RUNNING`, Tages-Sperre wird über `lockAlarmDayGuard()` erst NACH bestätigtem Start gesetzt.
+- **triggerAlarm() → ALARM_RUNNING:** `drainSerial2Pre()` räumt den Serial2-Puffer über die Bibliothek ab (12v14/12v19), setzt Lautstärke mit Untergrenze `ALARM_MIN_VOL` (10, 20v12 – schützt gegen ein durch klemmendes Touch-Pad auf 0 heruntergezähltes `vol`, ohne die gespeicherte Einstellung zu verändern), dann `playFolder()` + `verifyPlayStarted()` (bis zu `VERIFY_PLAY_RETRIES`=3 Versuche à `VERIFY_PLAY_DELAY_MS`=500 ms). `PLAY_OK` und `PLAY_NO_SOUND` (Modul lebt, Datei startet nicht hörbar – `alarmSilentFallback`) laufen beide in denselben Erfolgspfad: Licht, dann Motor ein (Reihenfolge seit 21v07), `wakeDisplay()` (10v03), `alarmState = ALARM_RUNNING`, Tages-Sperre wird über `lockAlarmDayGuard()` erst NACH bestätigtem Start gesetzt.
 - **triggerAlarm() → ALARM_IDLE (PLAY_CANCELLED, 20v12/20v15):** Nutzer hat während der ~1,5 s-Verifikation bewusst gestoppt (S1 immer; Sound-Vorschau/Funktionswahl-Menü nur wenn der Alarm bereits hörbar `ALARM_RUNNING` war, siehe `requestAlarmCancelIfActive(includeStartup)`). Kein Neustart, Tages-Sperre wird trotzdem gesetzt (sonst löste `alarmDue()` im nächsten Tick sofort erneut aus).
 - **triggerAlarm() → Neustart (12v05/12v07/12v10, weiterhin RTC_NOINIT_ATTR-basiert):** Bestätigt der DFPlayer den Play-Befehl über keinen der Versuche (`PLAY_CRASHED`), gilt er als abgestürzt. Alarmnummer/Datei/Minute/Fehlversuche werden in `RTC_NOINIT_ATTR`-Variablen (`rtcRetryMagic`/`-Alarm`/`-FileNo`/`-Min`/`-Count`) hinterlegt (übersteht `ESP.restart()`, NICHT aber Reset-Taster/Neuflashen – das ist ein echter Power-On), danach Neustart. Ab `ALARM_MAX_RESTARTS` (3, seit 12v10) Fehlversuchen kein weiterer Neustart mehr, Alarm bricht für diesen Tag endgültig ab (roter `[FEHLER]`-Eintrag im Web-Log).
 - **watchdogTask-Fallback (12v12):** Friert `alarmTask` mitten in `triggerAlarm()` ein (`alarmTriggerInFlight`-Marker), setzt `watchdogTask` selbst `rtcRetryMagic` vor seinem eigenen Neustart – sonst bliebe der Alarm nach diesem Freeze-Neustart ersatzlos aus. Seit 20v06 redundant (siehe unten), aber als Sicherheitsnetz belassen.
@@ -155,4 +155,4 @@ stateDiagram-v2
 
 ---
 
-*bTn Wecker · State Machines · Firmware 21v06*
+*bTn Wecker · State Machines · Firmware 21v07*
