@@ -602,4 +602,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 21v05 | Bugfix | Der Zugschalter S2 (Licht/Mühlrad) konnte durch eine Störflanke kurz nach dem Power-On ungewollt Motor und Licht einschalten. Neu: S2-Events werden in den ersten `S2_BOOT_IGNORE_MS` (3 s) nach dem Aktivieren der Taster-Interrupts in `setup()` verworfen. S1, S3 und die Alarmlogik (inkl. Nachholpfad) sind nicht betroffen. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v05
+## Version 21v06
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v06 | Bugfix | Fehler trat trotz 21v05 weiter auf: Nach Power-On, WLAN, NTP und Startton schalteten Licht und Motor gleichzeitig ein. Ursache: Das 3-s-Ignorierfenster begann beim Interrupt-Attach, danach lief aber noch der Startton (`delay(4000)`). Die dabei entstandene S2-Störflanke blieb in der `inputQueue`, wurde nach Task-Start von `inputTask` abgearbeitet (Fenster längst abgelaufen) und als Zugschalter-Betätigung gewertet. Neu: `inputQueue` wird unmittelbar vor dem Task-Start mit `xQueueReset()` geleert, das Ignorierfenster beginnt erst dort. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v06

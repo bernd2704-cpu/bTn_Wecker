@@ -1,6 +1,6 @@
 # bTn Wecker – Pinbelegung ESP32 DevKitC V4
 
-Stand: Firmware 21v05 · Hardware 2v0
+Stand: Firmware 21v06 · Hardware 2v0
 
 Draufsicht, USB-Buchse unten. `*` = vom Wecker belegt, übrige Pins `nc` (nicht beschaltet).
 PIN = Pin-Nummer am Board (J2 links 1–19 von oben nach unten, J3 rechts 20–38 von unten nach oben).
@@ -94,8 +94,8 @@ Pin 1–8 (links)            Pin 9–16 (rechts)
 | 16  | BUSY     | Wiedergabe-Status (LOW)   | GPIO35 (DFPLAYER_BUSY, PIN 6)      |
 
 Hinweis: Die Pinnummern entsprechen dem Datenblatt des DFPlayer Mini; Pin 7 und 10 sind beide GND.
-Die Zuordnung der Verbindungen folgt der Firmware (`SysConf_21v05.h`) – bitte gegen den Schaltplan
+Die Zuordnung der Verbindungen folgt der Firmware (`SysConf_21v06.h`) – bitte gegen den Schaltplan
 `Wecker_2v0.kicad_sch` prüfen.
 
 Vollständige Liste inkl. nc-Pins, Strapping-Hinweisen und Änderungshistorie:
-[Pin_GPIO-Liste.md](Pin_GPIO-Liste.md). Quelle: `SysConf_21v05.h`.
+[Pin_GPIO-Liste.md](Pin_GPIO-Liste.md). Quelle: `SysConf_21v06.h`.
