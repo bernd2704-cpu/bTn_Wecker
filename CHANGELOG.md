@@ -596,4 +596,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 21v04 | Bugfix | Licht (E3) und Motor (E2) konnten nach dem Booten zufällig eingeschaltet sein und blieben es bis zum manuellen Abschalten: E1/E2/E3 wurden erst nach NVR-Laden/WiFi/NTP initialisiert, E3 dabei nur als `OUTPUT` gesetzt, ohne `LOW` zu schreiben. Neu: Alle drei Ausgänge werden ganz am Anfang von `setup()` definiert auf AUS gesetzt. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v04
+## Version 21v05
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v05 | Bugfix | Der Zugschalter S2 (Licht/Mühlrad) konnte durch eine Störflanke kurz nach dem Power-On ungewollt Motor und Licht einschalten. Neu: S2-Events werden in den ersten `S2_BOOT_IGNORE_MS` (3 s) nach dem Aktivieren der Taster-Interrupts in `setup()` verworfen. S1, S3 und die Alarmlogik (inkl. Nachholpfad) sind nicht betroffen. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v05
