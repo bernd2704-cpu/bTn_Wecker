@@ -7,3 +7,9 @@ Hardware/Stückliste/DOC_Bauteile/
 # KiCad Sperrdateien/Backup-Verzeichnis
 *.lck
 .history/
+
+# Alte Firmware-Stände vor 12v00 – nur lokal (enthalten teils SSID/Passwörter)
+Software/Firmware_Versionshistorie/Wecker_[1-9]v*/
+Software/Firmware_Versionshistorie/Wecker_10v*/
+Software/Firmware_Versionshistorie/Wecker_11v*/
+Software/Firmware_Versionshistorie/bTn_Alarm_*/
