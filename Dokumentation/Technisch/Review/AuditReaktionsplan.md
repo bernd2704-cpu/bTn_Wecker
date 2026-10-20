@@ -172,8 +172,10 @@ Diese fünf Mechanismen funktionieren bereits korrekt und dürfen bei der Umsetz
     Pad länger als `TOUCH_MAX_HOLD_MS` (30 s) klemmt (`[WARNUNG]`-Log). `triggerAlarm()` sendet vor
     jedem Alarm `player.volume()` mit Untergrenze `ALARM_MIN_VOL` (10), unabhängig vom zuletzt
     gesendeten Wert – `vol` selbst bleibt unverändert.
-  - [-] E2: **Zurückgestellt auf Nutzerwunsch** – S3 bleibt bewusst auf GPIO0, weil der vorhandene
-    interne Boot-Taster des ESP32 DevKit C V4 dafür genutzt wird (kein zusätzliches Bauteil nötig).
+  - [x] E2: **Erledigt durch Hardwareschutz (Stand 2v0, 2026-10-20)** – S3 bleibt bewusst auf GPIO0, weil der
+    vorhandene interne Boot-Taster des ESP32 DevKit C V4 dafür genutzt wird (kein zusätzliches Bauteil
+    nötig). Zufällige Fehlbedienung von S3 während des Bootens ist hardwareseitig verhindert, ein
+    Verlegen auf einen Pin ohne Strapping-Funktion ist daher nicht mehr nötig.
   - [x] C6: Neues Flag `alarmCancelRequested`, gesetzt über `requestAlarmCancelIfActive()` in S1,
     Sound-Vorschau-Stopp und Funktionswahl-Menü, bevor deren `player.stop()` einen laufenden
     Alarmversuch treffen könnte. `verifyPlayStarted()` liefert dann `PLAY_CANCELLED` statt
