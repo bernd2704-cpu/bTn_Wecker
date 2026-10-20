@@ -9,6 +9,10 @@ Ausgänge E1=GPIO27 (Kuckuck)/E2=GPIO25 (Motor/Mühlrad)/E3=GPIO26 (LED-Licht)
 
 **Touch-Beschaltung:** je 510Ω Reihenwiderstand, keine externe Kapazität (volle Touch-Empfindlichkeit), ca. 30cm twisted pair
 
+**Taster-Beschaltung S1/S2:** je 47nF Keramikkondensator nach GND direkt am Pin (GPIO33/GPIO32), ohne Serienwiderstand.
+Zusammen mit dem Pull-up Hardware-Entprellung/Störfilter (τ ca. 2ms bei internem Pull-up). Entladestrom fließt über den Taster, nicht über den Pin.
+Falls weiter Störflanken auftreten: 100–330Ω in Reihe nachrüsten.
+
 **Ausgangsschaltung E1–E3:** IRLML6344TRPBF MOSFET, Gate 470Ω, Pull-Down 10kΩ (Gate nach GND, an allen 3 Gates), Freilaufdiode 1N4448, PWM 20kHz,
 Motor-Rail über LDO MCP1700T-3302E/TO auf 3,3V geregelt (kein Direktanschluss an 5V mehr) –
 voller PWM-Regelumfang 0..255 ohne Überspannungsrisiko nutzbar.
