@@ -338,6 +338,7 @@ if (mp3Count > 0) {
 - **Fix:** S3 auf einen GPIO ohne Strapping-Funktion legen (z.B. GPIO19/23 mit internem Pull-up) und Pin-Zuordnung in SysConf/CLAUDE.md/Schaltplan nachziehen. Falls die Verdrahtung bleiben muss: Diode oder RC, so dass ein Tastendruck GPIO0 in den ersten Millisekunden nach Reset nicht unter den LOW-Pegel zieht.
 - **Sicherheit des Befunds:** Bestätigt, Schweregrad von „hoch" auf „mittel" korrigiert (Software-Reset-Pfad widerlegt). Das DevKitC hat ohnehin einen BOOT-Taster auf GPIO0 – S3 erhöht nur die Exposition.
 - **Notiz (Review 2026-08-14):** Keine substanziellen Einwände.
+- **Hinweis (Stand Hardware 2v0, 2026-10-20):** Die 4,7 nF an T2/GPIO2 beziehen sich auf Hardware 1v0. In 2v0 haben die Touch-Eingänge nur noch 510 Ω in Reihe und keine externe Kapazität. Das Strapping-Risiko ist damit nicht behoben: GPIO2 hat beim Reset ohnehin einen schwachen internen Pull-down und liegt ohne Berührung weiterhin LOW. Die Bedingung GPIO0 = 0 und GPIO2 = 0 bleibt bei gedrücktem S3 erfüllt. S3 ist jedoch vor zufälliger Fehlbedienung während des Bootens hardwareseitig geschützt.
 
 ---
 

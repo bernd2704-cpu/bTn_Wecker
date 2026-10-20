@@ -7,7 +7,7 @@ DFPlayer Mini (Serial2, RX=16, TX=17, BUSY=GPIO35), Touch T0=GPIO4/T2=GPIO2/T3=G
 Taster S1=GPIO33/S2=GPIO32/S3=GPIO0,
 Ausgänge E1=GPIO27 (Kuckuck)/E2=GPIO25 (Motor/Mühlrad)/E3=GPIO26 (LED-Licht)
 
-**Touch-Beschaltung:** je 1kΩ Reihenwiderstand + 4,7nF nach GND (GPIO-seitig), ca. 30cm twisted pair
+**Touch-Beschaltung:** je 510Ω Reihenwiderstand, keine externe Kapazität (volle Touch-Empfindlichkeit), ca. 30cm twisted pair
 
 **Ausgangsschaltung E1–E3:** IRLML6344TRPBF MOSFET, Gate 470Ω, Pull-Down 10kΩ (Gate nach GND, an allen 3 Gates), Freilaufdiode 1N4448, PWM 20kHz,
 Motor-Rail über LDO MCP1700T-3302E/TO auf 3,3V geregelt (kein Direktanschluss an 5V mehr) –
