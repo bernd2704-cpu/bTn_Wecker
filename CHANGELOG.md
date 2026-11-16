@@ -614,4 +614,13 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 21v07 | Funktion | Einschaltreihenfolge getauscht: Beim Alarmstart (`triggerAlarm()`) und beim Zugschalter S2 wird jetzt zuerst das Licht (E3) und danach der Motor (`motorStart()`, E2) eingeschaltet (vorher umgekehrt). Ausschaltreihenfolge unverändert. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v07
+## Version 21v08
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v08 | Funktion | DFPlayer-Überwachung im Leerlauf. Neu `dfpHeartbeat()` im alarmTask: alle 5 min (`DFP_HB_INTERVAL_MS`, erster nach 60 s) wird der Status per `readState()` abgefragt (3 Versuche) und mit dem BUSY-Pin verglichen. Fehler: keine UART-Antwort oder BUSY LOW bei Status 0. Nach 3 fehlgeschlagenen Heartbeats in Folge (Wiederholung alle 30 s) `ESP.restart()`; `setup()` initialisiert den DFPlayer dabei neu. Schleifenschutz über RTC-Zähler (max. 3 Neustarts in Folge, Rücksetzen beim ersten erfolgreichen Heartbeat). Anlass: DFPlayer reagierte weder auf Alarm noch auf Menü-Wiedergabe, bis ein manueller Reset erfolgte – die Firmware erkannte das nicht. |
+| 21v08 | Funktion | Menü-Sound-Vorschau wird nach `playFolder()` verifiziert (`dfpPreviewVerify()`, nach 1,5 s): bleibt UART stumm und BUSY HIGH, wird der Heartbeat sofort angestoßen; Status 0 (z.B. Datei fehlt) nur als Log-Hinweis. |
+| 21v08 | Bugfix | `triggerAlarm()` verwarf einen nicht erhaltenen `playerMutex` bisher stillschweigend – jetzt `[FEHLER]`-Log (höchstens einmal je 30 s). |
+| 21v08 | Diagnose | `verifyPlayStarted()` loggt ab dem 2. Versuch, wenn der Start nur über das BUSY-Pin bestätigt wurde (Verhalten unverändert). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v08
