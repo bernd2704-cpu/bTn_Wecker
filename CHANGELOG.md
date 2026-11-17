@@ -623,4 +623,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 | 21v08 | Bugfix | `triggerAlarm()` verwarf einen nicht erhaltenen `playerMutex` bisher stillschweigend – jetzt `[FEHLER]`-Log (höchstens einmal je 30 s). |
 | 21v08 | Diagnose | `verifyPlayStarted()` loggt ab dem 2. Versuch, wenn der Start nur über das BUSY-Pin bestätigt wurde (Verhalten unverändert). |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v08
+## Version 21v09
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v09 | Funktion | Web-Log: im DFPlayer-Abschnitt neue Zeile `[DFPlayer] Heartbeat: dd.mm.jjjj hh:mm:ss` mit dem Zeitpunkt des letzten erfolgreichen Heartbeats (Snapshot `snapDfpHbTime`, bei jedem OK-Heartbeat aktualisiert, Schreib-/Lesezugriff unter `webLogMutex`). Ohne bisherigen Heartbeat `–`, ohne gültige NTP-Zeit Uptime (`+123s`). Kein Eintrag im Ring-Puffer; Heartbeat-Logik unverändert. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v09
