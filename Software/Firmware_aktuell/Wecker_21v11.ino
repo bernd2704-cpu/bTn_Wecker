@@ -61,7 +61,7 @@
 #include <esp_system.h>               // esp_reset_reason() – Ursache des letzten Resets
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_21v09.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_21v11.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -2945,7 +2945,19 @@ static void webLogTask(void *pvParam) {
     String generalLog;
     String dfLog;
     String resetLine;
+    String hbEntry;                                                   // Heartbeat-Zeile, wird unter mp3Count im DFPlayer-Log eingefügt
+    bool   hbInserted = false;
     if (webLogMutex && xSemaphoreTake(webLogMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
+      {
+        char hbTs[sizeof(snapDfpHbTime)];
+        memcpy(hbTs, snapDfpHbTime, sizeof(hbTs));
+        hbTs[sizeof(hbTs) - 1] = '\0';
+        String hbLine = "[DFPlayer]";
+        while ((int)hbLine.length() < WEBLOG_TAG_WIDTH) hbLine += ' ';
+        hbLine += " Heartbeat: ";
+        hbLine += (hbTs[0] != '\0') ? String(hbTs) : String("–");
+        hbEntry = "<span>" + hbLine + "</span>\n";
+      }
       uint16_t start = (webLogCount < WEBLOG_LINES)
                      ? 0
                      : webLogHead;                         // ältester Eintrag
@@ -2978,14 +2990,17 @@ static void webLogTask(void *pvParam) {
         line.replace("<", "&lt;"); line.replace(">", "&gt;");
         entry += line + "</span>\n";
         if (isResetCause)      resetLine += entry;
-        else if (isDfPlayer)   dfLog += entry;
-        else {
+        else if (isDfPlayer) {
+          dfLog += entry;
+          if (!hbInserted && line.indexOf("mp3Count") >= 0) { dfLog += hbEntry; hbInserted = true; }
+        } else {
           generalLog += entry;
           if (isResetCount) generalLog += resetLine;   // Reset-Ursache direkt nach resetCount, vor den Laufzeit-Meldungen
         }
       }
       xSemaphoreGive(webLogMutex);
     }
+    if (!hbInserted) dfLog = hbEntry + dfLog;                         // mp3Count-Zeile (Boot) aus dem Ring-Puffer gerollt: Heartbeat oben
 
     // ── 1: Allgemeines Log ────────────────────────────────────
     {
@@ -3036,16 +3051,6 @@ static void webLogTask(void *pvParam) {
       String alarmTs = strlen(snapAlarmTime) > 0 ? String(snapAlarmTime) : String("–");
       html += "<div class='sec-title'>DFPlayer &ndash; letzter erfolgreicher Alarm: "
               "<span style='color:#4A9EFF'>" + alarmTs + "</span></div>";
-    }
-    {                                                                 // 21v09: letzter erfolgreicher Heartbeat (Snapshot, nicht im Ring-Puffer)
-      char hbTs[sizeof(snapDfpHbTime)] = "";
-      if (webLogMutex && xSemaphoreTake(webLogMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
-        memcpy(hbTs, snapDfpHbTime, sizeof(hbTs));
-        xSemaphoreGive(webLogMutex);
-      }
-      hbTs[sizeof(hbTs) - 1] = '\0';
-      String hbStr = hbTs[0] != '\0' ? String(hbTs) : String("–");
-      html += "<div class='snap-box'>[DFPlayer] Heartbeat: <span class='ts'>" + hbStr + "</span></div>";
     }
     html += "<div id='dflog'>" + dfLog + "</div>";
 
@@ -3362,7 +3367,7 @@ void setup() {
       }
     }
     checkSerial2Leftover("volume (setup)");
-    player.volume(vol);
+    player.volume(STARTUP_VOL);                                                          // 21v11: fester Startton-Pegel, unabhängig von vol (SysConf)
     checkSerial2Leftover("EQ (setup)");
     player.EQ(DFPLAYER_EQ_BASS);
     checkSerial2Leftover("playFolder (setup Startsound)");
@@ -3457,7 +3462,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_21v09.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_21v11.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

@@ -629,4 +629,16 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 21v09 | Funktion | Web-Log: im DFPlayer-Abschnitt neue Zeile `[DFPlayer] Heartbeat: dd.mm.jjjj hh:mm:ss` mit dem Zeitpunkt des letzten erfolgreichen Heartbeats (Snapshot `snapDfpHbTime`, bei jedem OK-Heartbeat aktualisiert, Schreib-/Lesezugriff unter `webLogMutex`). Ohne bisherigen Heartbeat `–`, ohne gültige NTP-Zeit Uptime (`+123s`). Kein Eintrag im Ring-Puffer; Heartbeat-Logik unverändert. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v09
+## Version 21v10
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v10 | Funktion | Web-Log: Heartbeat-Zeile `[DFPlayer] Heartbeat: …` steht nicht mehr als eigenes Feld, sondern im DFPlayer-Fenster direkt unter der `mp3Count`-Zeile (Fallback: oberste Zeile, falls `mp3Count` aus dem Ring-Puffer gerollt ist). |
+
+## Version 21v11
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v11 | Funktion | Startton beim Boot mit fester Lautstärke `STARTUP_VOL` = 5 (neue Konstante in SysConf), unabhängig von der gespeicherten Lautstärke `vol`. Alarm- und Menülautstärke unverändert. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v11

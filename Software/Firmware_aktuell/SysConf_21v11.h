@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_21v09.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 21v09
-// Datei-Version    : 21v09
+// SysConf_21v11.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 21v11
+// Datei-Version    : 21v11
 // Boardverwalter   : esp32 3.3.12 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34, ab 21v01 GPIO35)
@@ -166,9 +166,12 @@
 // 21v09: Web-Log: Zeitstempel des letzten erfolgreichen DFPlayer-Heartbeats als
 //        eigene Zeile "[DFPlayer] Heartbeat: dd.mm.jjjj hh:mm:ss" im DFPlayer-Abschnitt
 //        (Snapshot snapDfpHbTime, bei jedem OK-Heartbeat aktualisiert, nicht im Ring-Puffer).
+// 21v10: Web-Log: Heartbeat-Zeile steht jetzt im DFPlayer-Fenster direkt unter der
+//        mp3Count-Zeile (statt als eigenes Feld darüber); Fallback: oben im Fenster.
+// 21v11: Startton beim Boot mit fester Lautstärke STARTUP_VOL (5), unabhängig von vol.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "21v09"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "21v11"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -261,6 +264,7 @@ const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               /
 const uint32_t S2_BOOT_IGNORE_MS    = 3000;                                    // 21v05/21v06: S2 ab Task-Start (Ende setup) für diese Zeit ignorieren
 const uint32_t ALARM_POLL_MS        = 5000;                                    // Alarm-Nachlauf Prüfintervall
 const uint32_t ALARM_MAX_RUN_MS     = 900000UL;                                // 20v05 (A3-Restarbeit, Audit 2026-08-13): harte Obergrenze fuer ALARM_RUNNING (15 min) – Rueckfallebene, falls BUSY dauerhaft LOW haengt und dfPlayerIdleDebounced() nie "idle" meldet
+const uint8_t  STARTUP_VOL         =    5;                                    // 21v11: feste Lautstärke (0..30) des Starttons beim Boot, unabhängig von der gespeicherten Lautstärke vol
 const uint8_t  ALARM_MIN_VOL        =   10;                                    // 20v12 (E1-Fix, Audit 2026-08-13): Lautstaerken-Untergrenze fuer triggerAlarm() – schuetzt gegen einen durch klemmendes Touch-Pad (T4) auf 0 heruntergezaehlten vol, ohne die persistierte Einstellung selbst zu veraendern
 const uint16_t ALARM_CATCHUP_MIN    =   60;                                    // 20v04 (A1-Fix, Audit 2026-08-13): Nachholfenster in Minuten – faengt Zeitspruenge (NTP-Sync nach Stromausfall), Reboots im Alarmfenster und die Maerz-Zeitumstellung ab, siehe alarmDue() in Wecker_20v04.ino
 const uint32_t VERIFY_PLAY_DELAY_MS =  500;                                    // 12v06: Start-Check – Wartezeit je Versuch (DFPlayer braucht Zeit zum Laden)
