@@ -61,7 +61,7 @@
 #include <esp_system.h>               // esp_reset_reason() – Ursache des letzten Resets
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_21v11.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_21v12.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -266,6 +266,11 @@ bool    wheel_on   = false;
 // alarmTask/inputTask lesen – 8-/32-bit-Zugriff auf Xtensa atomar.
 volatile uint8_t motor_duty   = MOTOR_PWM_DUTY;
 volatile bool    motorRunning = false;
+
+// 21v12: Startton-Lautstärke zur Laufzeit verstellbar (Web-Slider /startvol),
+// NVS-persistiert. Default aus SysConf (STARTUP_VOL), Bereich STARTUP_VOL_MIN..MAX_VOL.
+// webLogTask (Core 0) schreibt, setup() liest beim Boot – 8-bit atomar.
+volatile uint8_t startup_vol  = STARTUP_VOL;
 
 // pageselect: spiegelt (uint8_t)uiState – wird von checkboxAlarm/Sound genutzt
 volatile uint8_t pageselect = 0;
@@ -918,6 +923,7 @@ void writeNVR() {
   data.putBool("light_on",    light_on);
   data.putBool("wheel_on",    wheel_on);
   data.putInt ("motor_duty",  motor_duty);              // 12v03: Web-verstellbare Pulsweite
+  data.putInt ("startup_vol", startup_vol);         // 21v12: Web-verstellbare Startton-Lautstärke
   data.putInt ("vol",         vol);
   data.putInt ("lastA1Day",   lastA1Day);                // 20v17: Alarm-Tages-Sperre, siehe lockAlarmDayGuard()
   data.putInt ("lastA2Day",   lastA2Day);
@@ -938,6 +944,7 @@ void readNVR() {
   light_on    = data.getBool("light_on",     light_on);
   wheel_on    = data.getBool("wheel_on",     wheel_on);
   motor_duty  = data.getInt ("motor_duty",   motor_duty);
+  startup_vol = data.getInt ("startup_vol",  startup_vol);
   vol         = data.getInt ("vol",          vol);
   // 20v17: Alarm-Tages-Sperre (siehe lockAlarmDayGuard()) – ersetzt den
   // RTC_NOINIT-Ansatz aus 20v16, der Reset-Taster/Neuflashen nicht überstand.
@@ -956,6 +963,8 @@ void readNVR() {
   if (sound1_assigned < 1) sound1_assigned = 1;                // DFPlayer: Dateinummer min. 1
   if (sound2_assigned < 1) sound2_assigned = 1;                // Obergrenze erst nach mp3Count bekannt
   if (vol > MAX_VOL)   vol = MAX_VOL;                  // Lautstärke 0–MAX_VOL
+  if (startup_vol > MAX_VOL) startup_vol = MAX_VOL;    // 21v12: Startton-Lautstärke STARTUP_VOL_MIN–MAX_VOL
+  if (startup_vol < STARTUP_VOL_MIN) startup_vol = STARTUP_VOL_MIN;
   // motor_duty ist uint8_t → Wertebereich 0..255 bereits durch Typ erzwungen
   // (korrupter NVS-Wert wird beim Zuweisen auf 8 Bit beschnitten, bleibt gültig).
   if (lastA1Day != 0xFFFF && lastA1Day > 365) lastA1Day = 0xFFFF;  // yday 0–365, sonst ungültig
@@ -2926,8 +2935,8 @@ static void webLogTask(void *pvParam) {
       ".snap-wrap{margin-bottom:16px}"
       ".snap-title{font-size:1rem;color:#78909c;margin-bottom:4px}"
       ".snap-title .ts{color:#4A9EFF;font-weight:bold}"
-      ".snap-box{background:#0d1a0d;border:1px solid #2a4a2a;border-radius:6px;padding:10px;"
-      "white-space:pre;overflow-x:auto;font-size:19px;color:#b0d0b0}"
+      ".snap-box{background:#0d0d1a;border:1px solid #333;border-radius:6px;padding:10px;"
+      "white-space:pre;overflow-x:auto;font-size:19px;color:#e0e0e0}"
       "#log,#dflog{background:#0d0d1a;border:1px solid #333;border-radius:6px;padding:12px;"
       "white-space:pre;overflow-x:auto;max-height:60vh;overflow-y:auto;font-size:19px}"
       "#log,#dflog{margin-bottom:16px}"
@@ -3061,13 +3070,27 @@ static void webLogTask(void *pvParam) {
       int mpct = ((int)motor_duty * 100 + 127) / 255;                 // 0..255 → 0..100 % (gerundet)
       String mp = String(mpct);
       html += "<div class='sec-title'>M&uuml;hlrad-Motor &ndash; Pulsweite (Drehzahl)</div>"
-              "<form action='/motor' method='get' class='snap-box' style='color:#b0d0b0'>"
+              "<form action='/motor' method='get' class='snap-box'>"
               "Duty: <output id='dv'>" + mp + "</output> %"
               " &nbsp;<input type='range' name='duty' min='0' max='100' value='" + mp + "'"
               " style='vertical-align:middle;width:55%' oninput='dv.value=this.value'>"
               " &nbsp;<button type='submit'>Setzen</button>"
               "<div style='color:#78909c;font-size:0.85rem;margin-top:6px'>"
               "&lt; 35 % &rarr; Kickstart-Anlaufimpuls &middot; Wert wird in NVS gespeichert</div>"
+              "</form>";
+    }
+    // ── 7: Startton-Lautstärke-Slider (21v12) ─────────────────
+    // Analog Mühlrad-Fenster: GET-Form auf /startvol (0..MAX_VOL).
+    {
+      String sv = String((int)startup_vol);
+      html += "<div class='sec-title'>Startton &ndash; Lautst&auml;rke</div>"
+              "<form action='/startvol' method='get' class='snap-box'>"
+              "Lautst&auml;rke: <output id='sv'>" + sv + "</output> / " + String((int)MAX_VOL) +
+              " &nbsp;<input type='range' name='vol' min='" + String((int)STARTUP_VOL_MIN) + "' max='" + String((int)MAX_VOL) + "' value='" + sv + "'"
+              " style='vertical-align:middle;width:55%' oninput='sv.value=this.value'>"
+              " &nbsp;<button type='submit'>Setzen</button>"
+              "<div style='color:#78909c;font-size:0.85rem;margin-top:6px'>"
+              "Wirkt beim n&auml;chsten Boot &middot; Wert wird in NVS gespeichert</div>"
               "</form>";
     }
     html += "<script>document.getElementById('upd').textContent=new Date().toLocaleTimeString();</script></body></html>";
@@ -3104,6 +3127,21 @@ static void webLogTask(void *pvParam) {
       if (motorRunning) ledcWrite(E2, d);                            // Live-Übernahme, falls Motor läuft
       markSafeChange();                                              // nvrTask sichert nach Ruhezeit
       webLogf("[MOTOR] Duty -> %ld %% (%u/255)", pct, (unsigned)d);
+    }
+    logServer.sendHeader("Location", "/");
+    logServer.send(303, "text/plain", "");
+  });
+
+  // 21v12: GET /startvol?vol=NN (STARTUP_VOL_MIN..MAX_VOL) → Startton-Lautstärke setzen.
+  // Persistenz wie /motor über markSafeChange→nvrTask; wirkt ab nächstem Boot.
+  logServer.on("/startvol", HTTP_GET, [&logServer]() {
+    if (logServer.hasArg("vol")) {
+      long v = logServer.arg("vol").toInt();
+      if (v < (long)STARTUP_VOL_MIN) v = STARTUP_VOL_MIN;
+      if (v > (long)MAX_VOL)         v = MAX_VOL;
+      startup_vol = (uint8_t)v;
+      markSafeChange();
+      webLogf("[STARTVOL] Startton-Lautstaerke -> %ld", v);
     }
     logServer.sendHeader("Location", "/");
     logServer.send(303, "text/plain", "");
@@ -3367,7 +3405,7 @@ void setup() {
       }
     }
     checkSerial2Leftover("volume (setup)");
-    player.volume(STARTUP_VOL);                                                          // 21v11: fester Startton-Pegel, unabhängig von vol (SysConf)
+    player.volume(startup_vol);                                                          // 21v12: Startton-Pegel aus NVS (Default STARTUP_VOL), unabhängig von vol
     checkSerial2Leftover("EQ (setup)");
     player.EQ(DFPLAYER_EQ_BASS);
     checkSerial2Leftover("playFolder (setup Startsound)");
@@ -3462,7 +3500,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_21v11.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_21v12.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

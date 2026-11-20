@@ -641,4 +641,11 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 21v11 | Funktion | Startton beim Boot mit fester Lautstärke `STARTUP_VOL` = 5 (neue Konstante in SysConf), unabhängig von der gespeicherten Lautstärke `vol`. Alarm- und Menülautstärke unverändert. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v11
+## Version 21v12
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v12 | Funktion | Web-Log: Hintergrund und Rahmen der Snapshot-Fenster (Verbindung, Touch Baseline, Stack High-Water Marks) an den Standard des Fensters „Allgemeines Log“ angeglichen (`#0d0d1a`, Rahmen `#333`, Schrift `#e0e0e0`, vorher dunkelgrün/hellgrün); gilt auch für das Mühlrad-Motor-Fenster. |
+| 21v12 | Funktion | Neues Web-Log-Fenster „Startton – Lautstärke“ analog Mühlrad-Motor: Slider `STARTUP_VOL_MIN` (1, SysConf)..`MAX_VOL`, Handler `/startvol`, NVS-Key `startup_vol`, wirkt ab nächstem Boot. `STARTUP_VOL` (5) in SysConf ist nur noch Default. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 21v12
