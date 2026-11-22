@@ -148,14 +148,14 @@ Zwei Entprellstufen:
 1. **ISR:** Flanken, die weniger als **30 ms** (`BTN_DEBOUNCE_MS`) nach der letzten akzeptierten Flanke desselben Tasters kommen, werden verworfen.
 2. **Verarbeitung:** Nach einer ausgeführten Aktion wird derselbe Taster für **1000 ms** (`BTN_LOCKOUT_MS`) gesperrt (gilt für S1, S2 und S3, je Taster eigener Zeitstempel). Touch-Events haben **keine** Aktionssperre.
 
-Beim Boot werden S1, S2, S3 mit internem Pull-up als Eingang konfiguriert, die Interrupts aber erst kurz vor dem Start der Tasks aktiviert. Vor dem Task-Start wird die Event-Queue geleert. **S2 wird in den ersten 3000 ms** (`S2_BOOT_IGNORE_MS`) **nach dem Task-Start ignoriert** (Schutz vor Störflanken beim Einschalten, die sonst Licht/Motor starten).
+Beim Boot werden S1, S2, S3 mit internem Pull-up als Eingang konfiguriert, die Interrupts aber bereits in Boot-Schritt 13 aktiviert, also **vor** der DFPlayer-Initialisierung (bis 5 s) und dem Startton (4 s) und damit deutlich vor dem Start der Tasks. Events aus dieser Zeit sammeln sich in der Queue; sie wird vor dem Task-Start (Schritt 19) geleert. **S2 wird in den ersten 3000 ms** (`S2_BOOT_IGNORE_MS`) **nach dem Task-Start ignoriert** (Schutz vor Störflanken beim Einschalten, die sonst Licht/Motor starten).
 
 ### 3.3 Reihenfolge der Auswertung eines Events
 
 1. Ist das Display abgeschaltet (Abschnitt 4.6) und das Event ein Touch (T0/T2/T3/T4): Display einschalten, Timer neu starten, **Event verwerfen**.
 2. Ist das Display abgeschaltet und das Event S3: Display einschalten, Timer neu starten, Event **weiter auswerten** (öffnet die Info-Seite).
 3. S1 und S2 werden unabhängig vom Display ausgeführt (Abschnitt 6.5 und 6.6).
-4. T0 bis T4 und S3 setzen den Zeitstempel `lastTouchMs` (Basis für Auto-Rückkehr und Display-Timeout). S1/S2 setzen ihn **nicht**.
+4. T0, T2, T3, T4 (es gibt kein T1) und S3 setzen den Zeitstempel `lastTouchMs` (Basis für Auto-Rückkehr und Display-Timeout). S1/S2 setzen ihn **nicht**.
 5. Alle übrigen Events laufen durch den UI-Zustandsautomat (Abschnitt 5).
 
 ---
@@ -298,18 +298,18 @@ Checkboxen (alle drei werden immer gezeichnet): `BOX(32,20)`, `BOX(32,37)`, `BOX
 
 **Seite 7 – Info** (`clear()` zuerst)
 
-| Op    | x   | y   | Text                                                           |
-| ----- | --- | --  | -------------------------------------------------------------- |
-| Z10C  | 63  | 0   | `bTn_Wecker_<Version>`                                         |
-| Z10C  | 63  | 16  | `<IP>:8080` (z. B. `192.168.1.42:8080`)                        |
-| Z10L  | 1   | 28  | `MP3`                                                          |
-| Z10L  | 28  | 28  | `str_mp3`                                                      |
-| Z10C  | 78  | 28  | `RESET`                                                        |
-| Z10R  | 127 | 28  | `str_reset`                                                    |
-| Z10L  | 1   | 40  | `Taste +`                                                      |
-| Z10R  | 127 | 40  | `WiFi RESET`                                                   |
-| Z10L  | 1   | 54  | `Taste -`                                                      |
-| Z10R  | 127 | 54  | `Werks-RESET`                                                  |
+| Op   | x   | y  | Text                                                              |
+| ---- | --- | -- | ----------------------------------------------------------------- |
+| Z10C | 63  | 0  | `bTn_Wecker_<Version>`                                            |
+| Z10C | 63  | 16 | `<IP>:8080` (z. B. `192.168.1.42:8080`, ohne WLAN `0.0.0.0:8080`) |
+| Z10L | 1   | 28 | `MP3`                                                             |
+| Z10L | 28  | 28 | `str_mp3`                                                         |
+| Z10C | 78  | 28 | `RESET`                                                           |
+| Z10R | 127 | 28 | `str_reset`                                                       |
+| Z10L | 1   | 40 | `Taste +`                                                         |
+| Z10R | 127 | 40 | `WiFi RESET`                                                      |
+| Z10L | 1   | 54 | `Taste -`                                                         |
+| Z10R | 127 | 54 | `Werks-RESET`                                                     |
 
 ### 4.4 Teilaktualisierungen im Betrieb
 
@@ -362,7 +362,7 @@ Nach dem Boot erscheint Seite 0.
 
 - **Auto-Rückkehr:** Ist die Seite ≠ 0 und seit dem letzten Touch/S3-Event (`lastTouchMs`) sind **20 s** (`AUTO_RETURN_MS`) vergangen, wechselt das Gerät zu Seite 0 (auch von der Info-Seite).
 - **Display aus:** Sind seit `lastTouchMs` **300 s** (`DISPLAY_TIMEOUT_MS`) vergangen, wird das OLED abgeschaltet (`displayOff`, Befehl 0xAE). Beim Aufwecken `displayOn` (0xAF); der Framebuffer-Inhalt bleibt erhalten.
-- **Aufwecken:** Touch T0 bis T4 weckt nur (Event verworfen). S3 weckt und öffnet die Info-Seite. Ein Alarmstart weckt das Display ebenfalls.
+- **Aufwecken:** Touch T0, T2, T3, T4 weckt nur (Event verworfen). S3 weckt und öffnet die Info-Seite. Ein Alarmstart weckt das Display ebenfalls: war es abgeschaltet, `displayOn` und `lastTouchMs` auf die aktuelle Zeit setzen (sonst schaltet es im nächsten 300-ms-Takt wieder ab). War es an, bleibt `lastTouchMs` unverändert.
 - Die Anzeige-Task läuft im 300-ms-Takt (`DISPLAY_UPDATE_MS`); die Uhr wird nur neu gezeichnet, wenn sich die Sekunde geändert hat.
 - Beim Start ist `lastTouchMs = 0`: ohne Bedienung schaltet das Display 300 s nach dem Boot ab.
 
@@ -396,7 +396,7 @@ Details:
 
 - **Lautstärke (Seite 0):** `vol` wird geändert, an den DFPlayer gesendet (`volume`), `str_vol` neu gezeichnet. Gelingt der Zugriff auf den Player nicht (Player belegt, Timeout 50 ms), bleibt `vol` unverändert und es wird ins Log geschrieben: `[FEHLER] Lautstaerke+ fehlgeschlagen (Mutex belegt), vol unveraendert bei <n>` bzw. `Lautstaerke-`.
 - **Alarmzeit (Seite 1/2):** T3/T4 ändern die Zeit sofort in der Anzeige und merken, dass die Zeit editiert wurde. Alarm-Logik siehe 6.1.
-- **Sound-Seiten (Seite 3/4):** T3/T4 ändern die **gewählte** Nummer (`soundN_selected`), schalten die Vorschau aus (`soundN_on = false`, Player stoppen falls BUSY) und speichern. T2 schaltet die Vorschau um (6.8).
+- **Sound-Seiten (Seite 3/4):** T3/T4 ändern die **gewählte** Nummer (`soundN_selected`), schalten die Vorschau aus (`soundN_on = false`, Player stoppen falls BUSY) und lösen eine Speicherung aus. Persistiert wird dabei nur `soundN_assigned`, das sich erst beim Start der Vorschau (T2 an) ändert; `soundN_selected` selbst wird nicht gespeichert (6.8). T2 schaltet die Vorschau um (6.8).
 - **Funktionen (Seite 5):** Umschalten der Flags `cuckoo_on`, `light_on`, `wheel_on`, Checkbox neu, speichern.
 - **Info (Seite 7):** nur T3 und T4 wirken. Beide Aktionen werden erst nach Freigabe des Display-Zugriffs ausgeführt (Meldung anzeigen, warten, Neustart, Abschnitt 4.5).
 - Bleibt der Zustand gleich, wird nur partiell neu gezeichnet. Beim Seitenwechsel läuft die Seitenzeichnung (Abschnitt 4.3). Beim Verlassen der Alarm-Seiten gilt die Sperrlogik aus 6.1.
@@ -435,9 +435,9 @@ Sinn: Der Wecker sichert einen Termin. Weckzeit 02:xx wird im Frühjahr um eine 
    - Ergebnis „Modul lebt, Datei startet aber nicht“ (Status 0 nach 3 Versuchen): Alarm läuft **stumm** weiter (Licht/Motor), Log `[FEHLER] ... Datei <n> startet aber nicht (st=0)`.
    - Ergebnis „keine Antwort“ (Status −1 nach 3 Versuchen): Alarm in einem RTC-Merker ablegen, Neustart (`esp_restart`), nach dem Neustart wird derselbe Alarm erneut ausgelöst. Nach 3 Fehlversuchen kein weiterer Neustart: Der Alarm läuft **stumm** weiter (Licht/Motor, wie „Datei startet nicht“), zusätzlich wird als akustischer Ersatz der **Kuckuck 3×** ausgelöst (`ALARM_NODFP_CUCKOO_COUNT`, je 7500 ms E1 HIGH, 2000 ms Pause `ALARM_NODFP_CUCKOO_GAP_MS`; unabhängig von `cuckoo_on` und Zeitfenster). Tages-Sperre wird gesetzt. Log `[FEHLER] <Alarm>: DFPlayer antwortet nach 3 Versuchen weiterhin nicht (Datei <n>) – Alarm laeuft stumm weiter (Licht, Muehlrad, Kuckuck 3x), <Zeitstempel>`. (22v00; bis 21v13 wurde hier ohne Tages-Sperre abgebrochen.)
    - Hat der Nutzer während der Verifikation mit S1 gestoppt: Abbruch ohne Neustart, Tages-Sperre trotzdem setzen.
-4. Nach bestätigtem Start: Tages-Sperre für diesen Alarm auf **heute** setzen (und persistieren), Zeitstempel „letzter erfolgreicher Alarm“ für das Web-Log merken, **Licht** (E3 HIGH, falls `light_on`), danach **Motor** (`motorStart`, falls `wheel_on`), Display aufwecken, Zustand ALARM_RUNNING.
+4. Nach bestätigtem Start (das gilt auch für den stummen Alarm aus Schritt 3, „Datei startet nicht“ und „DFPlayer ohne Antwort“): Tages-Sperre für diesen Alarm auf **heute** setzen (und persistieren), Zeitstempel „letzter erfolgreicher Alarm“ für das Web-Log merken, **Licht** (E3 HIGH, falls `light_on`), danach **Motor** (`motorStart`, falls `wheel_on`), Display aufwecken, Zustand ALARM_RUNNING.
 
-**Laufender Alarm (ALARM_RUNNING):** alle 5 s (`ALARM_POLL_MS`) Player-Status abfragen. Ende, wenn der Player „gestoppt“ meldet (Status 0) **oder** bei fehlender Antwort der BUSY-Pin dreimal im Abstand von 5 ms HIGH liest, **oder** nach **15 min** (`ALARM_MAX_RUN_MS`, Log `[FEHLER] Alarm nach <ms> ms ohne Endebestaetigung abgebrochen`). Beim stummen Alarm (Datei startet nicht oder DFPlayer ohne Antwort, Merker `alarmSilentFallback`) endet der Alarm nicht über den Player-Status, sondern nur nach 15 min oder per S1; S1 beendet auch den Ersatz-Kuckuck. Bei Ende: Motor aus, Licht aus (falls `light_on`). Die Tages-Sperre bleibt bestehen.
+**Laufender Alarm (ALARM_RUNNING):** alle 5 s (`ALARM_POLL_MS`) Player-Status abfragen. Ende (nur wenn **kein** stummer Alarm läuft, siehe unten), wenn der Player „gestoppt“ meldet (Status 0) **oder** bei fehlender Antwort der BUSY-Pin dreimal im Abstand von 5 ms HIGH liest, **oder** nach **15 min** (`ALARM_MAX_RUN_MS`, Log `[FEHLER] Alarm nach <ms> ms ohne Endebestaetigung abgebrochen`). Beim stummen Alarm (Datei startet nicht oder DFPlayer ohne Antwort, Merker `alarmSilentFallback`) endet der Alarm nicht über den Player-Status, sondern nur nach 15 min oder per S1; S1 beendet auch den Ersatz-Kuckuck. Bei Ende: Motor aus, Licht aus (falls `light_on`). Die Tages-Sperre bleibt bestehen.
 
 **Tages-Sperre** (`lastA1Day`, `lastA2Day` = Tag im Jahr 0..365 oder 0xFFFF = frei): Derselbe Alarm löst am selben Kalendertag nicht erneut aus. Sie wird im NVS gespeichert und übersteht Neustart/Stromausfall.
 
@@ -550,7 +550,7 @@ Regeln:
 ## 8. Boot-Ablauf
 
 1. **Als Allererstes** E1, E3 auf LOW und E2 (LEDC) auf Duty 0 setzen (Ausgänge sicher aus).
-2. GPIO17 (DFPlayer RX) kurz auf LOW treiben, **3000 ms** warten.
+2. GPIO17 (DFPlayer RX) als Ausgang auf LOW setzen und **3000 ms** auf LOW halten (bis zum Start von UART2 in Schritt 3).
 3. UART2 (9600, 8N1, RX=16, TX=17) starten, 2000 ms warten.
 4. Log-Puffer anlegen, Reset-Ursache loggen: `[RESET] Ursache: <Text>` (Texte: `Power-on`, `externer Reset (EN-Pin)`, `Software-Reset (ESP.restart())`, `Panic/Exception`, `Interrupt-Watchdog`, `Task-Watchdog`, `sonstiger Watchdog`, `Brownout (Unterspannung)`, `SDIO-Reset`, `Aufwachen aus Deep-Sleep`, `unbekannt`).
 5. NVS laden (Abschnitt 7).
@@ -597,7 +597,7 @@ Start beim ersten Boot (keine gültigen Daten), nach Werksreset und nach WLAN-Re
 
 ## 10. Web-Log (HTTP Port 8080)
 
-Erreichbar nach WLAN-Verbindung unter `http://<IP>:8080`. Die Adresse steht auf der Info-Seite (Seite 7) und einmalig auf der seriellen Konsole.
+Erreichbar nach WLAN-Verbindung unter `http://<IP>:8080`. Die Adresse steht auf der Info-Seite (Seite 7) und einmalig auf der seriellen Konsole. Ohne WLAN-Verbindung zeigt die Info-Seite `0.0.0.0:8080` (die Firmware gibt `WiFi.localIP()` ohne Prüfung aus).
 
 ### 10.1 Endpunkte
 
@@ -701,7 +701,7 @@ Im Alarm-Task, nur wenn kein Alarm läuft, kein Start-Versuch und keine offene V
 ### 11.4 Weitere Absicherungen (aus der Original-Firmware, empfohlen)
 
 - **Watchdog:** Hardware-TWDT 15 s auf Eingabe-, Anzeige- und Alarm-Task. Zusätzlich Anwendungs-Watchdog: Prüfung jede Sekunde, Task gilt als eingefroren nach 10 s ohne Lebenszeichen (Start der Prüfung erst nach 10 s). Reaktion: Log `[WATCHDOG] Task-Freeze erkannt!` (mit Zeile je betroffenem Task `  <task>: <ms> ms ohne Lebenszeichen`), Display-Meldung (4.5), 2 s warten, Neustart. Fror die Alarm-Task mitten im Alarmstart, den Alarm für den Neustart vormerken.
-- **Alarm-Neustart-Merker** im RTC-Speicher (überlebt Software-Reset, **nicht** EN-Reset/Neuflashen): wird **beim Alarmstart gesetzt** und erst nach bestätigter Wiedergabe oder regulärem Ende gelöscht.
+- **Alarm-Neustart-Merker** im RTC-Speicher: überlebt `esp_restart()` (Software-Reset), **nicht** EN-Reset, Neuflashen oder Power-on. Im ESP-IDF dafür `RTC_NOINIT_ATTR` verwenden (nicht `RTC_DATA_ATTR`, das nur Deep-Sleep übersteht), zusammen mit einem Magic-Wert als Gültigkeitsmarke, weil der Inhalt nach Power-on undefiniert ist. Dasselbe gilt für den Heartbeat-Neustart-Zähler (11.3). Der Merker wird **beim Alarmstart gesetzt** und nach der ersten bestätigten Wiedergabe gelöscht; das zusätzliche Löschen am regulären Alarmende deckt nur sehr kurze Töne ab, die vor der ersten Statusabfrage enden.
 - **Ausgänge E1 bis E3** müssen so früh wie möglich nach dem Reset definiert abgeschaltet sein (Abschnitt 8, Schritt 1).
 
 ---
