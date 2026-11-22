@@ -648,4 +648,36 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 | 21v12 | Funktion | Web-Log: Hintergrund und Rahmen der Snapshot-Fenster (Verbindung, Touch Baseline, Stack High-Water Marks) an den Standard des Fensters „Allgemeines Log“ angeglichen (`#0d0d1a`, Rahmen `#333`, Schrift `#e0e0e0`, vorher dunkelgrün/hellgrün); gilt auch für das Mühlrad-Motor-Fenster. |
 | 21v12 | Funktion | Neues Web-Log-Fenster „Startton – Lautstärke“ analog Mühlrad-Motor: Slider `STARTUP_VOL_MIN` (1, SysConf)..`MAX_VOL`, Handler `/startvol`, NVS-Key `startup_vol`, wirkt ab nächstem Boot. `STARTUP_VOL` (5) in SysConf ist nur noch Default. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 21v12
+## Version 21v13
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 21v13 | Bugfix | Alarm-Zeit verstellen: Beim Durchscrollen (T3/T4) lösten Zwischenwerte im Nachholfenster der aktuellen Uhrzeit den Alarm aus, wenn die Tages-Sperre noch nicht gesetzt war. Alarm wird jetzt auf der Alarm-Seite während des Editierens nicht geprüft (`alarm1TimeEdited`/`alarm2TimeEdited`, jetzt `volatile`). |
+| 21v13 | Bugfix | Beim Verlassen der Alarm-Seite nach Edit wird die aufgehobene Tages-Sperre jetzt persistiert (`markSafeChange()`); vorher blieb im Flash der Wert „heute“ und kam nach Neustart/Flashen zurück, der neue Alarm (z. B. 18:30) wurde übergangen. Danach wird sofort neu gesperrt, falls die neue Weckzeit heute schon verstrichen ist (`lockAlarmIfTimePassed()`). |
+
+## Version 22v00
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 22v00 | Bugfix | `triggerAlarm()`: Nach `ALARM_MAX_RESTARTS` (3) erfolglosen DFPlayer-Versuchen (`PLAY_CRASHED`) wurde ohne Tages-Sperre abgebrochen. `alarmDue()` löste den Alarm im nächsten Tick erneut aus (3 Versuche, `ESP.restart()`, …) – Neustartschleife bis zum Ende des 60-min-Nachholfensters. Jetzt wird die Tages-Sperre gesetzt (gemeinsamer Erfolgspfad). |
+| 22v00 | Funktion | Bei dauerhaft antwortlosem DFPlayer bricht der Alarm nicht mehr ab, sondern läuft stumm weiter (Licht E3, Mühlrad E2; Ende nur über S1 oder `ALARM_MAX_RUN_MS`, analog `alarmSilentFallback`) und löst als akustischen Ersatz den Kuckuck (E1) `ALARM_NODFP_CUCKOO_COUNT` (3) mal aus, Pause `ALARM_NODFP_CUCKOO_GAP_MS` (2 s) zwischen den Auslösungen. Unabhängig von `cuckoo_on` und Kuckuck-Zeitfenster. S1 beendet auch den Ersatz-Kuckuck. Neue Variablen `alarmNoDfpCuckoo`, `alarmNoDfpCuckooNextMs`, neue Konstanten in SysConf. Log-Zeile `[FEHLER] … Alarm laeuft stumm weiter (Licht, Muehlrad, Kuckuck 3x)`. |
+
+## Version 22v01
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 22v01 | Bugfix | Sound-Vorschau (Seiten 3/4, `checkboxSound()`): Vor `playFolder()` wird jetzt `player.volume(vol)` gesendet. Vorher blieb der Player nach dem Boot auf `startup_vol` (Default 5, Anzeige zeigte `vol`) und nach einem Alarm auf `max(vol, ALARM_MIN_VOL)` – die Vorschau lief mit falschem Pegel, bis `vol` per T3/T4 verstellt wurde. |
+
+## Version 22v02
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 22v02 | Bugfix | Alarm 1 und Alarm 2 mit identischer Weckzeit (Default: beide 06:00): Der andere Alarm blieb im Nachholfenster offen und startete nach dem Ende bzw. S1-Stopp des ersten sofort, weil `alarmDue()` nur in `ALARM_IDLE` ausgewertet wird. `triggerAlarm()` sperrt jetzt mit dem Start eines Alarms den anderen für heute, wenn beide aktiv sind und dieselbe Weckzeit haben. Alarme mit unterschiedlicher Weckzeit sind unverändert (Zweitwecker wird weiter nachgeholt). |
+
+## Version 22v03
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 22v03 | Bugfix | S1-Stopp während einer Sound-Vorschau (Seiten 3/4): `sound1_on`/`sound2_on` blieben gesetzt und die Checkbox angehakt, T2 brauchte danach zwei Drücke zum erneuten Abspielen. Neue Funktion `clearSoundPreviewOnStop()` setzt die Flags im S1-Stopp-Zweig zurück und zeichnet die leere Box, falls eine Sound-Seite sichtbar ist (unter `displayMutex`, ohne zweites `player.stop()`). Das natürliche Trackende wird nicht erkannt (bewusst nicht Teil dieser Änderung). |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 22v03

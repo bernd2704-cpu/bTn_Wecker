@@ -1,6 +1,6 @@
 # bTn Wecker – Export für Neuaufbau in ESP-IDF
 
-*Stand: Firmware 21v13 (Arduino) · Hardware 2v0 · erstellt 2026-11-22*
+*Stand: Firmware 22v03 (Arduino) · Hardware 2v0 · erstellt 2026-11-22*
 
 ## 0. Auftrag und Randbedingungen
 
@@ -407,7 +407,7 @@ Details:
 
 ### 6.1 Wecker (Alarm 1 und Alarm 2)
 
-Zwei unabhängige Alarme, je mit Ein/Aus, Stunde, Minute und zugewiesenem Sound (Datei in Ordner 01). **Alarm 1 hat Vorrang**: in einem Takt wird höchstens ein Alarm ausgelöst, Alarm 1 wird zuerst geprüft.
+Zwei unabhängige Alarme, je mit Ein/Aus, Stunde, Minute und zugewiesenem Sound (Datei in Ordner 01). **Alarm 1 hat Vorrang**: in einem Takt wird höchstens ein Alarm ausgelöst, Alarm 1 wird zuerst geprüft. **Gleiche Weckzeit (22v02):** Sind beide Alarme aktiv und haben dieselbe Stunde und Minute (Default: beide 06:00), sperrt der erfolgreiche Start des einen Alarms den anderen für heute (Tages-Sperre setzen und persistieren). Er startet dann weder im selben noch in einem späteren Takt (nach Ende oder S1-Stopp des ersten). Alarme mit unterschiedlicher Weckzeit bleiben unabhängig; ein während eines laufenden Alarms fällig gewordener Zweitalarm wird nach dessen Ende im Nachholfenster weiterhin nachgeholt.
 
 Prüftakt **500 ms**. Ohne gültige Uhrzeit (Systemzeit ≤ 1700000000, d. h. noch kein NTP-Sync) wird weder Alarm noch Kuckuck ausgewertet.
 
@@ -433,11 +433,11 @@ Sinn: Der Wecker sichert einen Termin. Weckzeit 02:xx wird im Frühjahr um eine 
 2. DFPlayer-Befehl `playFolder(1, datei)`.
 3. Start verifizieren: bis zu 3 Versuche im Abstand von 500 ms. Erfolg, wenn Status „spielt“ (readState > 0) **oder** BUSY-Pin LOW.
    - Ergebnis „Modul lebt, Datei startet aber nicht“ (Status 0 nach 3 Versuchen): Alarm läuft **stumm** weiter (Licht/Motor), Log `[FEHLER] ... Datei <n> startet aber nicht (st=0)`.
-   - Ergebnis „keine Antwort“ (Status −1 nach 3 Versuchen): Alarm in einem RTC-Merker ablegen, Neustart (`esp_restart`), nach dem Neustart wird derselbe Alarm erneut ausgelöst. Nach 3 Fehlversuchen kein weiterer Neustart, Log `[FEHLER] <Alarm>: DFPlayer antwortet nach 3 Versuchen weiterhin nicht (Datei <n>) – Alarm abgebrochen, <Zeitstempel>`.
+   - Ergebnis „keine Antwort“ (Status −1 nach 3 Versuchen): Alarm in einem RTC-Merker ablegen, Neustart (`esp_restart`), nach dem Neustart wird derselbe Alarm erneut ausgelöst. Nach 3 Fehlversuchen kein weiterer Neustart: Der Alarm läuft **stumm** weiter (Licht/Motor, wie „Datei startet nicht“), zusätzlich wird als akustischer Ersatz der **Kuckuck 3×** ausgelöst (`ALARM_NODFP_CUCKOO_COUNT`, je 7500 ms E1 HIGH, 2000 ms Pause `ALARM_NODFP_CUCKOO_GAP_MS`; unabhängig von `cuckoo_on` und Zeitfenster). Tages-Sperre wird gesetzt. Log `[FEHLER] <Alarm>: DFPlayer antwortet nach 3 Versuchen weiterhin nicht (Datei <n>) – Alarm laeuft stumm weiter (Licht, Muehlrad, Kuckuck 3x), <Zeitstempel>`. (22v00; bis 21v13 wurde hier ohne Tages-Sperre abgebrochen.)
    - Hat der Nutzer während der Verifikation mit S1 gestoppt: Abbruch ohne Neustart, Tages-Sperre trotzdem setzen.
 4. Nach bestätigtem Start: Tages-Sperre für diesen Alarm auf **heute** setzen (und persistieren), Zeitstempel „letzter erfolgreicher Alarm“ für das Web-Log merken, **Licht** (E3 HIGH, falls `light_on`), danach **Motor** (`motorStart`, falls `wheel_on`), Display aufwecken, Zustand ALARM_RUNNING.
 
-**Laufender Alarm (ALARM_RUNNING):** alle 5 s (`ALARM_POLL_MS`) Player-Status abfragen. Ende, wenn der Player „gestoppt“ meldet (Status 0) **oder** bei fehlender Antwort der BUSY-Pin dreimal im Abstand von 5 ms HIGH liest, **oder** nach **15 min** (`ALARM_MAX_RUN_MS`, Log `[FEHLER] Alarm nach <ms> ms ohne Endebestaetigung abgebrochen`). Beim stummen Alarm ist nur der 15-min-Ausstieg (oder S1) möglich. Bei Ende: Motor aus, Licht aus (falls `light_on`). Die Tages-Sperre bleibt bestehen.
+**Laufender Alarm (ALARM_RUNNING):** alle 5 s (`ALARM_POLL_MS`) Player-Status abfragen. Ende, wenn der Player „gestoppt“ meldet (Status 0) **oder** bei fehlender Antwort der BUSY-Pin dreimal im Abstand von 5 ms HIGH liest, **oder** nach **15 min** (`ALARM_MAX_RUN_MS`, Log `[FEHLER] Alarm nach <ms> ms ohne Endebestaetigung abgebrochen`). Beim stummen Alarm (Datei startet nicht oder DFPlayer ohne Antwort, Merker `alarmSilentFallback`) endet der Alarm nicht über den Player-Status, sondern nur nach 15 min oder per S1; S1 beendet auch den Ersatz-Kuckuck. Bei Ende: Motor aus, Licht aus (falls `light_on`). Die Tages-Sperre bleibt bestehen.
 
 **Tages-Sperre** (`lastA1Day`, `lastA2Day` = Tag im Jahr 0..365 oder 0xFFFF = frei): Derselbe Alarm löst am selben Kalendertag nicht erneut aus. Sie wird im NVS gespeichert und übersteht Neustart/Stromausfall.
 
@@ -474,14 +474,14 @@ Manuell: S1 ohne laufenden Alarm löst den Kuckuck einmalig aus (unabhängig von
 
 ### 6.4 Lautstärke
 
-`vol` 0..25 (`MAX_VOL = 25`), Default 9. DFPlayer-Lautstärke 0..30, hier auf 25 begrenzt. Der Alarm nutzt mindestens 10 (6.1). Gespeichert wird `vol`.
+`vol` 0..25 (`MAX_VOL = 25`), Default 9. DFPlayer-Lautstärke 0..30, hier auf 25 begrenzt. Der Alarm nutzt mindestens 10 (6.1). Gespeichert wird `vol`. Die Player-Lautstärke wird beim Boot auf `startup_vol` gesetzt (Startton), vor jedem Alarm auf `max(vol, 10)` und vor jeder Sound-Vorschau auf `vol`.
 
 ### 6.5 Taster S1 – Stopp / Kuckuck
 
 Aktionssperre 1000 ms. Ablauf:
 
 1. Player-Status abfragen (bis 200 ms wiederholen; bleibt die Antwort aus, entscheidet der BUSY-Pin: LOW = spielt, HIGH = Idle).
-2. Läuft ein Alarm (ALARM_RUNNING) **oder** spielt der Player: Stopp. Abbruch-Merker für eine laufende Start-Verifikation setzen, `stop` an den DFPlayer, **Motor aus, E3 aus, Zustand ALARM_IDLE**. Die Tages-Sperre bleibt bestehen.
+2. Läuft ein Alarm (ALARM_RUNNING) **oder** spielt der Player: Stopp. Abbruch-Merker für eine laufende Start-Verifikation setzen, `stop` an den DFPlayer, **Motor aus, E3 aus, Zustand ALARM_IDLE**. Die Tages-Sperre bleibt bestehen. Seit 22v03 zusätzlich: laufende Sound-Vorschau beenden (`sound1_on = sound2_on = false`); ist Seite 3 oder 4 sichtbar, die Checkbox leer zeichnen (nur die Box, kein weiteres `stop`). Endet ein Track von selbst, bleibt die Checkbox angehakt (bekannte Einschränkung, zwei T2-Drücke zum erneuten Abspielen).
 3. Sonst: Kuckuck einmalig auslösen (6.2).
 
 ### 6.6 Taster S2 – Zugschalter Licht + Mühlrad
@@ -500,7 +500,7 @@ Siehe Abschnitt 5. S3 wirkt auch bei abgeschaltetem Display (weckt und öffnet d
 
 ### 6.8 Sound-Vorschau (Seiten 3 und 4)
 
-- **T2 (an):** `soundN_on = true`, Checkbox mit Tick zeichnen und `display()`, **dann** `soundN_assigned = soundN_selected` setzen und `playFolder(1, soundN_assigned)` senden. Anschließend `str_sN_play` mit der gewählten Nummer zeichnen (Tabelle 4.4). Nach 1500 ms wird die Wiedergabe verifiziert (Status > 0 oder BUSY LOW; sonst nur Log-Hinweis).
+- **T2 (an):** `soundN_on = true`, Checkbox mit Tick zeichnen und `display()`, **dann** `soundN_assigned = soundN_selected` setzen, die Player-Lautstärke auf `vol` setzen (`volume(vol)`, seit 22v01 – der Player steht sonst nach Boot auf `startup_vol`, nach einem Alarm auf `max(vol, 10)`) und `playFolder(1, soundN_assigned)` senden. Anschließend `str_sN_play` mit der gewählten Nummer zeichnen (Tabelle 4.4). Nach 1500 ms wird die Wiedergabe verifiziert (Status > 0 oder BUSY LOW; sonst nur Log-Hinweis).
 - **T2 (aus):** `soundN_on = false`, leere Box zeichnen. Läuft der Player (BUSY LOW), `stop` senden. Schlägt das wegen belegtem Player fehl, wird der Stopp außerhalb des Display-Zugriffs nachgeholt (Timeout 300 ms).
 - **T3/T4:** Nummer ändern, Vorschau **aus** (siehe oben).
 - **Wichtig:** Der dem Alarm zugewiesene Sound (`soundN_assigned`) ändert sich **nur**, wenn die Vorschau gestartet wird (T2 an). Nur T3/T4 ohne Vorschau ändert die Zuweisung nicht (Abweichung zur alten Anleitung, Abschnitt 13).
@@ -708,78 +708,80 @@ Im Alarm-Task, nur wenn kein Alarm läuft, kein Start-Versuch und keine offene V
 
 ## 12. Konstanten
 
-| Name                     | Wert                             | Bedeutung                                            |
-| ------------------------ | -------------------------------- | ---------------------------------------------------- |
-| FW_VERSION               | `NvNN`                           | Versionsstring (Display, Web-Log, Konfiguratorseite) |
-| WIFI_AP_SSID             | `bTn-Wecker`                     | SSID des Konfigurator-Access-Points                  |
-| WIFI_AP_CHANNEL          | 1                                | Kanal des Access-Points                              |
-| MY_NTP_SERVER            | `pool.ntp.org`                   | NTP-Server                                           |
-| MY_TZ                    | `CET-1CEST,M3.5.0/02,M10.5.0/03` | Zeitzone (POSIX)                                     |
-| WEBLOG_PORT              | 8080                             | Port des Web-Logs                                    |
-| WEBLOG_LINES             | 40                               | Zeilen im Ring-Puffer                                |
-| WEBLOG_LINE_LEN          | 128                              | maximale Zeilenlänge (inkl. Terminator)              |
-| WEBLOG_TAG_WIDTH         | 12                               | Tag-Spaltenbreite im Allgemeinen Log                 |
-| TOUCH_DROP               | 150                              | Mindest-Absenkung gegenüber der Baseline             |
-| TOUCH_POLL_MS            | 50                               | Touch-Abtastrate                                     |
-| TOUCH_HOLD_MS            | 750                              | Haltezeit bis Repeat                                 |
-| TOUCH_REPEAT_MS          | 250                              | Wiederholrate                                        |
-| TOUCH_RECAL_MS           | 600000                           | Baseline-Neumessung (nur im Leerlauf)                |
-| TOUCH_MAX_HOLD_MS        | 30000                            | Zwangsreset bei klemmendem Pad                       |
-| BTN_DEBOUNCE_MS          | 30                               | ISR-Entprellung                                      |
-| BTN_LOCKOUT_MS           | 1000                             | Aktionssperre je Taster                              |
-| S2_BOOT_IGNORE_MS        | 3000                             | S2 nach Task-Start ignorieren                        |
-| S2_TIMEOUT_MS            | 1800000                          | S2-Zugschalter automatisch AUS nach 30 min           |
-| DISPLAY_UPDATE_MS        | 300                              | Takt der Anzeige-Task                                |
-| AUTO_RETURN_MS           | 20000                            | Rückkehr zu Seite 0                                  |
-| DISPLAY_TIMEOUT_MS       | 300000                           | OLED aus nach 5 min                                  |
-| CUCKOO_DURATION_MS       | 7500                             | Kuckuck-Laufzeit                                     |
-| ALARM_POLL_MS            | 5000                             | Statusabfrage im laufenden Alarm                     |
-| ALARM_MAX_RUN_MS         | 900000                           | harte Obergrenze Alarmdauer (15 min)                 |
-| ALARM_CATCHUP_MIN        | 60                               | Nachholfenster in Minuten                            |
-| ALARM_MIN_VOL            | 10                               | Mindestlautstärke des Alarms                         |
-| VERIFY_PLAY_DELAY_MS     | 500                              | Wartezeit je Start-Prüfung                           |
-| VERIFY_PLAY_RETRIES      | 3                                | Anzahl der Start-Prüfungen                           |
-| ALARM_MAX_RESTARTS       | 3                                | max. Neustarts je Alarm bei DFPlayer-Absturz         |
-| DFP_PREVIEW_VERIFY_MS    | 1500                             | Prüfung der Vorschau                                 |
-| DFP_HB_FIRST_MS          | 60000                            | erster Heartbeat nach Boot                           |
-| DFP_HB_INTERVAL_MS       | 300000                           | Heartbeat-Intervall                                  |
-| DFP_HB_RETRY_MS          | 30000                            | Wiederholung nach Fehlschlag                         |
-| DFP_HB_PROBES            | 3                                | Abfragen je Heartbeat                                |
-| DFP_HB_PROBE_GAP_MS      | 400                              | Pause zwischen den Abfragen                          |
-| DFP_HB_FAILS_MAX         | 3                                | Fehlschläge bis Neustart                             |
-| DFP_HB_MAX_RESTARTS      | 3                                | max. Heartbeat-Neustarts in Folge                    |
-| SETUP_WIFI_TIMEOUT_MS    | 30000                            | Wartezeit auf WLAN beim Boot                         |
-| SETUP_NTP_TIMEOUT_MS     | 30000                            | Wartezeit auf erste NTP-Zeit                         |
-| SETUP_MP3_TIMEOUT_MS     | 5000                             | Wartezeit auf Dateizahl                              |
-| WIFI_RECONNECT_MS        | 3000                             | Reconnect-Takt                                       |
-| NVR_COMMIT_DELAY_MS      | 2000                             | Ruhezeit vor dem Speichern                           |
-| STACK_MON_INTERVAL_MS    | 60000                            | Aktualisierung der Stack-Anzeige                     |
-| WDG_TIMEOUT_MS           | 10000                            | Anwendungs-Watchdog                                  |
-| WDG_CHECK_MS             | 1000                             | Prüfintervall                                        |
-| WDT_HARDWARE_MS          | 15000                            | Hardware-TWDT                                        |
-| MAX_VOL                  | 25                               | höchste einstellbare Lautstärke                      |
-| STARTUP_VOL              | 5                                | Default Startton-Lautstärke                          |
-| STARTUP_VOL_MIN          | 1                                | Mindestwert Startton-Lautstärke                      |
-| MOTOR_PWM_FREQ           | 20000                            | PWM-Frequenz in Hz                                   |
-| MOTOR_PWM_RES            | 8                                | Auflösung in Bit                                     |
-| MOTOR_PWM_DUTY           | 153                              | Default-Sollwert (60 %)                              |
-| MOTOR_PWM_KICK_THRESHOLD | 89                               | unter diesem Sollwert Kickstart                      |
-| MOTOR_PWM_KICK_DUTY      | 255                              | Duty des Kickstart-Impulses                          |
-| MOTOR_PWM_KICK_MS        | 150                              | Dauer des Kickstarts                                 |
-| I2C                      | 0x3C                             | OLED-Adresse                                         |
+| Name                      | Wert                             | Bedeutung                                             |
+| ------------------------- | -------------------------------- | ----------------------------------------------------- |
+| FW_VERSION                | `NvNN`                           | Versionsstring (Display, Web-Log, Konfiguratorseite)  |
+| WIFI_AP_SSID              | `bTn-Wecker`                     | SSID des Konfigurator-Access-Points                   |
+| WIFI_AP_CHANNEL           | 1                                | Kanal des Access-Points                               |
+| MY_NTP_SERVER             | `pool.ntp.org`                   | NTP-Server                                            |
+| MY_TZ                     | `CET-1CEST,M3.5.0/02,M10.5.0/03` | Zeitzone (POSIX)                                      |
+| WEBLOG_PORT               | 8080                             | Port des Web-Logs                                     |
+| WEBLOG_LINES              | 40                               | Zeilen im Ring-Puffer                                 |
+| WEBLOG_LINE_LEN           | 128                              | maximale Zeilenlänge (inkl. Terminator)               |
+| WEBLOG_TAG_WIDTH          | 12                               | Tag-Spaltenbreite im Allgemeinen Log                  |
+| TOUCH_DROP                | 150                              | Mindest-Absenkung gegenüber der Baseline              |
+| TOUCH_POLL_MS             | 50                               | Touch-Abtastrate                                      |
+| TOUCH_HOLD_MS             | 750                              | Haltezeit bis Repeat                                  |
+| TOUCH_REPEAT_MS           | 250                              | Wiederholrate                                         |
+| TOUCH_RECAL_MS            | 600000                           | Baseline-Neumessung (nur im Leerlauf)                 |
+| TOUCH_MAX_HOLD_MS         | 30000                            | Zwangsreset bei klemmendem Pad                        |
+| BTN_DEBOUNCE_MS           | 30                               | ISR-Entprellung                                       |
+| BTN_LOCKOUT_MS            | 1000                             | Aktionssperre je Taster                               |
+| S2_BOOT_IGNORE_MS         | 3000                             | S2 nach Task-Start ignorieren                         |
+| S2_TIMEOUT_MS             | 1800000                          | S2-Zugschalter automatisch AUS nach 30 min            |
+| DISPLAY_UPDATE_MS         | 300                              | Takt der Anzeige-Task                                 |
+| AUTO_RETURN_MS            | 20000                            | Rückkehr zu Seite 0                                   |
+| DISPLAY_TIMEOUT_MS        | 300000                           | OLED aus nach 5 min                                   |
+| CUCKOO_DURATION_MS        | 7500                             | Kuckuck-Laufzeit                                      |
+| ALARM_POLL_MS             | 5000                             | Statusabfrage im laufenden Alarm                      |
+| ALARM_MAX_RUN_MS          | 900000                           | harte Obergrenze Alarmdauer (15 min)                  |
+| ALARM_CATCHUP_MIN         | 60                               | Nachholfenster in Minuten                             |
+| ALARM_MIN_VOL             | 10                               | Mindestlautstärke des Alarms                          |
+| VERIFY_PLAY_DELAY_MS      | 500                              | Wartezeit je Start-Prüfung                            |
+| VERIFY_PLAY_RETRIES       | 3                                | Anzahl der Start-Prüfungen                            |
+| ALARM_MAX_RESTARTS        | 3                                | max. Neustarts je Alarm bei DFPlayer-Absturz          |
+| ALARM_NODFP_CUCKOO_COUNT  | 3                                | Ersatz-Kuckuck-Auslösungen bei totem DFPlayer (22v00) |
+| ALARM_NODFP_CUCKOO_GAP_MS | 2000                             | Pause zwischen Ersatz-Kuckuck-Auslösungen (22v00)     |
+| DFP_PREVIEW_VERIFY_MS     | 1500                             | Prüfung der Vorschau                                  |
+| DFP_HB_FIRST_MS           | 60000                            | erster Heartbeat nach Boot                            |
+| DFP_HB_INTERVAL_MS        | 300000                           | Heartbeat-Intervall                                   |
+| DFP_HB_RETRY_MS           | 30000                            | Wiederholung nach Fehlschlag                          |
+| DFP_HB_PROBES             | 3                                | Abfragen je Heartbeat                                 |
+| DFP_HB_PROBE_GAP_MS       | 400                              | Pause zwischen den Abfragen                           |
+| DFP_HB_FAILS_MAX          | 3                                | Fehlschläge bis Neustart                              |
+| DFP_HB_MAX_RESTARTS       | 3                                | max. Heartbeat-Neustarts in Folge                     |
+| SETUP_WIFI_TIMEOUT_MS     | 30000                            | Wartezeit auf WLAN beim Boot                          |
+| SETUP_NTP_TIMEOUT_MS      | 30000                            | Wartezeit auf erste NTP-Zeit                          |
+| SETUP_MP3_TIMEOUT_MS      | 5000                             | Wartezeit auf Dateizahl                               |
+| WIFI_RECONNECT_MS         | 3000                             | Reconnect-Takt                                        |
+| NVR_COMMIT_DELAY_MS       | 2000                             | Ruhezeit vor dem Speichern                            |
+| STACK_MON_INTERVAL_MS     | 60000                            | Aktualisierung der Stack-Anzeige                      |
+| WDG_TIMEOUT_MS            | 10000                            | Anwendungs-Watchdog                                   |
+| WDG_CHECK_MS              | 1000                             | Prüfintervall                                         |
+| WDT_HARDWARE_MS           | 15000                            | Hardware-TWDT                                         |
+| MAX_VOL                   | 25                               | höchste einstellbare Lautstärke                       |
+| STARTUP_VOL               | 5                                | Default Startton-Lautstärke                           |
+| STARTUP_VOL_MIN           | 1                                | Mindestwert Startton-Lautstärke                       |
+| MOTOR_PWM_FREQ            | 20000                            | PWM-Frequenz in Hz                                    |
+| MOTOR_PWM_RES             | 8                                | Auflösung in Bit                                      |
+| MOTOR_PWM_DUTY            | 153                              | Default-Sollwert (60 %)                               |
+| MOTOR_PWM_KICK_THRESHOLD  | 89                               | unter diesem Sollwert Kickstart                       |
+| MOTOR_PWM_KICK_DUTY       | 255                              | Duty des Kickstart-Impulses                           |
+| MOTOR_PWM_KICK_MS         | 150                              | Dauer des Kickstarts                                  |
+| I2C                       | 0x3C                             | OLED-Adresse                                          |
 
 ---
 
 ## 13. Abweichungen und Eigenheiten
 
-Die alte Bedienungsanleitung (Firmware 21v11) weicht in einigen Punkten vom Code (21v13) ab. **Es gilt das Verhalten des Codes**, wie in diesem Dokument beschrieben:
+Die alte Bedienungsanleitung (Firmware 21v11) weicht in einigen Punkten vom Code (22v03) ab. **Es gilt das Verhalten des Codes**, wie in diesem Dokument beschrieben:
 
 | Thema                | Alte Anleitung                                                | Tatsächliches Verhalten (maßgeblich)                                                                                                     |
 | -------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Sound-Vorschau T3/T4 | „neuer Sound spielt sofort als Vorschau, wenn Vorschau aktiv“ | T3/T4 schalten die Vorschau **aus**; Abspielen nur über T2                                                                               |
 | Sound speichern      | „gespeichert beim Verlassen der Seite“                        | Zuweisung (`soundN_assigned`) wird beim **Starten der Vorschau** (T2 an) gesetzt                                                         |
 | Weckzeit verstellen  | Sperre wird beim Verlassen aufgehoben                         | Zusätzlich: Alarm ist während des Editierens nicht scharf; Sperre wird persistiert und ggf. sofort neu gesetzt (21v13)                   |
-| Versionsstand        | 21v11                                                         | 21v13                                                                                                                                    |
+| Versionsstand        | 21v11                                                         | 22v03                                                                                                                                    |
 | Seiten 2 und 4       | nicht beschrieben                                             | Teilaktualisierung der Vorgängerseite: Checkbox der Zeile A1 verschwindet, nur die Box des gewählten Alarms/Sounds wird gezeichnet (4.3) |
 | Seite 1 und 3        | nicht beschrieben                                             | Es wird nur **eine** Checkbox gezeichnet (Alarm 1 bzw. Sound 1)                                                                          |
 

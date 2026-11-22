@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_21v12.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 21v12
-// Datei-Version    : 21v12
+// SysConf_22v03.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 22v03
+// Datei-Version    : 22v03
 // Boardverwalter   : esp32 3.3.12 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34, ab 21v01 GPIO35)
@@ -171,9 +171,14 @@
 // 21v11: Startton beim Boot mit fester Lautstärke STARTUP_VOL (5), unabhängig von vol.
 // 21v12: Web-Log: Hintergrund und Rahmen der Snapshot-Fenster (Verbindung, Touch, Stack) an das Allgemeine Log angeglichen (#0d0d1a / #333), Schriftfarbe #e0e0e0.
 // 21v12: Neues Web-Log-Fenster "Startton – Lautstärke" (Slider, /startvol, NVS-Key startup_vol); STARTUP_VOL ist jetzt nur noch Default, STARTUP_VOL_MIN (1) Untergrenze.
+// 21v13: Alarm-Zeit verstellen: Alarm wird während des Editierens (T3/T4 auf der Alarm-Seite) nicht geprüft; beim Verlassen Sperre aufgehoben + persistiert (markSafeChange) und sofort neu gesetzt, falls die neue Zeit heute schon verstrichen ist. Behebt: Auslösung beim Durchscrollen und übergangener Alarm nach Neustart/Flashen.
+// 22v00: DFPlayer dauerhaft ohne Antwort (ALARM_MAX_RESTARTS ausgeschöpft): Alarm bricht nicht mehr ab, sondern läuft stumm weiter (Licht, Mühlrad) und löst als akustischen Ersatz den Kuckuck ALARM_NODFP_CUCKOO_COUNT-mal aus; Tages-Sperre wird gesetzt (keine Neustartschleife im Nachholfenster).
+// 22v01: Sound-Vorschau (Menüseiten Sound 1/2) setzt vor dem Abspielen die Player-Lautstärke auf vol – vorher blieb sie nach Boot auf startup_vol bzw. nach einem Alarm auf max(vol, ALARM_MIN_VOL).
+// 22v02: Gleiche Weckzeit bei Alarm 1 und 2: Der Start des einen Alarms sperrt den anderen für heute – vorher startete er nach Ende/S1-Stopp des ersten sofort im Nachholfenster.
+// 22v03: S1-Stopp setzt die Sound-Vorschau zurück (sound1_on/sound2_on aus, Checkbox leer) – vorher brauchte T2 danach zwei Drücke.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "21v12"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "22v03"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -260,6 +265,8 @@ const uint32_t DISPLAY_UPDATE_MS    =  300;                                    /
 const uint32_t BTN_DEBOUNCE_MS      =   30;                                    // ISR-Entprellung: filtert Hardware-Prellen (typ. 5–50 ms)
 const uint32_t BTN_LOCKOUT_MS       = 1000;                                    // Aktionssperre in inputTask: verhindert bewusste Doppeldrücke
 const uint32_t CUCKOO_DURATION_MS   = 7500;                                    // Kuckuck-Laufzeit
+const uint8_t  ALARM_NODFP_CUCKOO_COUNT = 3;                                  // 22v00: Kuckuck-Auslösungen als akustischer Ersatz, wenn der DFPlayer dauerhaft nicht antwortet
+const uint32_t ALARM_NODFP_CUCKOO_GAP_MS   = 2000;                               // 22v00: Pause zwischen zwei Ersatz-Kuckuck-Auslösungen
 const uint32_t AUTO_RETURN_MS       = 20000;                                   // Auto-Rückkehr zu Seite 0
 const uint32_t DISPLAY_TIMEOUT_MS   = 300000UL;                                // OLED aus nach 5 min ohne Touch-Event
 const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               // 12v02: Licht/Mühlrad (Zugschalter S2) aus nach 30 min – analog AUTO_RETURN_MS

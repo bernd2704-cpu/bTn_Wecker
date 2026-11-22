@@ -61,7 +61,7 @@
 #include <esp_system.h>               // esp_reset_reason() – Ursache des letzten Resets
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_21v12.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_22v03.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -122,6 +122,15 @@ volatile CuckooState cuckooState = CUCKOO_IDLE;
 // Alarm NICHT beenden (das wäre sofort beim ersten Poll der Fall) – einziger
 // Ausstieg ist dann ALARM_MAX_RUN_MS (A3) oder S1. Cross-core wie alarmState.
 volatile bool alarmSilentFallback = false;
+// 22v00: DFPlayer dauerhaft ohne Antwort (ALARM_MAX_RESTARTS ausgeschöpft) –
+// der Alarm läuft stumm weiter (wie alarmSilentFallback, dessen Flag dabei
+// ebenfalls gesetzt wird) und löst als akustischen Ersatz den Kuckuck aus.
+// alarmNoDfpCuckoo = noch ausstehende Kuckuck-Auslösungen (0 = nicht aktiv),
+// alarmNoDfpCuckooNextMs = frühester Zeitpunkt der nächsten Auslösung.
+// Geschrieben von triggerAlarm()/runAlarmMachine() (alarmTask, Core 0) und vom
+// S1-Handler (inputTask, Core 1) – einzeln atomar, wie cuckooState/t_start4.
+volatile uint8_t  alarmNoDfpCuckoo       = 0;
+volatile uint32_t alarmNoDfpCuckooNextMs = 0;
 // 20v12 (C6-Fix, Audit 2026-08-13): von S1/Sound-Vorschau/Funktionswahl
 // gesetzt, wenn player.stop() einen laufenden Alarmversuch trifft (siehe
 // requestAlarmCancelIfActive()). verifyPlayStarted() wertet es als
@@ -708,6 +717,11 @@ void checkboxSound() {
         display.display();                                                               // Checkbox anzeigen bevor Audio startet
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
           sound1_assigned = sound1_selected;
+          // 22v01: Player-Lautstärke auf vol setzen – nach dem Boot steht der Player
+          // auf startup_vol, nach einem Alarm auf max(vol, ALARM_MIN_VOL); die
+          // Vorschau lief sonst mit falschem Pegel. Gleiche Reihenfolge wie in triggerAlarm().
+          drainSerial2Pre("volume (Sound1 Vorschau)");
+          player.volume(vol);
           drainSerial2Pre("playFolder (Sound1 an)");
           player.playFolder(1, sound1_assigned);
           previewVerifyAt = (millis() + DFP_PREVIEW_VERIFY_MS) | 1UL;                    // 21v08: Verifikation durch alarmTask (|1: nie 0)
@@ -738,6 +752,11 @@ void checkboxSound() {
         display.display();                                                               // Checkbox anzeigen bevor Audio startet
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {                  // 50 ms < 100 ms displayMutex-Timeout
           sound2_assigned = sound2_selected;
+          // 22v01: Player-Lautstärke auf vol setzen – nach dem Boot steht der Player
+          // auf startup_vol, nach einem Alarm auf max(vol, ALARM_MIN_VOL); die
+          // Vorschau lief sonst mit falschem Pegel. Gleiche Reihenfolge wie in triggerAlarm().
+          drainSerial2Pre("volume (Sound2 Vorschau)");
+          player.volume(vol);
           drainSerial2Pre("playFolder (Sound2 an)");
           player.playFolder(1, sound2_assigned);
           previewVerifyAt = (millis() + DFP_PREVIEW_VERIFY_MS) | 1UL;                    // 21v08: Verifikation durch alarmTask (|1: nie 0)
@@ -905,8 +924,8 @@ static uint16_t lastA2Day = 0xFFFF;
 // u.a. über den 20s-Auto-Rücksprung auf UI_CLOCK). Diese Flags merken sich,
 // ob während des aktuellen Seitenbesuchs tatsächlich per T3/T4 editiert
 // wurde; uiTransition() hebt die Sperre nur noch in diesem Fall auf.
-static bool alarm1TimeEdited = false;
-static bool alarm2TimeEdited = false;
+static volatile bool alarm1TimeEdited = false;                                          // 21v13: volatile – alarmTask (Core 0) liest, inputTask (Core 1) schreibt
+static volatile bool alarm2TimeEdited = false;
 
 void writeNVR() {
   data.putBool("a1_on",       a1_on);
@@ -1141,6 +1160,7 @@ void runWifiConfigServer() {
 
 // ── Zustandswechsel ──────────────────────────────────────────
 // Muss unter displayMutex aufgerufen werden.
+static void lockAlarmIfTimePassed(uint8_t alarmNum);                                     // 21v13: Vorwärtsdeklaration (Definition weiter unten)
 // 20v22 (Bugfix): Tages-Sperre (lastA1Day/lastA2Day) wird erst HIER beim
 // Verlassen der jeweiligen Alarm-Seite aufgehoben, nicht mehr bei jedem
 // einzelnen Stunde+/Minute+-Tastendruck in onAlarm1()/onAlarm2() – dort lag
@@ -1155,13 +1175,22 @@ void uiTransition(UiState next) {
   // per T3/T4 editiert wurde (siehe alarm1TimeEdited/alarm2TimeEdited oben) –
   // reines Anschauen der Seite darf einen bereits verstrichenen Alarm nicht
   // erneut scharf schalten.
+  // 21v13: Beim Verlassen nach Edit wird die Sperre aufgehoben UND persistiert
+  // (markSafeChange) – vorher blieb der alte Flash-Wert (heute) stehen und kam
+  // nach einem Neustart/Flashen zurück: der neu gestellte Alarm wurde übergangen.
+  // Danach sofort neu sperren, falls die neue Weckzeit heute schon verstrichen ist
+  // (kein Nachholen nach bewusstem Verstellen, siehe lockAlarmIfTimePassed()).
   if (uiState == UI_ALARM1 && next != UI_ALARM1 && alarm1TimeEdited) {
     lastA1Day = 0xFFFF;
     alarm1TimeEdited = false;
+    lockAlarmIfTimePassed(1);
+    markSafeChange();
   }
   if (uiState == UI_ALARM2 && next != UI_ALARM2 && alarm2TimeEdited) {
     lastA2Day = 0xFFFF;
     alarm2TimeEdited = false;
+    lockAlarmIfTimePassed(2);
+    markSafeChange();
   }
   uiState    = next;
   pageselect = (uint8_t)next;                                                            // checkboxAlarm/Sound nutzen pageselect
@@ -1685,6 +1714,30 @@ static void wakeDisplay() {
   }
 }
 
+// 22v03: Sound-Vorschau-Flags zurücksetzen, wenn S1 den Player gestoppt hat.
+// Vorher blieben sound1_on/sound2_on und die angehakte Checkbox stehen – der
+// nächste T2-Druck schaltete nur "aus", erst der zweite spielte wieder ab.
+// Läuft im inputTask ohne gehaltenen Mutex; die Box wird nur gezeichnet, wenn
+// gerade eine Sound-Seite sichtbar ist (gleiche Geometrie wie checkboxSound(),
+// aber ohne player.stop()). Das natürliche Trackende wird bewusst nicht erkannt.
+static void clearSoundPreviewOnStop() {
+  if (!sound1_on && !sound2_on) { return; }
+  sound1_on = false;
+  sound2_on = false;
+  if (xSemaphoreTake(displayMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+    if (uiState == UI_SOUND1 || uiState == UI_SOUND2) {
+      display.setColor(BLACK);
+      display.fillRect(67, 37, 10, 10);
+      display.fillRect(67, 54, 10, 10);
+      display.setColor(WHITE);
+      if (uiState == UI_SOUND1) { display.drawRect(67, 37, 10, 10); }
+      else                      { display.drawRect(67, 54, 10, 10); }
+      display.display();
+    }
+    xSemaphoreGive(displayMutex);
+  }
+}
+
 // ── Mühlrad-Motor ein/aus (12v03) ────────────────────────────
 // Zentrale Ansteuerung von E2 statt verstreuter ledcWrite(E2,…)-Aufrufe.
 // motorStart(): respektiert wheel_on; bei motor_duty < MOTOR_PWM_KICK_THRESHOLD
@@ -1871,25 +1924,40 @@ static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t 
     if (playResult == PLAY_CRASHED) {
       failCount++;
       if (failCount >= ALARM_MAX_RESTARTS) {
+        // 22v00: kein Abbruch mehr – DFPlayer dauerhaft ohne Antwort, der Wecker
+        // soll trotzdem wecken: stummer Alarm (Licht, Mühlrad) plus Kuckuck als
+        // akustischer Ersatz. Vorher: return ohne Tages-Sperre → alarmDue()
+        // löste im nächsten Tick erneut aus (3 Versuche, ESP.restart(), ...) –
+        // Neustartschleife bis zum Ende des Nachholfensters. Die Tages-Sperre
+        // wird weiter unten im gemeinsamen Erfolgspfad gesetzt.
         char ts[20];
         snapTimeStr(ts, sizeof(ts));
-        webLogf("[FEHLER] %s: DFPlayer antwortet nach %u Versuchen weiterhin nicht (Datei %d) – Alarm abgebrochen, %s",
-                label, (unsigned)failCount, fileNo, ts);
-        rtcRetryMagic = 0;                                                                // kein weiterer Retry nach Abbruch
-        alarmTriggerInFlight = false;                                                     // 12v12: kein Freeze-Fallback mehr nötig – Abbruch ist final
-        return;
+        webLogf("[FEHLER] %s: DFPlayer antwortet nach %u Versuchen weiterhin nicht (Datei %d) – Alarm laeuft stumm weiter (Licht, Muehlrad, Kuckuck %ux), %s",
+                label, (unsigned)failCount, fileNo, (unsigned)ALARM_NODFP_CUCKOO_COUNT, ts);
+        rtcRetryMagic = 0;                                                                // kein weiterer Retry
+        alarmNoDfpCuckoo       = ALARM_NODFP_CUCKOO_COUNT;                                // Kuckuck-Ersatz, ausgelöst in runAlarmMachine()
+        alarmNoDfpCuckooNextMs = millis();
+      } else {
+        rtcRetryCount  = failCount;                                                       // Merker ist bereits gesetzt (s.o.) – nur Fehlversuchszähler für den nächsten Versuch aktualisieren
+        alarmTriggerInFlight = false;                                                     // 12v12: regulärer Retry-Pfad übernimmt – Freeze-Fallback nicht mehr nötig
+        ESP.restart();
       }
-      rtcRetryCount  = failCount;                                                         // Merker ist bereits gesetzt (s.o.) – nur Fehlversuchszähler für den nächsten Versuch aktualisieren
-      alarmTriggerInFlight = false;                                                       // 12v12: regulärer Retry-Pfad übernimmt – Freeze-Fallback nicht mehr nötig
-      ESP.restart();
     }
     alarmTriggerInFlight = false;                                                         // 12v12: Play erfolgreich bestätigt (mit oder ohne Ton) – kein Freeze-Fallback mehr nötig
     // 20v09 (C3-Fix): PLAY_NO_SOUND läuft in denselben Erfolgspfad wie
     // PLAY_OK (Motor/Licht sollen den Nutzer trotzdem wecken) – einziger
     // Unterschied ist das Flag, das runAlarmMachine() vor einem sofortigen
     // Ausstieg über playerStatus==0 bewahrt (siehe ALARM_RUNNING unten).
-    alarmSilentFallback = (playResult == PLAY_NO_SOUND);
+    alarmSilentFallback = (playResult == PLAY_NO_SOUND) || (alarmNoDfpCuckoo > 0);          // 22v00: auch bei totem DFPlayer stumm laufen lassen (kein Ausstieg über playerStatus)
     lockAlarmDayGuard(alarmNum);                                                          // 20v04 (A1-Fix): Tages-Sperre erst nach erfolgreichem Start setzen
+    // 22v02: Haben beide Alarme dieselbe Weckzeit (Default: beide 06:00), gilt der
+    // andere Alarm mit diesem Start als erledigt. Sonst blieb er im Nachholfenster
+    // offen und startete nach dem Ende bzw. S1-Stopp dieses Alarms sofort (alarmDue()
+    // wird nur in ALARM_IDLE ausgewertet). Alarme mit anderer Weckzeit bleiben
+    // unberührt (Zweitwecker wird weiterhin nachgeholt).
+    if (a1_on && a2_on && a1_hour == a2_hour && a1_min == a2_min) {
+      lockAlarmDayGuard((alarmNum == 1) ? 2 : 1);
+    }
     snapTimeStr(snapAlarmTime, sizeof(snapAlarmTime));                                    // letzter erfolgreicher Alarm für Web-Log
     if (light_on) { digitalWrite(E3, HIGH); }                                            // 21v07: erst Licht ...
     motorStart();                                                                        // ... dann Motor via PWM + Kickstart (respektiert wheel_on)
@@ -1921,17 +1989,32 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour, uint16_t yda
       // (z.B. während langem WebLog-Zugriff). Nächster alarmTask-Tick (500 ms
       // später) versucht es dann automatisch erneut, solange das Nachhol-
       // fenster (ALARM_CATCHUP_MIN) nicht abgelaufen ist.
+      // 21v13: Solange die Weckzeit auf der Alarm-Seite per T3/T4 editiert wird,
+      // wird dieser Alarm nicht geprüft – Zwischenwerte beim Durchscrollen im
+      // Nachholfenster der aktuellen Uhrzeit lösten sonst aus.
       // Alarm 1 prüfen
-      if (alarmDue(a1_on, a1_hour, a1_min, hour, min, yday, lastA1Day, isdst)) {
+      if (!(uiState == UI_ALARM1 && alarm1TimeEdited) && alarmDue(a1_on, a1_hour, a1_min, hour, min, yday, lastA1Day, isdst)) {
         triggerAlarm(1, sound1_assigned, min, 0);
       }
       // Alarm 2 prüfen (else if → Alarm 1 hat Vorrang bei gleicher Zeit)
-      else if (alarmDue(a2_on, a2_hour, a2_min, hour, min, yday, lastA2Day, isdst)) {
+      else if (!(uiState == UI_ALARM2 && alarm2TimeEdited) && alarmDue(a2_on, a2_hour, a2_min, hour, min, yday, lastA2Day, isdst)) {
         triggerAlarm(2, sound2_assigned, min, 0);
       }
       break;
 
     case ALARM_RUNNING:
+      // 22v00: Kuckuck als akustischer Ersatz bei totem DFPlayer – eine Auslösung
+      // nach der anderen (cuckooState bleibt die gemeinsame Leitgröße mit
+      // runCuckooMachine(), das E1 nach CUCKOO_DURATION_MS wieder abschaltet).
+      // Unabhängig von cuckoo_on und Zeitfenster: Notersatz für den MP3-Ton.
+      if (alarmNoDfpCuckoo > 0 && cuckooState == CUCKOO_IDLE
+          && (int32_t)(millis() - alarmNoDfpCuckooNextMs) >= 0) {
+        alarmNoDfpCuckoo--;
+        digitalWrite(E1, HIGH);
+        t_start4    = millis();
+        cuckooState = CUCKOO_RUNNING;
+        alarmNoDfpCuckooNextMs = millis() + CUCKOO_DURATION_MS + ALARM_NODFP_CUCKOO_GAP_MS;
+      }
       if (delayFunction(t_start6, ALARM_POLL_MS)) {
         int16_t st = -1;
         if (xSemaphoreTake(playerMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
@@ -1997,6 +2080,7 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour, uint16_t yda
           // ein späterer Reboot soll ihn nicht erneut auslösen).
           rtcRetryMagic = 0;
           alarmSilentFallback = false;                                                   // 20v09 (C3-Fix): Sonderfall beendet, nächster Alarm startet neutral
+          alarmNoDfpCuckoo = 0;                                                          // 22v00: ausstehende Ersatz-Kuckucks verwerfen
           alarmState = ALARM_IDLE;                                                       // → ALARM_IDLE
         }
       }
@@ -2340,6 +2424,15 @@ static void inputTask(void *pvParam) {
           digitalWrite(E3, LOW);
           alarmState = ALARM_IDLE;
           alarmSilentFallback = false;                                                   // 20v09 (C3-Fix): Sonderfall beendet, nächster Alarm startet neutral
+          if (alarmNoDfpCuckoo > 0 || cuckooState == CUCKOO_RUNNING) {
+            // 22v00: S1 beendet auch den Ersatz-Kuckuck (ausstehende Auslösungen
+            // verwerfen, laufende sofort abschalten). Die Bedingung trifft auch
+            // einen zufällig laufenden Stundenkuckuck – ein Stopp ist dort ebenfalls erwünscht.
+            alarmNoDfpCuckoo = 0;
+            digitalWrite(E1, LOW);
+            cuckooState = CUCKOO_IDLE;
+          }
+          clearSoundPreviewOnStop();                                                     // 22v03: Vorschau-Checkbox zurücksetzen (S1 hat den Player gestoppt)
           // 20v04 (A1-Fix): Tages-Sperre (lastA1Day/lastA2Day) bewusst NICHT
           // aufgehoben – sonst würde die pegelbasierte Fälligkeitsprüfung
           // (alarmDue()) den gerade manuell gestoppten Alarm im nächsten
@@ -3500,7 +3593,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_21v12.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_22v03.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };
