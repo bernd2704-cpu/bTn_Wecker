@@ -30,7 +30,7 @@ Prüfung von `wecker_export.md` (Firmware 21v13, Stand 2026-11-22) gegen sich se
 - **Web-Log-Refresh:** Der 20-s-Refresh lädt die Seite neu, ein halb verstellter Schieberegler geht verloren (Z. 606 vs. 640).
 - **Boot-Schritt 2:** „kurz auf LOW“ und „3000 ms warten“ widersprechen sich, es ist unklar, ob LOW die ganze Zeit anliegt (Z. 553). **Status: Export korrigiert (LOW wird die gesamten 3000 ms gehalten, wie in der Firmware).**
 - **T0 bis T4:** Es gibt kein T1, gemeint sind T0/T2/T3/T4 (Z. 158, 365). **Status: Export korrigiert.**
-- **Wecken per Touch:** Die Begründung „Schutz vor Reset auf der Info-Seite“ (Z. 791) greift ins Leere. Die Auto-Rückkehr nach 20 s liegt immer vor dem Display-Aus nach 300 s.
+- **Wecken per Touch:** Die Begründung „Schutz vor Reset auf der Info-Seite“ (Z. 791) greift ins Leere. Die Auto-Rückkehr nach 20 s liegt immer vor dem Display-Aus nach 300 s. **Status: Export umformuliert** (Zweck: erster Tipp ändert nicht Lautstärke/Seite; nur das erste Ereignis wird verworfen, Hold/Repeat wirken; S1/S2 wecken nicht). Web-Log-Refresh: laut Anwender unkritisch.
 - **Werksreset:** T4 auf der Info-Seite löst ihn ohne Bestätigung beim ersten Touch-Event aus.
 
 ## Stichproben ohne Befund

@@ -790,7 +790,7 @@ Weitere Eigenheiten, die bewusst so sind:
 - Das **Datum** auf Seite 0 wird nur beim Seitenaufbau (und Mitternacht) aktualisiert, nicht jede Sekunde.
 - Beim Alarmstart erscheint **keine eigene Alarmanzeige**: das Display zeigt die aktuelle Seite (wird bei Bedarf aufgeweckt).
 - T0 auf der Info-Seite hat keine Funktion. Die Info-Seite wird nur durch S3 oder die 20-s-Auto-Rückkehr verlassen.
-- Touch-Events bei abgeschaltetem Display wecken nur und werden verworfen (Schutz vor blindem Auslösen von WLAN-Reset/Werksreset).
+- Touch-Events (T0, T2, T3, T4) bei abgeschaltetem Display wecken nur und werden verworfen. Das verhindert, dass der erste Tipp auf ein dunkles Display Lautstärke oder Seite verstellt (Seite 0 reagiert auf T0, T3, T4); vor WLAN- oder Werksreset schützt es nicht zusätzlich, weil ein abgeschaltetes Display immer auf Seite 0 steht (Auto-Rückkehr nach 20 s kommt vor dem Display-Aus nach 300 s). Verworfen wird nur das **erste** Ereignis: Bleibt das Pad berührt, wirken Hold (nach 750 ms) und Repeat (alle 250 ms) normal. S1 und S2 wecken das Display nicht und setzen `lastTouchMs` nicht; S3 weckt und öffnet die Info-Seite.
 - Die Lautstärke-Tasten fallen weg, wenn der Player beim Tastendruck gerade belegt ist (Log-Zeile, Anzeige und Wert bleiben konsistent). Kein Fehlverhalten.
 - Es gibt keine weiteren Bedienelemente, keine Sekunden-Einstellung, keine Datums- oder Zeitzonenwahl am Gerät. Die Zeit kommt ausschließlich per NTP.
 - Der Wecker hat **keine Pufferbatterie/RTC**: ohne WLAN/NTP bleibt die Uhr ungültig (Anzeige zeigt 1970), und Alarm und Kuckuck sind gesperrt.
