@@ -680,4 +680,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 22v03 | Bugfix | S1-Stopp während einer Sound-Vorschau (Seiten 3/4): `sound1_on`/`sound2_on` blieben gesetzt und die Checkbox angehakt, T2 brauchte danach zwei Drücke zum erneuten Abspielen. Neue Funktion `clearSoundPreviewOnStop()` setzt die Flags im S1-Stopp-Zweig zurück und zeichnet die leere Box, falls eine Sound-Seite sichtbar ist (unter `displayMutex`, ohne zweites `player.stop()`). Das natürliche Trackende wird nicht erkannt (bewusst nicht Teil dieser Änderung). |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 22v03
+## Version 22v04
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 22v04 | Bugfix | S1 genau am natürlichen Alarmende (Tonende): `runAlarmMachine()` hatte bei `mp3Finished` Motor/Licht sofort abgeschaltet und `alarmState` auf `ALARM_IDLE` gesetzt; ein S1-Druck in diesem Moment las `st==0` und nahm den Kuckuck-Zweig statt eines Stopps. Jetzt Nachlaufzeit `ALARM_END_GRACE_MS` (3 s): bei `mp3Finished`/`runTimeExceeded` wird nur `alarmEndPending`/`alarmEndMs` gesetzt, Motor/Licht laufen weiter, `alarmState` bleibt `ALARM_RUNNING` (S1 = Stopp, kein Kuckuck, kein Poll mehr). Nach Ablauf schaltet der Alarm ab (sichtbares Zeichen, dass S1 wieder den Kuckuck auslöst). `triggerAlarm()` und S1-Stopp-Zweig setzen `alarmEndPending` zurück. Nicht kompiliert/getestet. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 22v04

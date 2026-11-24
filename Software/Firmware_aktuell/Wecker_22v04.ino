@@ -61,7 +61,7 @@
 #include <esp_system.h>               // esp_reset_reason() – Ursache des letzten Resets
 
 // ── Konfiguration ────────────────────────────────────────────
-#include "SysConf_22v03.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
+#include "SysConf_22v04.h"                                                               // Pin-Belegung, Timing-Konstanten, Touch-Schwellwerte
 #include "WEB.h"
 
 // 20v14 (Compile-Fix): verifyPlayStarted()-Ergebnis muss vor der ersten Verwendung stehen, da die
@@ -131,6 +131,11 @@ volatile bool alarmSilentFallback = false;
 // S1-Handler (inputTask, Core 1) – einzeln atomar, wie cuckooState/t_start4.
 volatile uint8_t  alarmNoDfpCuckoo       = 0;
 volatile uint32_t alarmNoDfpCuckooNextMs = 0;
+// 22v04: Nachlaufzeit am Alarmende (siehe ALARM_END_GRACE_MS). Geschrieben von
+// runAlarmMachine()/triggerAlarm() (alarmTask, Core 0) und vom S1-Handler
+// (inputTask, Core 1) – einzeln atomar, wie alarmNoDfpCuckoo.
+volatile bool     alarmEndPending        = false;
+volatile uint32_t alarmEndMs             = 0;
 // 20v12 (C6-Fix, Audit 2026-08-13): von S1/Sound-Vorschau/Funktionswahl
 // gesetzt, wenn player.stop() einen laufenden Alarmversuch trifft (siehe
 // requestAlarmCancelIfActive()). verifyPlayStarted() wertet es als
@@ -1962,6 +1967,7 @@ static void triggerAlarm(uint8_t alarmNum, uint8_t fileNo, uint8_t min, uint8_t 
     if (light_on) { digitalWrite(E3, HIGH); }                                            // 21v07: erst Licht ...
     motorStart();                                                                        // ... dann Motor via PWM + Kickstart (respektiert wheel_on)
     t_start6      = millis();
+    alarmEndPending = false;                                                             // 22v04: Nachlauf-Merker eines früheren Alarms verwerfen
     alarmRunStart = t_start6;                                                            // 20v05 (A3-Restarbeit): fester Startzeitpunkt für ALARM_MAX_RUN_MS
     alarmState    = ALARM_RUNNING;                                                       // → ALARM_RUNNING
     wakeDisplay();
@@ -2014,6 +2020,22 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour, uint16_t yda
         t_start4    = millis();
         cuckooState = CUCKOO_RUNNING;
         alarmNoDfpCuckooNextMs = millis() + CUCKOO_DURATION_MS + ALARM_NODFP_CUCKOO_GAP_MS;
+      }
+      // 22v04: Nachlaufzeit läuft – Motor/Licht bleiben an, alarmState bleibt
+      // ALARM_RUNNING, S1 wirkt damit weiter als Stopp (kein Kuckuck). Erst nach
+      // ALARM_END_GRACE_MS wirklich beenden; das Abschalten ist das sichtbare
+      // Zeichen, dass S1 wieder den Kuckuck auslöst.
+      if (alarmEndPending) {
+        if ((int32_t)(millis() - alarmEndMs) >= (int32_t)ALARM_END_GRACE_MS) {
+          motorStop();                                                                   // 12v03: Motor-PWM abschalten
+          if (light_on) { digitalWrite(E3, LOW); }
+          rtcRetryMagic = 0;
+          alarmSilentFallback = false;
+          alarmNoDfpCuckoo = 0;
+          alarmEndPending = false;
+          alarmState = ALARM_IDLE;                                                       // → ALARM_IDLE
+        }
+        break;                                                                           // kein Poll mehr in der Nachlaufzeit
       }
       if (delayFunction(t_start6, ALARM_POLL_MS)) {
         int16_t st = -1;
@@ -2068,20 +2090,14 @@ static void runAlarmMachine(uint8_t sec, uint8_t min, uint8_t hour, uint16_t yda
             webLogf("[FEHLER] Alarm nach %lu ms ohne Endebestaetigung abgebrochen (playerStatus=%d)",
                     (unsigned long)(millis() - alarmRunStart), playerStatus);
           }
-          motorStop();                                                                   // 12v03: Motor-PWM abschalten
-          if (light_on) { digitalWrite(E3, LOW); }
-          // 20v04: Tages-Sperre (lastA1Day/lastA2Day) bleibt bewusst bestehen –
-          // ein Reset hier würde die pegelbasierte Fälligkeitsprüfung (siehe
-          // alarmDue()) im nächsten 500-ms-Tick sofort wieder auslösen.
-          // 20v06 (B2-Fix): RTC-Merker sicherheitshalber auch hier löschen –
-          // deckt einen sehr kurzen Sound ab, der schon vor dem ersten Poll
-          // mit playerStatus > 0 beendet war (dann griff die Löschung oben
-          // nie) sowie den runTimeExceeded-Abbruch (Alarm lief nachweislich,
-          // ein späterer Reboot soll ihn nicht erneut auslösen).
-          rtcRetryMagic = 0;
-          alarmSilentFallback = false;                                                   // 20v09 (C3-Fix): Sonderfall beendet, nächster Alarm startet neutral
-          alarmNoDfpCuckoo = 0;                                                          // 22v00: ausstehende Ersatz-Kuckucks verwerfen
-          alarmState = ALARM_IDLE;                                                       // → ALARM_IDLE
+          // 22v04: Nicht sofort abschalten – Nachlaufzeit starten (ALARM_END_GRACE_MS).
+          // Motor/Licht laufen weiter, alarmState bleibt ALARM_RUNNING; das eigentliche
+          // Beenden (Motor/Licht aus, RTC-Merker, alarmSilentFallback, alarmNoDfpCuckoo,
+          // alarmState → IDLE) erfolgt oben in ALARM_RUNNING nach Ablauf. Ein S1-Druck
+          // genau am Tonende stoppt dadurch (statt den Kuckuck auszulösen). Tages-Sperre
+          // (20v04) bleibt wie bisher bestehen.
+          alarmEndMs      = millis();
+          alarmEndPending = true;
         }
       }
       break;
@@ -2423,6 +2439,7 @@ static void inputTask(void *pvParam) {
           motorStop();                                                                   // 12v03: Motor-PWM abschalten (war digitalWrite LOW)
           digitalWrite(E3, LOW);
           alarmState = ALARM_IDLE;
+          alarmEndPending = false;                                                       // 22v04: Nachlauf-Merker löschen, S1 hat selbst beendet
           alarmSilentFallback = false;                                                   // 20v09 (C3-Fix): Sonderfall beendet, nächster Alarm startet neutral
           if (alarmNoDfpCuckoo > 0 || cuckooState == CUCKOO_RUNNING) {
             // 22v00: S1 beendet auch den Ersatz-Kuckuck (ausstehende Auslösungen
@@ -3593,7 +3610,7 @@ void setup() {
   // Timeout WDT_HARDWARE_MS kürzer als Software-Watchdog WDG_TIMEOUT_MS:
   // Hardware greift bei echtem CPU-Lock, Software bei logischem Freeze.
   const esp_task_wdt_config_t twdt_cfg = {
-    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_22v03.h
+    .timeout_ms    = WDT_HARDWARE_MS,  // aus SysConf_22v04.h
     .idle_core_mask = 0,               // Idle-Tasks nicht überwachen
     .trigger_panic  = true,            // Backtrace + Reset bei Ablauf
   };

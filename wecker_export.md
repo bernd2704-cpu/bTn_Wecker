@@ -1,6 +1,6 @@
 # bTn Wecker – Export für Neuaufbau in ESP-IDF
 
-*Stand: Firmware 22v03 (Arduino) · Hardware 2v0 · erstellt 2026-11-22*
+*Stand: Firmware 22v04 (Arduino) · Hardware 2v0 · erstellt 2026-11-22*
 
 ## 0. Auftrag und Randbedingungen
 
@@ -437,7 +437,7 @@ Sinn: Der Wecker sichert einen Termin. Weckzeit 02:xx wird im Frühjahr um eine 
    - Hat der Nutzer während der Verifikation mit S1 gestoppt: Abbruch ohne Neustart, Tages-Sperre trotzdem setzen.
 4. Nach bestätigtem Start (das gilt auch für den stummen Alarm aus Schritt 3, „Datei startet nicht“ und „DFPlayer ohne Antwort“): Tages-Sperre für diesen Alarm auf **heute** setzen (und persistieren), Zeitstempel „letzter erfolgreicher Alarm“ für das Web-Log merken, **Licht** (E3 HIGH, falls `light_on`), danach **Motor** (`motorStart`, falls `wheel_on`), Display aufwecken, Zustand ALARM_RUNNING.
 
-**Laufender Alarm (ALARM_RUNNING):** alle 5 s (`ALARM_POLL_MS`) Player-Status abfragen. Ende (nur wenn **kein** stummer Alarm läuft, siehe unten), wenn der Player „gestoppt“ meldet (Status 0) **oder** bei fehlender Antwort der BUSY-Pin dreimal im Abstand von 5 ms HIGH liest, **oder** nach **15 min** (`ALARM_MAX_RUN_MS`, Log `[FEHLER] Alarm nach <ms> ms ohne Endebestaetigung abgebrochen`). Beim stummen Alarm (Datei startet nicht oder DFPlayer ohne Antwort, Merker `alarmSilentFallback`) endet der Alarm nicht über den Player-Status, sondern nur nach 15 min oder per S1; S1 beendet auch den Ersatz-Kuckuck. Bei Ende: Motor aus, Licht aus (falls `light_on`). Die Tages-Sperre bleibt bestehen.
+**Laufender Alarm (ALARM_RUNNING):** alle 5 s (`ALARM_POLL_MS`) Player-Status abfragen. Ende (nur wenn **kein** stummer Alarm läuft, siehe unten), wenn der Player „gestoppt“ meldet (Status 0) **oder** bei fehlender Antwort der BUSY-Pin dreimal im Abstand von 5 ms HIGH liest, **oder** nach **15 min** (`ALARM_MAX_RUN_MS`, Log `[FEHLER] Alarm nach <ms> ms ohne Endebestaetigung abgebrochen`). Beim stummen Alarm (Datei startet nicht oder DFPlayer ohne Antwort, Merker `alarmSilentFallback`) endet der Alarm nicht über den Player-Status, sondern nur nach 15 min oder per S1; S1 beendet auch den Ersatz-Kuckuck. Bei Ende (Player-Status oder 15 min) wird **nicht sofort** abgeschaltet: Seit 22v04 läuft eine **Nachlaufzeit** von 3 s (`ALARM_END_GRACE_MS`), in der Motor und Licht weiterlaufen, der Zustand ALARM_RUNNING bleibt und der Player nicht mehr abgefragt wird. Erst danach: Motor aus, Licht aus (falls `light_on`), Zustand ALARM_IDLE. Ein S1-Druck in der Nachlaufzeit stoppt (Abschnitt 6.5) und löst keinen Kuckuck aus; das Abschalten ist das sichtbare Zeichen, dass S1 wieder den Kuckuck auslöst. Die Tages-Sperre bleibt bestehen.
 
 **Tages-Sperre** (`lastA1Day`, `lastA2Day` = Tag im Jahr 0..365 oder 0xFFFF = frei): Derselbe Alarm löst am selben Kalendertag nicht erneut aus. Sie wird im NVS gespeichert und übersteht Neustart/Stromausfall.
 
@@ -481,7 +481,7 @@ Manuell: S1 ohne laufenden Alarm löst den Kuckuck einmalig aus (unabhängig von
 Aktionssperre 1000 ms. Ablauf:
 
 1. Player-Status abfragen (bis 200 ms wiederholen; bleibt die Antwort aus, entscheidet der BUSY-Pin: LOW = spielt, HIGH = Idle).
-2. Läuft ein Alarm (ALARM_RUNNING) **oder** spielt der Player: Stopp. Abbruch-Merker für eine laufende Start-Verifikation setzen, `stop` an den DFPlayer, **Motor aus, E3 aus, Zustand ALARM_IDLE**. Die Tages-Sperre bleibt bestehen. Seit 22v03 zusätzlich: laufende Sound-Vorschau beenden (`sound1_on = sound2_on = false`); ist Seite 3 oder 4 sichtbar, die Checkbox leer zeichnen (nur die Box, kein weiteres `stop`). Endet ein Track von selbst, bleibt die Checkbox angehakt (bekannte Einschränkung, zwei T2-Drücke zum erneuten Abspielen).
+2. Läuft ein Alarm (ALARM_RUNNING) **oder** spielt der Player: Stopp. Abbruch-Merker für eine laufende Start-Verifikation setzen, `stop` an den DFPlayer, **Motor aus, E3 aus, Zustand ALARM_IDLE**. Die Tages-Sperre bleibt bestehen. Ein S1-Druck in der Nachlaufzeit am Alarmende (22v04, Abschnitt 6.2) zählt als laufender Alarm und stoppt ebenfalls, ohne den Kuckuck auszulösen. Seit 22v03 zusätzlich: laufende Sound-Vorschau beenden (`sound1_on = sound2_on = false`); ist Seite 3 oder 4 sichtbar, die Checkbox leer zeichnen (nur die Box, kein weiteres `stop`). Endet ein Track von selbst, bleibt die Checkbox angehakt (bekannte Einschränkung, zwei T2-Drücke zum erneuten Abspielen).
 3. Sonst: Kuckuck einmalig auslösen (6.2).
 
 ### 6.6 Taster S2 – Zugschalter Licht + Mühlrad
@@ -742,6 +742,7 @@ Im Alarm-Task, nur wenn kein Alarm läuft, kein Start-Versuch und keine offene V
 | ALARM_MAX_RESTARTS        | 3                                | max. Neustarts je Alarm bei DFPlayer-Absturz          |
 | ALARM_NODFP_CUCKOO_COUNT  | 3                                | Ersatz-Kuckuck-Auslösungen bei totem DFPlayer (22v00) |
 | ALARM_NODFP_CUCKOO_GAP_MS | 2000                             | Pause zwischen Ersatz-Kuckuck-Auslösungen (22v00)     |
+| ALARM_END_GRACE_MS        | 3000                             | Nachlaufzeit am Alarmende, S1 stoppt noch (22v04)     |
 | DFP_PREVIEW_VERIFY_MS     | 1500                             | Prüfung der Vorschau                                  |
 | DFP_HB_FIRST_MS           | 60000                            | erster Heartbeat nach Boot                            |
 | DFP_HB_INTERVAL_MS        | 300000                           | Heartbeat-Intervall                                   |
@@ -774,14 +775,14 @@ Im Alarm-Task, nur wenn kein Alarm läuft, kein Start-Versuch und keine offene V
 
 ## 13. Abweichungen und Eigenheiten
 
-Die alte Bedienungsanleitung (Firmware 21v11) weicht in einigen Punkten vom Code (22v03) ab. **Es gilt das Verhalten des Codes**, wie in diesem Dokument beschrieben:
+Die alte Bedienungsanleitung (Firmware 21v11) weicht in einigen Punkten vom Code (22v04) ab. **Es gilt das Verhalten des Codes**, wie in diesem Dokument beschrieben:
 
 | Thema                | Alte Anleitung                                                | Tatsächliches Verhalten (maßgeblich)                                                                                                     |
 | -------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Sound-Vorschau T3/T4 | „neuer Sound spielt sofort als Vorschau, wenn Vorschau aktiv“ | T3/T4 schalten die Vorschau **aus**; Abspielen nur über T2                                                                               |
 | Sound speichern      | „gespeichert beim Verlassen der Seite“                        | Zuweisung (`soundN_assigned`) wird beim **Starten der Vorschau** (T2 an) gesetzt                                                         |
 | Weckzeit verstellen  | Sperre wird beim Verlassen aufgehoben                         | Zusätzlich: Alarm ist während des Editierens nicht scharf; Sperre wird persistiert und ggf. sofort neu gesetzt (21v13)                   |
-| Versionsstand        | 21v11                                                         | 22v03                                                                                                                                    |
+| Versionsstand        | 21v11                                                         | 22v04                                                                                                                                    |
 | Seiten 2 und 4       | nicht beschrieben                                             | Teilaktualisierung der Vorgängerseite: Checkbox der Zeile A1 verschwindet, nur die Box des gewählten Alarms/Sounds wird gezeichnet (4.3) |
 | Seite 1 und 3        | nicht beschrieben                                             | Es wird nur **eine** Checkbox gezeichnet (Alarm 1 bzw. Sound 1)                                                                          |
 

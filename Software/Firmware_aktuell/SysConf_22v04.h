@@ -1,7 +1,7 @@
 #pragma once
-// SysConf_22v03.h – Konfigurationskonstanten für bTn Wecker
-// Firmware-Version : 22v03
-// Datei-Version    : 22v03
+// SysConf_22v04.h – Konfigurationskonstanten für bTn Wecker
+// Firmware-Version : 22v04
+// Datei-Version    : 22v04
 // Boardverwalter   : esp32 3.3.12 von Espressif Systems
 // Änderungshistorie: siehe CHANGELOG.md
 // 20v00: Basis 13v00, Hardware ab 2v0 (DFPlayer BUSY-Signal an GPIO34, ab 21v01 GPIO35)
@@ -176,9 +176,10 @@
 // 22v01: Sound-Vorschau (Menüseiten Sound 1/2) setzt vor dem Abspielen die Player-Lautstärke auf vol – vorher blieb sie nach Boot auf startup_vol bzw. nach einem Alarm auf max(vol, ALARM_MIN_VOL).
 // 22v02: Gleiche Weckzeit bei Alarm 1 und 2: Der Start des einen Alarms sperrt den anderen für heute – vorher startete er nach Ende/S1-Stopp des ersten sofort im Nachholfenster.
 // 22v03: S1-Stopp setzt die Sound-Vorschau zurück (sound1_on/sound2_on aus, Checkbox leer) – vorher brauchte T2 danach zwei Drücke.
+// 22v04: Nachlaufzeit am natürlichen Alarmende (ALARM_END_GRACE_MS): Motor/Licht laufen nach Tonende noch 3 s weiter, alarmState bleibt ALARM_RUNNING – S1 stoppt in dieser Zeit (kein Kuckuck); das Abschalten zeigt, dass S1 wieder den Kuckuck auslöst. Vorher: S1 genau am Tonende löste den Kuckuck statt eines Stopps aus.
 
 // ── Firmware-Version ─────────────────────────────────────────
-#define FW_VERSION "22v03"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
+#define FW_VERSION "22v04"                                                     // Versionsnummer (als String in PGMInfo, Web-Log, WEB.h)
 
 // ── WiFi ─────────────────────────────────────────────────────
 // STA_SSID / STA_PSK werden nicht mehr direkt genutzt.
@@ -267,6 +268,7 @@ const uint32_t BTN_LOCKOUT_MS       = 1000;                                    /
 const uint32_t CUCKOO_DURATION_MS   = 7500;                                    // Kuckuck-Laufzeit
 const uint8_t  ALARM_NODFP_CUCKOO_COUNT = 3;                                  // 22v00: Kuckuck-Auslösungen als akustischer Ersatz, wenn der DFPlayer dauerhaft nicht antwortet
 const uint32_t ALARM_NODFP_CUCKOO_GAP_MS   = 2000;                               // 22v00: Pause zwischen zwei Ersatz-Kuckuck-Auslösungen
+const uint32_t ALARM_END_GRACE_MS      = 3000;                                    // 22v04: Nachlaufzeit nach Tonende/Obergrenze, bis Motor/Licht abschalten und S1 wieder den Kuckuck auslöst
 const uint32_t AUTO_RETURN_MS       = 20000;                                   // Auto-Rückkehr zu Seite 0
 const uint32_t DISPLAY_TIMEOUT_MS   = 300000UL;                                // OLED aus nach 5 min ohne Touch-Event
 const uint32_t S2_TIMEOUT_MS        = 1800000UL;                               // 12v02: Licht/Mühlrad (Zugschalter S2) aus nach 30 min – analog AUTO_RETURN_MS
