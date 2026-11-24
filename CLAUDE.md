@@ -47,6 +47,7 @@ Stack-Größen als STACK_*-Konstanten in SysConf_*.h
 - Niemals `vTaskDelay()` unter gehaltenem Mutex aufrufen
 - Alle Serial-Ausgaben nach WiFi-Connect über `webLogf()` statt `Serial.*`
 - Versionsnummer bei jeder Änderung inkrementieren
+- Vor dem Erzeugen einer neuen Version den bisherigen Stand (`Wecker_*.ino`, `SysConf_*.h`) in `Software/Firmware_Versionshistorie/` ablegen, bevor die Dateien in `Firmware_aktuell/` umbenannt werden
 - Stack-Größen nur über `STACK_*`-Konstanten in SysConf ändern
 - SysConf immer mit Versionsnummer benennen (`SysConf_XvYY.h`)
 - Neue Schaltungen: alle Grenzwerte explizit gegen Datenblatt prüfen
