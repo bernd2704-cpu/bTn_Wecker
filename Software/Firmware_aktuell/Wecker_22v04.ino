@@ -1,5 +1,6 @@
 // bTn Wecker mit OLED-Anzeige und MP3-Player
 // Basis: bTn_Wecker_20v00 – FreeRTOS + State Machine + WiFi-Konfigurator
+// Arduino IDE - Board: ESP32 Dev Module
 // Boardverwalter: esp32 3.3.12 von Espressif Systems
 //
 // ─── State Machines ──────────────────────────────────────────
