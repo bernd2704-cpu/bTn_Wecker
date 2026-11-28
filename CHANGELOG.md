@@ -686,4 +686,10 @@ abgearbeitet. Offen bleiben nur noch die im Audit selbst nie gegengeprüften Pun
 |---|---|---|
 | 22v04 | Bugfix | S1 genau am natürlichen Alarmende (Tonende): `runAlarmMachine()` hatte bei `mp3Finished` Motor/Licht sofort abgeschaltet und `alarmState` auf `ALARM_IDLE` gesetzt; ein S1-Druck in diesem Moment las `st==0` und nahm den Kuckuck-Zweig statt eines Stopps. Jetzt Nachlaufzeit `ALARM_END_GRACE_MS` (3 s): bei `mp3Finished`/`runTimeExceeded` wird nur `alarmEndPending`/`alarmEndMs` gesetzt, Motor/Licht laufen weiter, `alarmState` bleibt `ALARM_RUNNING` (S1 = Stopp, kein Kuckuck, kein Poll mehr). Nach Ablauf schaltet der Alarm ab (sichtbares Zeichen, dass S1 wieder den Kuckuck auslöst). `triggerAlarm()` und S1-Stopp-Zweig setzen `alarmEndPending` zurück. Nicht kompiliert/getestet. |
 
-bTn Wecker  ·  Änderungshistorie  ·  Stand 22v04
+## Version 22v05
+
+| Version | Kategorie | Änderung |
+|---|---|---|
+| 22v05 | Qualität | Neustart-Ursache wird festgehalten: Vor jedem `ESP.restart()` (7 Stellen) setzt `markRestart()` einen RTC-Merker (`rtcRstMagic`/`rtcRstWhy`), beim Software-Watchdog zusätzlich Stillstandszeit je Task, `alarmState`, `uiState`, Sekunden seit Alarmstart und Uptime. `logRestartCause()` (setup(), nach `bumpResetCount()`) schreibt die Ursache ins Web-Log (`[RESET] Software-Reset durch: …`); ungewollte Neustarts (Watchdog, Heartbeat, Alarm-Retry, RTOS-Fehler, Panic/WDT/Brownout, unbekannt) werden im NVS (Namespace `rstInfo`, Schlüssel `last`) abgelegt und bei jedem Boot als `[RESET] Letzter Absturz (NVS): …` erneut geloggt. Anlass: Software-Reset im laufenden Alarm 1 nach ca. 30 s Ton, Ursache nicht mehr nachvollziehbar. Nicht kompiliert/getestet. |
+
+bTn Wecker  ·  Änderungshistorie  ·  Stand 22v05

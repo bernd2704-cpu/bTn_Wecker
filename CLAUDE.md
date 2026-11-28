@@ -21,7 +21,7 @@ DFPlayer Mini GND als Sternpunkt-Topologie.
 ## Aktuelle Version
 
 Hardware 2v0 (mit DFPlayer-BUSY-Signal, GPIO35, Motor über MCP1700T-3302E/TO geregelt),
-Firmware 22v04, Konfiguration SysConf_22v04.h
+Firmware 22v05, Konfiguration SysConf_22v05.h
 
 Vorheriger eingefrorener Stand: Hardware 1v0 (ohne BUSY-Signal) / Firmware 13v00,
 siehe `Software/Firmware_Versionshistorie/`.
@@ -75,6 +75,6 @@ bTn_Wecker/
 │   └── Stückliste/
 └── Software/
     ├── Bibliotheken/
-    ├── Firmware_aktuell/          ← Wecker_22v04.ino, SysConf_22v04.h, WEB.h
+    ├── Firmware_aktuell/          ← Wecker_22v05.ino, SysConf_22v05.h, WEB.h
     └── Firmware_Versionshistorie/ ← ältere Stände (12vNN, 13v00, 20v00–20v16)
 ```

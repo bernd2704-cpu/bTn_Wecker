@@ -1,6 +1,6 @@
 # bTn Wecker – Export für Neuaufbau in ESP-IDF
 
-*Stand: Firmware 22v04 (Arduino) · Hardware 2v0 · erstellt 2026-11-22*
+*Stand: Firmware 22v05 (Arduino) · Hardware 2v0 · erstellt 2026-11-22*
 
 ## 0. Auftrag und Randbedingungen
 
@@ -556,7 +556,7 @@ Regeln:
 5. NVS laden (Abschnitt 7).
 6. Display initialisieren (gedreht), Start-Bildschirm (Abschnitt 4.5).
 7. WLAN-Daten laden. **Keine gültigen Daten:** Konfigurator starten (Abschnitt 9.2), kehrt nicht zurück.
-8. `resetCount` erhöhen, Log `[WiFi] Credentials geladen: SSID=<ssid>`.
+8. `resetCount` erhöhen, dann (22v05) die Neustart-Ursache auswerten (siehe unten), Log `[WiFi] Credentials geladen: SSID=<ssid>`.
 9. SNTP-Callback registrieren, `pool.ntp.org`, Zeitzone setzen.
 10. WLAN verbinden (STA), Wartebildschirm. Timeout 30 s: Meldung „kein WLAN“ 2 s, **Betrieb ohne WLAN/NTP** (Alarm und Kuckuck bleiben gesperrt, bis die Uhr gültig ist).
 11. Bei Verbindung: Serial-Ausgabe `WiFi connected – IP: <ip>  Log: http://<ip>:8080`, Log `[WiFi] connected`, `[WiFi] IP: <ip>`, NTP-Wartebildschirm, Log `[NTP] warte auf Synchronisation ...`. Warten bis Jahr ≥ 2001 (Timeout 30 s, dann `[NTP] Timeout – Uhr nicht gestellt` und „NTP Timeout“ 2 s). Erfolg: `[NTP] Synchronisation OK` und Zeitstempel „letzter Reset“ merken.
@@ -653,6 +653,7 @@ Inhalt in dieser Reihenfolge:
 - `<` und `>` im Text werden maskiert (`&lt;`, `&gt;`).
 - Zuordnung: Zeilen mit „DFPlayer“ gehören in den DFPlayer-Abschnitt, alle anderen in das Allgemeine Log. Die Zeile `[RESET] Ursache: …` wird im Allgemeinen Log **direkt hinter** die Zeile `[RESET] resetCount: <n>` einsortiert, unabhängig vom Zeitpunkt.
 - `[RESET] resetCount: <n>` wird geschrieben, sobald der Web-Log-Server gestartet ist.
+- **Neustart-Ursache (22v05):** Vor jedem Neustart (`ESP.restart()`, 7 Stellen: Watchdog, DFPlayer-Heartbeat, Alarm-Retry, WLAN-Setup, Werksreset, WLAN-Konfigurator, RTOS-Fehler beim Start) wird ein Merker mit Grund im RTC-Speicher abgelegt (überlebt Software-Reset, nicht EN-Reset/Neuflashen); beim Software-Watchdog zusätzlich Stillstandszeit je Task (input, display, alarm), `alarmState`, `uiState`, Sekunden seit Alarmstart und Uptime. Beim Boot (nach dem Erhöhen von `resetCount`) wird daraus `[RESET] Software-Reset durch: <Grund>` (beim Watchdog zusätzlich `[RESET] Watchdog: <Details>`) geloggt, ein Software-Reset ohne Merker als `Ausloeser unbekannt`. Ungewollte Neustarts (Watchdog, Heartbeat, Alarm-Retry, RTOS-Fehler, Panic, Watchdog-Reset, Brownout, unbekannt) werden zusätzlich im NVS (Namespace `rstInfo`, Schlüssel `last`, Text `Boot #<resetCount>: <Ursache>`) gespeichert und bei **jedem** Boot als `[RESET] Letzter Absturz (NVS): <Text>` erneut geloggt, bis ein neuer Absturz den Eintrag ersetzt. WLAN-Setup, Werksreset und Konfigurator überschreiben den NVS-Eintrag nicht.
 - Wichtige Meldungen (sinngemäß übernehmen, Tag und Wortlaut möglichst gleich): `[RESET]`, `[WiFi]`, `[NTP]`, `[DFPlayer]`, `[TWDT]`, `[WATCHDOG]`, `[FEHLER]`, `[WARNUNG]`, `[MOTOR]`, `[STARTVOL]` mit den in diesem Dokument genannten Texten.
 
 ---
